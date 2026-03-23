@@ -28,6 +28,10 @@ export default function CesiumMap3D({
   const orbitListenerRef = useRef(null)
   const orbitHeadingRef = useRef(0)
   const isOrbitingRef = useRef(false)
+  const dsmHeightsRef = useRef(dsmHeights)
+
+  // Keep ref in sync with latest prop so async blocks always see current value
+  useEffect(() => { dsmHeightsRef.current = dsmHeights }, [dsmHeights])
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -83,8 +87,9 @@ export default function CesiumMap3D({
       viewer.scene.globe.show = true // show globe until 3D tiles cover it
 
       // Immediately set camera to building location (don't wait for tiles)
+      // Use 1000m above ellipsoid as a safe starting altitude for any terrain elevation
       viewer.camera.setView({
-        destination: Cesium.Cartesian3.fromDegrees(lng, lat, 200),
+        destination: Cesium.Cartesian3.fromDegrees(lng, lat, 1000),
         orientation: {
           heading: Cesium.Math.toRadians(0),
           pitch: Cesium.Math.toRadians(-45),
@@ -152,8 +157,11 @@ export default function CesiumMap3D({
           // Once tiles are loaded, hide globe and fly to building
           viewerRef.current.scene.globe.show = false
           orbitHeadingRef.current = 0
+          // Use DSM ground elevation if available (absolute WGS84 altitude), else wide overview
+          const groundH = dsmHeightsRef.current?.building?.ground_elevation_m
+          const flyAlt = groundH != null ? groundH + 80 : 1000
           viewerRef.current.camera.flyTo({
-            destination: Cesium.Cartesian3.fromDegrees(lng - 0.0002, lat - 0.0003, 80),
+            destination: Cesium.Cartesian3.fromDegrees(lng - 0.0002, lat - 0.0003, flyAlt),
             orientation: {
               heading: Cesium.Math.toRadians(30),
               pitch: Cesium.Math.toRadians(-40),
@@ -191,6 +199,22 @@ export default function CesiumMap3D({
       }
     }
   }, [lat, lng, apiKey])
+
+  // When DSM heights arrive after tile-load fly, re-fly to correct building altitude
+  useEffect(() => {
+    const viewer = viewerRef.current
+    if (!viewer || viewer.isDestroyed() || loading || !dsmHeights?.building?.ground_elevation_m) return
+    const groundH = dsmHeights.building.ground_elevation_m
+    viewer.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(lng - 0.0002, lat - 0.0003, groundH + 80),
+      orientation: {
+        heading: Cesium.Math.toRadians(30),
+        pitch: Cesium.Math.toRadians(-40),
+        roll: 0,
+      },
+      duration: 1.5,
+    })
+  }, [dsmHeights, loading])
 
   // Add/update panel entities whenever panel data or count changes
   useEffect(() => {

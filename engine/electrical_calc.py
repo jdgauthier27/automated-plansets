@@ -76,15 +76,21 @@ class ElectricalDesign:
     warnings: List[str] = field(default_factory=list)
 
 
-def calculate_shade_factor(flux_geotiff_bytes: bytes, panel_positions: list = None) -> float:
+def calculate_shade_factor(flux_geotiff_bytes: bytes,
+                           panel_positions: list = None,
+                           mask_bytes: bytes = None) -> float:
     """Calculate shade factor from annual flux GeoTIFF.
 
-    Reads the GeoTIFF pixel values (peak sun hours per year). Returns
-    shade_factor in range [0.0, 1.0] where 1.0 = no shading, 0.7 = 30% shading.
+    Reads the GeoTIFF pixel values (annual flux in kWh/m²/yr). Returns
+    shade_factor in [0.0, 1.0] where 1.0 = fully exposed, 0.7 = 30% shading.
 
-    Strategy: shade_factor = mean(valid roof pixels) / max(valid roof pixels)
-    If panel_positions [(x, y), ...] are provided (in pixel coords), only those
-    pixels are averaged; otherwise the full raster mean is used.
+    Algorithm:
+      1. Load flux raster (and optional building mask).
+      2. If mask provided, restrict to roof pixels only.
+      3. If panel_positions (pixel coords) provided, sample those pixels.
+      4. Otherwise, use the top-50% of valid pixels (panel-worthy areas).
+      5. shade_factor = mean(panel_area) / p95(panel_area)
+         Using p95 instead of max avoids single-pixel outlier inflation.
 
     Falls back to 1.0 (no shading assumed) on any error.
     """
@@ -92,54 +98,74 @@ def calculate_shade_factor(flux_geotiff_bytes: bytes, panel_positions: list = No
         return 1.0
 
     try:
+        import numpy as np
+
         if _RASTERIO_AVAILABLE:
-            import numpy as np
             from rasterio.io import MemoryFile
-            with MemoryFile(flux_geotiff_bytes) as memfile:
-                with memfile.open() as dataset:
-                    data = dataset.read(1).astype(float)
-                    nodata = dataset.nodata
+
+            # Load flux
+            with MemoryFile(flux_geotiff_bytes) as mf:
+                with mf.open() as ds:
+                    data = ds.read(1).astype(float)
+                    nodata = ds.nodata
                     if nodata is not None:
                         data[data == nodata] = 0.0
-                    # Mask out zero/negative pixels (non-roof area)
-                    valid = data[data > 0]
-                    if valid.size == 0:
-                        return 1.0
-                    max_flux = float(valid.max())
-                    if max_flux <= 0:
-                        return 1.0
-                    if panel_positions:
-                        # Sample flux at panel pixel positions
-                        h, w = data.shape
-                        samples = []
-                        for pos in panel_positions:
-                            px = int(round(pos[0]))
-                            py = int(round(pos[1]))
-                            if 0 <= px < w and 0 <= py < h and data[py, px] > 0:
-                                samples.append(data[py, px])
-                        if samples:
-                            mean_flux = float(np.mean(samples))
-                        else:
-                            mean_flux = float(valid.mean())
-                    else:
-                        mean_flux = float(valid.mean())
-                    shade = round(min(1.0, mean_flux / max_flux), 3)
-                    logger.info("Shade factor: %.3f (mean=%.1f, max=%.1f kWh/m²/yr)",
-                                shade, mean_flux, max_flux)
-                    return shade
+
+            # Apply building mask if provided (restrict to roof pixels)
+            if mask_bytes:
+                with MemoryFile(mask_bytes) as mf:
+                    with mf.open() as ds:
+                        mask_arr = ds.read(1)
+                valid_pixels = data[(data > 0) & (mask_arr > 0)]
+            else:
+                valid_pixels = data[data > 0]
+
+            if valid_pixels.size == 0:
+                return 1.0
+
+            if panel_positions:
+                # Sample flux at explicit panel pixel positions
+                h, w = data.shape
+                samples = []
+                for pos in panel_positions:
+                    px, py = int(round(pos[0])), int(round(pos[1]))
+                    if 0 <= px < w and 0 <= py < h and data[py, px] > 0:
+                        samples.append(data[py, px])
+                panel_area = np.array(samples) if samples else valid_pixels
+            else:
+                # Use top 50% of valid pixels (panel-worthy: south-facing, unshaded)
+                median_flux = np.percentile(valid_pixels, 50)
+                panel_area = valid_pixels[valid_pixels >= median_flux]
+                if panel_area.size == 0:
+                    panel_area = valid_pixels
+
+            p95 = float(np.percentile(panel_area, 95))
+            if p95 <= 0:
+                return 1.0
+            mean_flux = float(panel_area.mean())
+            shade = round(min(1.0, mean_flux / p95), 3)
+            logger.info("Shade factor: %.3f (panel mean=%.1f, p95=%.1f kWh/m²/yr, n=%d px)",
+                        shade, mean_flux, p95, panel_area.size)
+            return shade
+
         else:
-            # PIL fallback — read first band as grayscale proxy
+            # PIL fallback — no geospatial awareness, use percentile heuristic
             import io
             from PIL import Image
-            import numpy as np
             img = Image.open(io.BytesIO(flux_geotiff_bytes))
-            data = np.array(img, dtype=float)
-            valid = data[data > 0]
+            arr = np.array(img, dtype=float)
+            valid = arr[arr > 0]
             if valid.size == 0:
                 return 1.0
-            shade = round(min(1.0, float(valid.mean()) / float(valid.max())), 3)
+            median = np.percentile(valid, 50)
+            panel_area = valid[valid >= median]
+            p95 = float(np.percentile(panel_area, 95))
+            if p95 <= 0:
+                return 1.0
+            shade = round(min(1.0, float(panel_area.mean()) / p95), 3)
             logger.info("Shade factor (PIL fallback): %.3f", shade)
             return shade
+
     except Exception as e:
         logger.warning("Shade factor calculation failed (%s) — defaulting to 1.0", e)
         return 1.0

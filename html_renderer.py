@@ -6999,7 +6999,7 @@ class HtmlRenderer:
         certs2 = [
             "ICC-ES ESR-3164  |  UL 2703 Listed Attachment System",
             f"IBC 2021 / {self._building_code} 2020  |  ASCE 7-22 Wind/Snow Loading",
-            f"{'NEC 690 / California Electrical Code' if self._code_prefix == 'NEC' else 'NEC 690 / CEC Section 64'}  |  {self._building_code} Compliant",
+            f"{'NEC 690 / California Electrical Code' if self._code_prefix == 'NEC' else 'CEC Section 64 (CSA C22.1-2021)'}  |  {self._building_code} Compliant",
         ]
         for ci3, cert in enumerate(certs2):
             svg.append(f'<text x="{rx3+12}" y="{cc_y+36+ci3*18}" font-size="9" '

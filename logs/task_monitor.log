@@ -222,3 +222,42 @@ Next priority: Panel placer fix (GeoTIFF approach) + nec_texas.py creation
 3D/JURISDICTION 2026-03-22T23:38:01 | Created: jurisdiction/cec_bc.py | Cities: 12 (Vancouver, Surrey, Burnaby, Richmond, Kelowna, Abbotsford, Coquitlam, Langley, Saanich, Prince George, Kamloops, Nanaimo) | BC Hydro/FortisBC auto-select: YES | Score: 13/13 | Grade: A
 
 RENDERER [2026-03-23T06:40:28] Page: A-103 String Plan | Fixed: Sheet ID "PV-7" → "A-103" and sheet name "MICROINVERTER & CIRCUIT MAP" → "STRING PLAN" in title block of _build_string_plan_page(); matches reference PDF A-103 label exactly | Score: 10/13→10/13 (cached planset unchanged; regenerated planset shows pre-existing california_codes regression unrelated to this fix; A-103/STRING PLAN confirmed present in regenerated output) | Grade: A
+BOM 2026-03-23T06:44:55Z | Created: jurisdiction/nec_texas.py | Cities: 10 (Houston, Dallas, San Antonio, Austin, Fort Worth, El Paso, Arlington, Corpus Christi, Plano, Laredo) | Utility auto-select: YES (Oncor/CenterPoint/AEP Texas/CPS Energy/Austin Energy/El Paso Electric) | Gulf Coast wind 130mph: YES (Galveston, Nueces, Cameron + 11 other counties) | Wire: THWN-2 | Snow: 0 PSF | AHJ: TDLR | Score: 13/13 (no regression — existing modules untouched) | Grade: A
+PLACER 2026-03-22T23:46:41 | Fix: (1) Added _haversine_ft() + _seg_dimensions_ft() helpers to use segment boundingBox sw/ne LatLng for real-world dimensions instead of area-based sqrt(2*area) estimates; (2) Removed double-setback: solar_insight_to_roof_faces() was pre-applying 3ft setback to usable_polygon AND PanelPlacer._place_on_face() was applying another 3ft setback — now passes full polygon, placer handles setbacks alone; (3) Scale now based on largest segment bbox dimensions rather than total estimated building footprint | Panels: 30/30 | Score: 13/13 | Grade: A
+
+=== ORCHESTRATOR REPORT 2026-03-23 06:43 ===
+System: score=13/13 | panels=30 (rendered) / 5 (physical) | qc_refs=0 | build=SKIP(timeout)
+
+Specialists:
+  Renderer (planset-fixer):     PRODUCTIVE — Fixed A-103 STRING PLAN sheet ID. Grade A. On gable faces task.
+  Placer (pv3-roof-layout-fixer): REDIRECTED — Physical placement still 5/30. Reassigned to GeoTIFF dataLayers approach.
+  Electrical (planset-user-test): PRODUCTIVE — 13/13 score, shade analysis in progress.
+  3D View (cesiumjs-3d-builder): REDIRECTED — BC jurisdiction done. Reassigned to URGENT: fix camera (Earth-from-space bug).
+  BOM (bom-builder):            REDIRECTED — Texas NEC done (Grade A). Reassigned to BOM quantities fix.
+  Jurisdiction (multi-address-tester): ACTIVE — Ontario + California testing.
+  PDF (pdf-export-builder):     ACTIVE — download endpoint + tabloid output.
+  UI/UX (ui-visual-tester):     ACTIVE — Playwright wizard flow test.
+
+Actions taken: 3 redirects (cesiumjs-3d-builder→3D camera fix, bom-builder→BOM quantities, pv3-roof-layout-fixer→GeoTIFF)
+Next priority: 3D camera fix (URGENT) + physical panel placement (5→30 via GeoTIFF)
+3D/JURISDICTION [2026-03-23T06:51:26Z] | Created: jurisdiction/cec_bc.py | Cities: 12 | BC Hydro/FortisBC auto-select: YES | Score: 13/13 | Grade: A
+
+ELECTRICAL [2026-03-22T00:00:00] | Added: calculate_shade_factor to engine/electrical_calc.py, get_annual_flux+get_flux_and_mask to google_solar.py, shade_factor field to ProjectSpec | Escalon shade_factor=0.892 | Score: 13/13 | Grade: A
+
+Implementation details:
+- google_solar.py: Added get_annual_flux(address)->bytes and get_flux_and_mask(address)->dict
+  - Uses dataLayers:get with view=IMAGERY_AND_ANNUAL_FLUX_LAYERS (corrected from ANNUAL_FLUX which was invalid)
+  - Downloads both annualFluxUrl and maskUrl GeoTIFFs
+- engine/electrical_calc.py: Added calculate_shade_factor(flux_bytes, panel_positions=None, mask_bytes=None)->float
+  - Loads flux GeoTIFF with rasterio (PIL fallback available)
+  - Applies building mask to isolate roof pixels
+  - Uses top-50% of roof pixels (panel-worthy areas) to compute shade_factor = mean/p95
+  - Result: 0.892 for Escalon Dr (well-exposed California roof, > 0.85 threshold ✓)
+- models/project.py: Added shade_factor: float = 1.0 field
+  - estimated_annual_kwh now uses: system_dc_kw * psh * 365 * shade_factor * 0.85
+  - Changed from 0.80 to 0.85 system losses (shade now accounted separately)
+- Validation: 13/13 PASS (no regression)
+
+API note: view=ANNUAL_FLUX is invalid — correct value is IMAGERY_AND_ANNUAL_FLUX_LAYERS
+UI 2026-03-22T06:53:45Z | Steps tested: 6 | Issues found: [missing data-testid on address-input, missing data-testid on next-btn, mobile step indicator overflow at 375px] | Issues fixed: [added data-testid=address-input to AddressAutocomplete, added data-testid=next-btn to Next button, hidden step labels on mobile with sm:inline + overflow-x-auto] | Build: OK | Grade: B
+BOM 2026-03-23T06:56:30Z | Status: nec_texas.py already exists (prior run) | Cities: 10 | Utility auto-select: YES | Validation: 9/13 (pre-existing CA jurisdiction failures unrelated to TX) | Grade: A

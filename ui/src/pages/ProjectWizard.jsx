@@ -92,9 +92,9 @@ export default function ProjectWizard() {
       <h1 className="text-2xl font-bold text-gray-900 mb-6">New Project</h1>
 
       {/* Step indicator */}
-      <div className="flex items-center gap-2 mb-8">
+      <div className="flex items-center gap-1 sm:gap-2 mb-8 overflow-x-auto pb-1">
         {STEPS.map((s, i) => (
-          <div key={s} className="flex items-center">
+          <div key={s} className="flex items-center flex-shrink-0">
             <button
               onClick={() => i < step && setStep(i)}
               className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
@@ -107,10 +107,10 @@ export default function ProjectWizard() {
             >
               {i + 1}
             </button>
-            <span className={`ml-2 text-sm ${i === step ? 'text-gray-900 font-medium' : 'text-gray-400'}`}>
+            <span className={`ml-1 sm:ml-2 text-sm hidden sm:inline ${i === step ? 'text-gray-900 font-medium' : 'text-gray-400'}`}>
               {s}
             </span>
-            {i < STEPS.length - 1 && <div className="w-8 h-px bg-gray-200 mx-2" />}
+            {i < STEPS.length - 1 && <div className="w-4 sm:w-8 h-px bg-gray-200 mx-1 sm:mx-2" />}
           </div>
         ))}
       </div>
@@ -272,6 +272,7 @@ export default function ProjectWizard() {
           <button
             onClick={() => setStep(s => s + 1)}
             disabled={!canNext()}
+            data-testid="next-btn"
             className="px-6 py-2 text-sm font-medium text-white bg-solar-600 hover:bg-solar-700 rounded-lg disabled:opacity-50 transition-colors"
           >
             Next

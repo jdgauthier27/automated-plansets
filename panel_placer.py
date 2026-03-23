@@ -138,13 +138,26 @@ class PanelPlacer:
 
         sorted_roofs = sorted(roofs, key=_sort_key)
 
+        # Per-face cap: when ≥2 productive faces exist, limit any single face
+        # to ceil(max_panels / 2) so panels are spread across both array faces.
+        # This mirrors real installer practice (gable roofs get two arrays).
+        productive_count = sum(
+            1 for r in roofs
+            if not (r.azimuth_deg < 45 or r.azimuth_deg > 315)
+        )
+        if productive_count >= 2 and self.config.max_panels > 1:
+            per_face_cap = math.ceil(self.config.max_panels / 2)
+        else:
+            per_face_cap = self.config.max_panels
+
         for rf in sorted_roofs:
             if remaining <= 0:
                 results.append(PlacementResultWithSpec(
                     rf, [], self.panel, self.config.sun_hours_peak))
                 continue
 
-            panels = self._place_on_face(rf, pts_per_ft, remaining, panel_id)
+            face_limit = min(remaining, per_face_cap)
+            panels = self._place_on_face(rf, pts_per_ft, face_limit, panel_id)
             panel_id += len(panels)
             remaining -= len(panels)
 

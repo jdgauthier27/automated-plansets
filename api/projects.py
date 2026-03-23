@@ -212,6 +212,22 @@ def generate_planset(project_id: str):
         client = GoogleSolarClient(api_key="")
         insight = client.get_building_insight(address=project.address)
 
+    # Compute shade factor from annual flux GeoTIFF (async, non-blocking)
+    if api_key and client.api_key:
+        try:
+            flux_result = client.get_flux_and_mask(project.address)
+            if flux_result:
+                from engine.electrical_calc import calculate_shade_factor
+                project.shade_factor = calculate_shade_factor(
+                    flux_result.get("flux_bytes"),
+                    mask_bytes=flux_result.get("mask_bytes"),
+                )
+                import logging as _log
+                _log.getLogger(__name__).info("Shade factor: %.3f", project.shade_factor)
+        except Exception as _e:
+            import logging as _log
+            _log.getLogger(__name__).warning("Shade factor skipped: %s", _e)
+
     # Place panels
     roofs, scale = solar_insight_to_roof_faces(insight)
     panel_spec = PanelSpec(

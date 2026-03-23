@@ -107,11 +107,22 @@ class GoogleSolarClient:
     def get_annual_flux(self, address: str) -> Optional[bytes]:
         """Fetch annual flux GeoTIFF bytes for an address.
 
-        Calls dataLayers:get with view=ANNUAL_FLUX and downloads the returned
-        annualFluxUrl GeoTIFF. Returns raw bytes or None on failure.
+        Calls dataLayers:get with view=IMAGERY_AND_ANNUAL_FLUX_LAYERS and
+        downloads the returned annualFluxUrl GeoTIFF. Returns raw bytes or
+        None on failure.
+        """
+        result = self.get_flux_and_mask(address)
+        return result.get("flux_bytes") if result else None
+
+    def get_flux_and_mask(self, address: str) -> Optional[dict]:
+        """Fetch annual flux GeoTIFF and building mask for an address.
+
+        Returns dict with:
+          - 'flux_bytes': annual flux GeoTIFF bytes
+          - 'mask_bytes': building roof mask GeoTIFF bytes (or None)
+        Returns None on failure.
         """
         import urllib.request
-        import urllib.parse
 
         if not self.api_key:
             logger.warning("No API key — cannot fetch annual flux GeoTIFF")
@@ -142,23 +153,29 @@ class GoogleSolarClient:
             return None
 
         flux_url = data.get("annualFluxUrl")
+        mask_url = data.get("maskUrl")
+
         if not flux_url:
             logger.error("No annualFluxUrl in dataLayers response: %s", list(data.keys()))
             return None
 
-        # Download the GeoTIFF (append API key)
-        if "?" in flux_url:
-            dl_url = f"{flux_url}&key={self.api_key}"
-        else:
-            dl_url = f"{flux_url}?key={self.api_key}"
+        def _download(url_str: str) -> Optional[bytes]:
+            dl = (f"{url_str}&key={self.api_key}" if "?" in url_str
+                  else f"{url_str}?key={self.api_key}")
+            try:
+                with urllib.request.urlopen(urllib.request.Request(dl),
+                                            timeout=60, context=_ssl_ctx) as r:
+                    return r.read()
+            except Exception as e:
+                logger.error("GeoTIFF download failed: %s", e)
+                return None
 
-        try:
-            req = urllib.request.Request(dl_url)
-            with urllib.request.urlopen(req, timeout=60, context=_ssl_ctx) as resp:
-                return resp.read()
-        except Exception as e:
-            logger.error("Annual flux GeoTIFF download failed: %s", e)
+        flux_bytes = _download(flux_url)
+        mask_bytes = _download(mask_url) if mask_url else None
+
+        if flux_bytes is None:
             return None
+        return {"flux_bytes": flux_bytes, "mask_bytes": mask_bytes}
 
     def get_building_insight(
         self,

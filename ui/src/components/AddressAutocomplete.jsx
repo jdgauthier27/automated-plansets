@@ -83,6 +83,7 @@ export default function AddressAutocomplete({ value, onChange, apiKey, placehold
       placeholder={placeholder || "Start typing an address..."}
       className="flex-1 border border-gray-300 rounded-lg px-3 py-2"
       autoComplete="off"
+      data-testid="address-input"
     />
   )
 }

@@ -186,6 +186,34 @@ def parse_args():
 # ADDRESS MODE — Google Solar API
 # ═══════════════════════════════════════════════════════════════════════════════
 
+def _detect_country(address: str) -> str:
+    """Detect country from address string. Returns 'US' or 'CA' (Canada)."""
+    # Canadian provinces/territories pattern: ', XX ' or ', XX,' or end-of-string
+    _CA_PROVINCES = {
+        "QC", "ON", "BC", "AB", "MB", "SK", "NS", "NB", "NL", "PE", "YT", "NT", "NU"
+    }
+    addr_upper = address.upper()
+    # Check for explicit country suffix
+    if addr_upper.endswith(", USA") or ", USA," in addr_upper or addr_upper.endswith(" USA"):
+        return "US"
+    if addr_upper.endswith(", CANADA") or ", CANADA," in addr_upper:
+        return "CA"
+    # Check for Canadian postal code pattern (letter-digit-letter digit-letter-digit)
+    import re
+    if re.search(r'\b[A-Z]\d[A-Z]\s*\d[A-Z]\d\b', addr_upper):
+        return "CA"
+    # Check for Canadian province abbreviation preceded by comma+space
+    for prov in _CA_PROVINCES:
+        if (f", {prov} " in addr_upper or f", {prov}," in addr_upper
+                or addr_upper.endswith(f", {prov}")):
+            return "CA"
+    # Check for 5-digit US ZIP code
+    if re.search(r',\s*[A-Z]{2}\s+\d{5}(-\d{4})?\s*$', addr_upper):
+        return "US"
+    # Default to Canada (tool originally built for Quebec)
+    return "CA"
+
+
 def run_address_mode(args, logger):
     """Run the tool in address mode using Google Solar API data."""
     from google_solar import GoogleSolarClient, solar_insight_to_roof_faces
@@ -195,6 +223,8 @@ def run_address_mode(args, logger):
     client = GoogleSolarClient(api_key=api_key)
 
     address = args.address
+    country = _detect_country(address)
+    logger.info("Detected country: %s", "United States" if country == "US" else "Canada")
     logger.info("=" * 60)
     logger.info("SOLAR PLANSET TOOL — Address Mode")
     logger.info("=" * 60)
@@ -329,6 +359,7 @@ def run_address_mode(args, logger):
 
         project = ProjectSpec(
             address=address,
+            country=country,
             latitude=insight.lat,
             longitude=insight.lng,
             panel=panel_entry,
@@ -346,6 +377,21 @@ def run_address_mode(args, logger):
             building_insight=insight,
             placements=placements,
         )
+
+        # Compute shade factor from annual flux GeoTIFF
+        if api_key:
+            try:
+                flux_result = client.get_flux_and_mask(address)
+                if flux_result:
+                    from engine.electrical_calc import calculate_shade_factor
+                    project.shade_factor = calculate_shade_factor(
+                        flux_result.get("flux_bytes"),
+                        mask_bytes=flux_result.get("mask_bytes"),
+                    )
+                    logger.info("  Shade factor: %.3f", project.shade_factor)
+            except Exception as _e:
+                logger.warning("Shade factor skipped: %s", _e)
+
         logger.info("Using ProjectSpec with catalog equipment:")
         logger.info("  Panel: %s (%dW)", panel_entry.model_short, panel_entry.wattage_w)
         logger.info("  Inverter: %s (%s)", inverter_entry.model_short, inverter_entry.type)
