@@ -1,0 +1,545 @@
+{
+  "provinces": [
+    {
+      "province": "QC",
+      "country": "CA",
+      "jurisdiction_module": "cec_quebec",
+      "utilities": ["Hydro-Quebec"],
+      "code_edition": "CSA C22.1-2021",
+      "licensing_body": "RBQ / CMEQ",
+      "ahj_entries": [
+        {
+          "name": "Gatineau",
+          "province": "QC",
+          "ahj_label": "Ville de Gatineau — Service de l'urbanisme",
+          "design_temp_cold_c": -25,
+          "wind_speed_kph": 110,
+          "snow_load_kpa": 2.8,
+          "utility": "Hydro-Quebec",
+          "fire_setback_ft": 3
+        },
+        {
+          "name": "Montreal",
+          "province": "QC",
+          "ahj_label": "Ville de Montreal — Direction de l'amenagement urbain",
+          "design_temp_cold_c": -23,
+          "wind_speed_kph": 110,
+          "snow_load_kpa": 2.6,
+          "utility": "Hydro-Quebec",
+          "fire_setback_ft": 3
+        },
+        {
+          "name": "Quebec City",
+          "province": "QC",
+          "ahj_label": "Ville de Quebec — Service de la planification de l'amenagement et de l'environnement",
+          "design_temp_cold_c": -28,
+          "wind_speed_kph": 100,
+          "snow_load_kpa": 3.1,
+          "utility": "Hydro-Quebec",
+          "fire_setback_ft": 3
+        },
+        {
+          "name": "Sherbrooke",
+          "province": "QC",
+          "ahj_label": "Ville de Sherbrooke — Service de la planification et du developpement urbain",
+          "design_temp_cold_c": -26,
+          "wind_speed_kph": 100,
+          "snow_load_kpa": 2.9,
+          "utility": "Hydro-Quebec",
+          "fire_setback_ft": 3
+        },
+        {
+          "name": "Trois-Rivieres",
+          "province": "QC",
+          "ahj_label": "Ville de Trois-Rivieres — Service de l'amenagement et du developpement",
+          "design_temp_cold_c": -27,
+          "wind_speed_kph": 100,
+          "snow_load_kpa": 2.8,
+          "utility": "Hydro-Quebec",
+          "fire_setback_ft": 3
+        },
+        {
+          "name": "Laval",
+          "province": "QC",
+          "ahj_label": "Ville de Laval — Service de l'urbanisme",
+          "design_temp_cold_c": -23,
+          "wind_speed_kph": 110,
+          "snow_load_kpa": 2.6,
+          "utility": "Hydro-Quebec",
+          "fire_setback_ft": 3
+        },
+        {
+          "name": "Longueuil",
+          "province": "QC",
+          "ahj_label": "Ville de Longueuil — Direction de l'amenagement et de l'urbanisme",
+          "design_temp_cold_c": -23,
+          "wind_speed_kph": 110,
+          "snow_load_kpa": 2.6,
+          "utility": "Hydro-Quebec",
+          "fire_setback_ft": 3
+        }
+      ]
+    },
+    {
+      "province": "ON",
+      "country": "CA",
+      "jurisdiction_module": "cec_ontario",
+      "utilities": ["Hydro One", "Toronto Hydro", "Ottawa Hydro"],
+      "code_edition": "CEC 25th Edition",
+      "licensing_body": "ESA / ECRA",
+      "ahj_entries": [
+        {
+          "name": "Toronto",
+          "province": "ON",
+          "ahj_label": "City of Toronto — Toronto Building",
+          "design_temp_cold_c": -18,
+          "wind_speed_kph": 120,
+          "snow_load_kpa": 1.4,
+          "utility": "Toronto Hydro",
+          "fire_setback_ft": 3
+        },
+        {
+          "name": "Ottawa",
+          "province": "ON",
+          "ahj_label": "City of Ottawa — Building Code Services",
+          "design_temp_cold_c": -25,
+          "wind_speed_kph": 110,
+          "snow_load_kpa": 2.4,
+          "utility": "Ottawa Hydro",
+          "fire_setback_ft": 3
+        },
+        {
+          "name": "Mississauga",
+          "province": "ON",
+          "ahj_label": "City of Mississauga — Building Division",
+          "design_temp_cold_c": -19,
+          "wind_speed_kph": 120,
+          "snow_load_kpa": 1.5,
+          "utility": "Hydro One",
+          "fire_setback_ft": 3
+        },
+        {
+          "name": "Brampton",
+          "province": "ON",
+          "ahj_label": "City of Brampton — Building Division",
+          "design_temp_cold_c": -19,
+          "wind_speed_kph": 120,
+          "snow_load_kpa": 1.5,
+          "utility": "Hydro One",
+          "fire_setback_ft": 3
+        },
+        {
+          "name": "Hamilton",
+          "province": "ON",
+          "ahj_label": "City of Hamilton — Planning and Building Division",
+          "design_temp_cold_c": -17,
+          "wind_speed_kph": 110,
+          "snow_load_kpa": 1.6,
+          "utility": "Hydro One",
+          "fire_setback_ft": 3
+        },
+        {
+          "name": "London",
+          "province": "ON",
+          "ahj_label": "City of London — Building Division",
+          "design_temp_cold_c": -19,
+          "wind_speed_kph": 110,
+          "snow_load_kpa": 1.6,
+          "utility": "Hydro One",
+          "fire_setback_ft": 3
+        },
+        {
+          "name": "Windsor",
+          "province": "ON",
+          "ahj_label": "City of Windsor — Building Department",
+          "design_temp_cold_c": -14,
+          "wind_speed_kph": 110,
+          "snow_load_kpa": 1.0,
+          "utility": "Hydro One",
+          "fire_setback_ft": 3
+        },
+        {
+          "name": "Kingston",
+          "province": "ON",
+          "ahj_label": "City of Kingston — Building Department",
+          "design_temp_cold_c": -22,
+          "wind_speed_kph": 110,
+          "snow_load_kpa": 1.9,
+          "utility": "Hydro One",
+          "fire_setback_ft": 3
+        },
+        {
+          "name": "Thunder Bay",
+          "province": "ON",
+          "ahj_label": "City of Thunder Bay — Building Division",
+          "design_temp_cold_c": -31,
+          "wind_speed_kph": 110,
+          "snow_load_kpa": 2.8,
+          "utility": "Hydro One",
+          "fire_setback_ft": 3
+        },
+        {
+          "name": "Barrie",
+          "province": "ON",
+          "ahj_label": "City of Barrie — Building Division",
+          "design_temp_cold_c": -22,
+          "wind_speed_kph": 110,
+          "snow_load_kpa": 2.1,
+          "utility": "Hydro One",
+          "fire_setback_ft": 3
+        }
+      ]
+    }
+  ,
+    {
+      "province": "BC",
+      "country": "CA",
+      "jurisdiction_module": "cec_bc",
+      "utilities": ["BC Hydro", "FortisBC"],
+      "code_edition": "CEC 25th Edition / BCBC 2018",
+      "licensing_body": "Technical Safety BC",
+      "ahj_entries": [
+        {
+          "name": "Vancouver",
+          "province": "BC",
+          "ahj_label": "City of Vancouver — Development, Buildings and Licensing",
+          "design_temp_cold_c": -7,
+          "wind_speed_kph": 144,
+          "snow_load_kpa": 1.9,
+          "utility": "BC Hydro",
+          "fire_setback_ft": 3,
+          "seismic": "SDC D"
+        },
+        {
+          "name": "Surrey",
+          "province": "BC",
+          "ahj_label": "City of Surrey — Planning and Development",
+          "design_temp_cold_c": -8,
+          "wind_speed_kph": 144,
+          "snow_load_kpa": 1.9,
+          "utility": "BC Hydro",
+          "fire_setback_ft": 3,
+          "seismic": "SDC D"
+        },
+        {
+          "name": "Burnaby",
+          "province": "BC",
+          "ahj_label": "City of Burnaby — Building and Planning Department",
+          "design_temp_cold_c": -7,
+          "wind_speed_kph": 144,
+          "snow_load_kpa": 1.9,
+          "utility": "BC Hydro",
+          "fire_setback_ft": 3,
+          "seismic": "SDC D"
+        },
+        {
+          "name": "Richmond",
+          "province": "BC",
+          "ahj_label": "City of Richmond — Building Approvals",
+          "design_temp_cold_c": -7,
+          "wind_speed_kph": 144,
+          "snow_load_kpa": 1.9,
+          "utility": "BC Hydro",
+          "fire_setback_ft": 3,
+          "seismic": "SDC D"
+        },
+        {
+          "name": "Kelowna",
+          "province": "BC",
+          "ahj_label": "City of Kelowna — Development Services",
+          "design_temp_cold_c": -22,
+          "wind_speed_kph": 130,
+          "snow_load_kpa": 2.5,
+          "utility": "FortisBC",
+          "fire_setback_ft": 3,
+          "seismic": "SDC B"
+        },
+        {
+          "name": "Abbotsford",
+          "province": "BC",
+          "ahj_label": "City of Abbotsford — Development Services",
+          "design_temp_cold_c": -12,
+          "wind_speed_kph": 130,
+          "snow_load_kpa": 2.2,
+          "utility": "BC Hydro",
+          "fire_setback_ft": 3,
+          "seismic": "SDC C"
+        },
+        {
+          "name": "Coquitlam",
+          "province": "BC",
+          "ahj_label": "City of Coquitlam — Development Services",
+          "design_temp_cold_c": -9,
+          "wind_speed_kph": 144,
+          "snow_load_kpa": 2.0,
+          "utility": "BC Hydro",
+          "fire_setback_ft": 3,
+          "seismic": "SDC D"
+        },
+        {
+          "name": "Langley",
+          "province": "BC",
+          "ahj_label": "Township of Langley — Building Division",
+          "design_temp_cold_c": -10,
+          "wind_speed_kph": 130,
+          "snow_load_kpa": 2.0,
+          "utility": "BC Hydro",
+          "fire_setback_ft": 3,
+          "seismic": "SDC D"
+        },
+        {
+          "name": "Saanich",
+          "province": "BC",
+          "ahj_label": "District of Saanich — Building Inspection",
+          "design_temp_cold_c": -6,
+          "wind_speed_kph": 144,
+          "snow_load_kpa": 1.4,
+          "utility": "BC Hydro",
+          "fire_setback_ft": 3,
+          "seismic": "SDC D"
+        },
+        {
+          "name": "Prince George",
+          "province": "BC",
+          "ahj_label": "City of Prince George — Inspections and Permits",
+          "design_temp_cold_c": -33,
+          "wind_speed_kph": 110,
+          "snow_load_kpa": 3.8,
+          "utility": "BC Hydro",
+          "fire_setback_ft": 3,
+          "seismic": "SDC B"
+        },
+        {
+          "name": "Kamloops",
+          "province": "BC",
+          "ahj_label": "City of Kamloops — Development and Engineering Services",
+          "design_temp_cold_c": -23,
+          "wind_speed_kph": 120,
+          "snow_load_kpa": 2.2,
+          "utility": "BC Hydro",
+          "fire_setback_ft": 3,
+          "seismic": "SDC B"
+        },
+        {
+          "name": "Nanaimo",
+          "province": "BC",
+          "ahj_label": "City of Nanaimo — Development and Engineering Services",
+          "design_temp_cold_c": -7,
+          "wind_speed_kph": 130,
+          "snow_load_kpa": 1.6,
+          "utility": "BC Hydro",
+          "fire_setback_ft": 3,
+          "seismic": "SDC C"
+        }
+      ]
+    }
+  ,
+    {
+      "province": "CA",
+      "country": "US",
+      "jurisdiction_module": "nec_california",
+      "utilities": ["LADWP", "SCE", "SDG&E", "PG&E", "SMUD", "GWP"],
+      "code_edition": "NEC 2020 / California Electrical Code",
+      "licensing_body": "CSLB C-46 Solar",
+      "ahj_entries": [
+        {
+          "name": "Los Angeles",
+          "province": "CA",
+          "ahj_label": "City of Los Angeles",
+          "design_temp_cold_c": 1,
+          "wind_speed_mph": 94,
+          "snow_load_psf": 0,
+          "utility": "LADWP",
+          "fire_setback_ft": 3,
+          "seismic": "SDC D"
+        },
+        {
+          "name": "Encino",
+          "province": "CA",
+          "ahj_label": "City of Los Angeles",
+          "design_temp_cold_c": 1,
+          "wind_speed_mph": 94,
+          "snow_load_psf": 0,
+          "utility": "LADWP",
+          "fire_setback_ft": 3,
+          "seismic": "SDC D"
+        },
+        {
+          "name": "Sherman Oaks",
+          "province": "CA",
+          "ahj_label": "City of Los Angeles",
+          "design_temp_cold_c": 1,
+          "wind_speed_mph": 94,
+          "snow_load_psf": 0,
+          "utility": "LADWP",
+          "fire_setback_ft": 3,
+          "seismic": "SDC D"
+        },
+        {
+          "name": "Pasadena",
+          "province": "CA",
+          "ahj_label": "City of Pasadena",
+          "design_temp_cold_c": 1,
+          "wind_speed_mph": 94,
+          "snow_load_psf": 0,
+          "utility": "SCE",
+          "fire_setback_ft": 3,
+          "seismic": "SDC D"
+        },
+        {
+          "name": "San Diego",
+          "province": "CA",
+          "ahj_label": "City of San Diego",
+          "design_temp_cold_c": 5,
+          "wind_speed_mph": 85,
+          "snow_load_psf": 0,
+          "utility": "SDG&E",
+          "fire_setback_ft": 3,
+          "seismic": "SDC D"
+        },
+        {
+          "name": "San Francisco",
+          "province": "CA",
+          "ahj_label": "City of San Francisco",
+          "design_temp_cold_c": 3,
+          "wind_speed_mph": 85,
+          "snow_load_psf": 0,
+          "utility": "PG&E",
+          "fire_setback_ft": 3,
+          "seismic": "SDC E"
+        },
+        {
+          "name": "Sacramento",
+          "province": "CA",
+          "ahj_label": "City of Sacramento",
+          "design_temp_cold_c": -2,
+          "wind_speed_mph": 85,
+          "snow_load_psf": 0,
+          "utility": "SMUD",
+          "fire_setback_ft": 3,
+          "seismic": "SDC D"
+        }
+      ]
+    },
+    {
+      "province": "TX",
+      "country": "US",
+      "jurisdiction_module": "nec_texas",
+      "utilities": ["Oncor", "CenterPoint Energy", "AEP Texas", "CPS Energy", "Austin Energy", "El Paso Electric", "ERCOT Retail Provider"],
+      "code_edition": "NEC 2020 (Texas Adoption)",
+      "licensing_body": "TDLR",
+      "ahj_entries": [
+        {
+          "name": "Houston",
+          "province": "TX",
+          "ahj_label": "City of Houston / TDLR",
+          "design_temp_cold_c": 2,
+          "wind_speed_mph": 115,
+          "snow_load_psf": 0,
+          "utility": "CenterPoint Energy",
+          "fire_setback_ft": 3,
+          "seismic": "SDC B"
+        },
+        {
+          "name": "Dallas",
+          "province": "TX",
+          "ahj_label": "City of Dallas / TDLR",
+          "design_temp_cold_c": -5,
+          "wind_speed_mph": 115,
+          "snow_load_psf": 0,
+          "utility": "Oncor",
+          "fire_setback_ft": 3,
+          "seismic": "SDC B"
+        },
+        {
+          "name": "San Antonio",
+          "province": "TX",
+          "ahj_label": "City of San Antonio / TDLR",
+          "design_temp_cold_c": -1,
+          "wind_speed_mph": 115,
+          "snow_load_psf": 0,
+          "utility": "CPS Energy",
+          "fire_setback_ft": 3,
+          "seismic": "SDC B"
+        },
+        {
+          "name": "Austin",
+          "province": "TX",
+          "ahj_label": "City of Austin / TDLR",
+          "design_temp_cold_c": -2,
+          "wind_speed_mph": 115,
+          "snow_load_psf": 0,
+          "utility": "Austin Energy",
+          "fire_setback_ft": 3,
+          "seismic": "SDC B"
+        },
+        {
+          "name": "Fort Worth",
+          "province": "TX",
+          "ahj_label": "City of Fort Worth / TDLR",
+          "design_temp_cold_c": -5,
+          "wind_speed_mph": 115,
+          "snow_load_psf": 0,
+          "utility": "Oncor",
+          "fire_setback_ft": 3,
+          "seismic": "SDC B"
+        },
+        {
+          "name": "El Paso",
+          "province": "TX",
+          "ahj_label": "City of El Paso / TDLR",
+          "design_temp_cold_c": -6,
+          "wind_speed_mph": 115,
+          "snow_load_psf": 0,
+          "utility": "El Paso Electric",
+          "fire_setback_ft": 3,
+          "seismic": "SDC B"
+        },
+        {
+          "name": "Arlington",
+          "province": "TX",
+          "ahj_label": "City of Arlington / TDLR",
+          "design_temp_cold_c": -5,
+          "wind_speed_mph": 115,
+          "snow_load_psf": 0,
+          "utility": "Oncor",
+          "fire_setback_ft": 3,
+          "seismic": "SDC B"
+        },
+        {
+          "name": "Corpus Christi",
+          "province": "TX",
+          "ahj_label": "City of Corpus Christi / TDLR",
+          "design_temp_cold_c": 2,
+          "wind_speed_mph": 130,
+          "snow_load_psf": 0,
+          "utility": "AEP Texas",
+          "fire_setback_ft": 3,
+          "seismic": "SDC B"
+        },
+        {
+          "name": "Plano",
+          "province": "TX",
+          "ahj_label": "City of Plano / TDLR",
+          "design_temp_cold_c": -5,
+          "wind_speed_mph": 115,
+          "snow_load_psf": 0,
+          "utility": "Oncor",
+          "fire_setback_ft": 3,
+          "seismic": "SDC B"
+        },
+        {
+          "name": "Laredo",
+          "province": "TX",
+          "ahj_label": "City of Laredo / TDLR",
+          "design_temp_cold_c": 1,
+          "wind_speed_mph": 115,
+          "snow_load_psf": 0,
+          "utility": "AEP Texas",
+          "fire_setback_ft": 3,
+          "seismic": "SDC B"
+        }
+      ]
+    }
+  ]
+}

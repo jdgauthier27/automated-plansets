@@ -1,0 +1,122 @@
+[
+  {
+    "id": "ironridge-xr10",
+    "manufacturer": "IronRidge",
+    "model": "XR10",
+    "type": "flush_mount_rail",
+    "material": "6005-T5 Extruded Aluminum",
+    "finish": "Clear Anodized",
+
+    "profile": {
+      "width_in": 2.22,
+      "height_in": 1.72,
+      "wall_thickness_in": 0.099
+    },
+    "available_lengths_ft": [7, 11, 14, 17],
+
+    "wind_load_psf": 55,
+    "snow_load_psf": 70,
+    "max_span_ft": 6.0,
+    "max_cantilever_ft": 1.5,
+
+    "compatible_attachment_ids": ["ironridge-flashfoot2"],
+    "clamps": {
+      "mid_clamp": "IronRidge UFO",
+      "end_clamp": "IronRidge Stopper Sleeve"
+    },
+    "bonding_method": "Bonded Splice (integrated grounding)",
+
+    "certifications": ["UL 2703", "ICC-ESR"],
+    "compatible_inverter_types": ["string", "micro"]
+  },
+  {
+    "id": "k2-crossrail-48x",
+    "manufacturer": "K2 Systems",
+    "model": "CrossRail 48-X",
+    "type": "flush_mount_rail",
+    "material": "6063-T6 Extruded Aluminum",
+    "finish": "Mill",
+
+    "profile": {
+      "width_in": 1.89,
+      "height_in": 1.89,
+      "wall_thickness_in": 0.079
+    },
+    "available_lengths_ft": [7, 10, 14],
+
+    "wind_load_psf": 50,
+    "snow_load_psf": 65,
+    "max_span_ft": 5.5,
+    "max_cantilever_ft": 1.25,
+
+    "compatible_attachment_ids": ["k2-multi-mount", "s5-protea"],
+    "clamps": {
+      "mid_clamp": "K2 OneMid Clamp",
+      "end_clamp": "K2 Yeti End Clamp"
+    },
+    "bonding_method": "UL 2703 Integrated Bonding (one lug per row)",
+
+    "certifications": ["UL 2703", "ICC-ESR"],
+    "compatible_inverter_types": ["string", "micro"]
+  },
+  {
+    "id": "unirac-solarmount",
+    "manufacturer": "Unirac",
+    "model": "SolarMount",
+    "type": "flush_mount_rail",
+    "material": "6063-T6 Extruded Aluminum",
+    "finish": "Clear Anodized",
+
+    "profile": {
+      "width_in": 1.68,
+      "height_in": 1.85,
+      "wall_thickness_in": 0.090
+    },
+    "available_lengths_ft": [7, 10, 14],
+
+    "wind_load_psf": 45,
+    "snow_load_psf": 50,
+    "max_span_ft": 5.5,
+    "max_cantilever_ft": 1.25,
+
+    "compatible_attachment_ids": ["ironridge-flashfoot2", "k2-multi-mount"],
+    "clamps": {
+      "mid_clamp": "Unirac RM Mid Clamp",
+      "end_clamp": "Unirac RM End Clamp"
+    },
+    "bonding_method": "UL 2703 Integrated Bonding",
+
+    "certifications": ["UL 2703", "ICC-ESR"],
+    "compatible_inverter_types": ["string", "micro"]
+  },
+  {
+    "id": "snapnrack-series-100",
+    "manufacturer": "SnapNRack",
+    "model": "Series 100",
+    "type": "flush_mount_rail",
+    "material": "6063-T6 Extruded Aluminum",
+    "finish": "Clear Anodized",
+
+    "profile": {
+      "width_in": 1.75,
+      "height_in": 1.75,
+      "wall_thickness_in": 0.085
+    },
+    "available_lengths_ft": [7, 10, 14],
+
+    "wind_load_psf": 50,
+    "snow_load_psf": 50,
+    "max_span_ft": 5.75,
+    "max_cantilever_ft": 1.5,
+
+    "compatible_attachment_ids": ["ironridge-flashfoot2", "k2-multi-mount"],
+    "clamps": {
+      "mid_clamp": "SnapNRack Mid Clamp",
+      "end_clamp": "SnapNRack End Clamp"
+    },
+    "bonding_method": "UL 2703 Integrated Bonding",
+
+    "certifications": ["UL 2703", "ICC-ESR"],
+    "compatible_inverter_types": ["string", "micro"]
+  }
+]

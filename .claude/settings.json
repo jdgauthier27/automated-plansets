@@ -1,0 +1,58 @@
+{
+  "env": {
+    "GOOGLE_SOLAR_API_KEY": "AIzaSyCddcFWFRf_zoV5IPv_8FhgquGPxSdmI5M"
+  },
+  "permissions": {
+    "defaultMode": "bypassPermissions",
+    "allow": [
+      "Bash(*)",
+      "Read",
+      "Write",
+      "Edit",
+      "Glob",
+      "Grep",
+      "WebFetch",
+      "WebSearch",
+      "Agent"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ruff format --quiet $CLAUDE_FILE_PATHS 2>/dev/null || true"
+          },
+          {
+            "type": "command",
+            "command": "cd '/Users/jdelafontaine/Quebec Solaire/Automated plans/solar_planset_tool' && echo $CLAUDE_FILE_PATHS | grep -qE '\\.py$' && python3 -c \"import py_compile,sys; [py_compile.compile(f,doraise=True) for f in sys.argv[1:]]\" $CLAUDE_FILE_PATHS 2>&1 | head -5 || true",
+            "statusMessage": "Syntax checking..."
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd '/Users/jdelafontaine/Quebec Solaire/Automated plans/solar_planset_tool' && (lsof -ti:8000 >/dev/null 2>&1 || (python3 app.py &>/tmp/solar_api.log &)) && (lsof -ti:5173 >/dev/null 2>&1 || (cd ui && npm run dev &>/tmp/solar_ui.log &)) 2>/dev/null; true",
+            "statusMessage": "Ensuring servers are running..."
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo $CLAUDE_FILE_PATHS | grep -qE '\\.env$|\\.env\\.' && echo 'BLOCKED: .env files contain API keys' >&2 && exit 1 || exit 0"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,224 @@
+[
+  {
+    "id": "solis-s6-eh1p5k",
+    "manufacturer": "Solis",
+    "model": "S6-EH1P5K-H-US",
+    "model_short": "Solis S6 5kW",
+    "type": "string",
+
+    "max_ac_output_va": 5000,
+    "rated_ac_output_w": 5000,
+    "max_ac_amps": 20.8,
+    "ac_voltage_v": 240,
+    "ac_phases": 1,
+
+    "max_dc_input_w": 6750,
+    "max_dc_voltage_v": 600,
+    "mppt_voltage_min_v": 80,
+    "mppt_voltage_max_v": 520,
+    "max_dc_input_current_a": 16.0,
+    "mppt_count": 3,
+
+    "cec_efficiency_pct": 96.0,
+
+    "operating_temp_min_c": -25,
+    "operating_temp_max_c": 60,
+
+    "rapid_shutdown_builtin": true,
+    "rapid_shutdown_method": "Tigo TS4 / APS Transmitter (integrated)",
+    "monitoring": "SolisCloud",
+
+    "max_units_per_branch_15a": 0,
+    "max_units_per_branch_20a": 0,
+
+    "certifications": ["UL 1741-SA", "UL 9540", "UL 3741", "IEEE 1547-2018", "CSA C22.2 No. 107.1"],
+
+    "compatible_panel_wattage_min_w": 300,
+    "compatible_panel_wattage_max_w": 600
+  },
+  {
+    "id": "hoymiles-hms-800",
+    "manufacturer": "Hoymiles",
+    "model": "HMS-800-2T-NA",
+    "model_short": "Hoymiles HMS-800",
+    "type": "micro",
+
+    "max_ac_output_va": 800,
+    "rated_ac_output_w": 720,
+    "max_ac_amps": 3.33,
+    "ac_voltage_v": 240,
+    "ac_phases": 1,
+
+    "max_dc_input_w": 540,
+    "max_dc_voltage_v": 60,
+    "mppt_voltage_min_v": 16,
+    "mppt_voltage_max_v": 60,
+    "max_dc_input_current_a": 14.0,
+    "mppt_count": 2,
+
+    "cec_efficiency_pct": 96.7,
+
+    "operating_temp_min_c": -40,
+    "operating_temp_max_c": 65,
+
+    "rapid_shutdown_builtin": true,
+    "rapid_shutdown_method": "Integrated module-level",
+    "monitoring": "Hoymiles DTU / S-Miles Cloud",
+
+    "max_units_per_branch_15a": 4,
+    "max_units_per_branch_20a": 5,
+
+    "certifications": ["UL 1741", "CSA C22.2 No. 107.1", "IEEE 1547", "FCC Part 15"],
+
+    "compatible_panel_wattage_min_w": 320,
+    "compatible_panel_wattage_max_w": 540
+  },
+  {
+    "id": "enphase-iq8plus",
+    "manufacturer": "Enphase",
+    "model": "IQ8PLUS-72-2-US",
+    "model_short": "Enphase IQ8+",
+    "type": "micro",
+
+    "max_ac_output_va": 300,
+    "rated_ac_output_w": 290,
+    "max_ac_amps": 1.25,
+    "ac_voltage_v": 240,
+    "ac_phases": 1,
+
+    "max_dc_input_w": 440,
+    "max_dc_voltage_v": 60,
+    "mppt_voltage_min_v": 16,
+    "mppt_voltage_max_v": 58,
+    "max_dc_input_current_a": 12.5,
+    "mppt_count": 1,
+
+    "cec_efficiency_pct": 97.5,
+
+    "operating_temp_min_c": -40,
+    "operating_temp_max_c": 60,
+
+    "rapid_shutdown_builtin": true,
+    "rapid_shutdown_method": "Integrated module-level",
+    "monitoring": "Enphase Enlighten / IQ Gateway",
+
+    "max_units_per_branch_15a": 11,
+    "max_units_per_branch_20a": 15,
+
+    "certifications": ["UL 1741-SA", "UL 62109", "CSA C22.2 No. 107.1", "IEEE 1547-2018", "FCC Part 15"],
+
+    "compatible_panel_wattage_min_w": 235,
+    "compatible_panel_wattage_max_w": 440
+  },
+  {
+    "id": "solaredge-se7600h",
+    "manufacturer": "SolarEdge",
+    "model": "SE7600H-US",
+    "model_short": "SolarEdge SE7600H",
+    "type": "string",
+
+    "max_ac_output_va": 7600,
+    "rated_ac_output_w": 7600,
+    "max_ac_amps": 31.7,
+    "ac_voltage_v": 240,
+    "ac_phases": 1,
+
+    "max_dc_input_w": 9300,
+    "max_dc_voltage_v": 480,
+    "mppt_voltage_min_v": 100,
+    "mppt_voltage_max_v": 480,
+    "max_dc_input_current_a": 22.5,
+    "mppt_count": 1,
+
+    "cec_efficiency_pct": 99.0,
+
+    "operating_temp_min_c": -40,
+    "operating_temp_max_c": 60,
+
+    "rapid_shutdown_builtin": true,
+    "rapid_shutdown_method": "Integrated (requires SolarEdge Power Optimizers)",
+    "monitoring": "SolarEdge mySolarEdge / SetApp",
+
+    "max_units_per_branch_15a": 0,
+    "max_units_per_branch_20a": 0,
+
+    "certifications": ["UL 1741-SA", "UL 9540", "IEEE 1547-2018", "CSA C22.2 No. 107.1"],
+
+    "compatible_panel_wattage_min_w": 300,
+    "compatible_panel_wattage_max_w": 600
+  },
+  {
+    "id": "sma-sunny-boy-7700",
+    "manufacturer": "SMA",
+    "model": "Sunny Boy 7.7-US",
+    "model_short": "SMA SB7.7",
+    "type": "string",
+
+    "max_ac_output_va": 7700,
+    "rated_ac_output_w": 7700,
+    "max_ac_amps": 32.1,
+    "ac_voltage_v": 240,
+    "ac_phases": 1,
+
+    "max_dc_input_w": 11400,
+    "max_dc_voltage_v": 600,
+    "mppt_voltage_min_v": 100,
+    "mppt_voltage_max_v": 530,
+    "max_dc_input_current_a": 30.0,
+    "mppt_count": 2,
+
+    "cec_efficiency_pct": 97.0,
+
+    "operating_temp_min_c": -25,
+    "operating_temp_max_c": 60,
+
+    "rapid_shutdown_builtin": false,
+    "rapid_shutdown_method": "External module-level shutdown device required",
+    "monitoring": "SMA Sunny Portal / SMA Energy",
+
+    "max_units_per_branch_15a": 0,
+    "max_units_per_branch_20a": 0,
+
+    "certifications": ["UL 1741-SA", "UL 9540", "IEEE 1547-2018", "CSA C22.2 No. 107.1"],
+
+    "compatible_panel_wattage_min_w": 300,
+    "compatible_panel_wattage_max_w": 600
+  },
+  {
+    "id": "enphase-iq8m",
+    "manufacturer": "Enphase",
+    "model": "IQ8M",
+    "model_short": "Enphase IQ8M",
+    "type": "micro",
+
+    "max_ac_output_va": 330,
+    "rated_ac_output_w": 295,
+    "max_ac_amps": 1.38,
+    "ac_voltage_v": 240,
+    "ac_phases": 1,
+
+    "max_dc_input_w": 460,
+    "max_dc_voltage_v": 60,
+    "mppt_voltage_min_v": 16,
+    "mppt_voltage_max_v": 58,
+    "max_dc_input_current_a": 14.0,
+    "mppt_count": 1,
+
+    "cec_efficiency_pct": 97.0,
+
+    "operating_temp_min_c": -40,
+    "operating_temp_max_c": 65,
+
+    "rapid_shutdown_builtin": true,
+    "rapid_shutdown_method": "Integrated module-level",
+    "monitoring": "Enphase Enlighten / IQ Gateway",
+
+    "max_units_per_branch_15a": 11,
+    "max_units_per_branch_20a": 15,
+
+    "certifications": ["UL 1741-SA", "UL 62109", "CSA C22.2 No. 107.1", "IEEE 1547-2018", "FCC Part 15"],
+
+    "compatible_panel_wattage_min_w": 235,
+    "compatible_panel_wattage_max_w": 460
+  }
+]

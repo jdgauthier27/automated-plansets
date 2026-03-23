@@ -1,0 +1,82 @@
+[
+  {
+    "id": "ironridge-flashfoot2",
+    "manufacturer": "IronRidge",
+    "model": "FlashFoot2",
+    "type": "deck_mount",
+
+    "compatible_roof_materials": ["asphalt_shingle", "composite_shingle"],
+    "compatible_racking_ids": ["ironridge-xr10"],
+
+    "flashing_material": "Aluminum",
+    "flashing_dimensions_in": {"width": 12, "height": 16},
+    "fastener_spec": "5/16\" x 4\" SS Lag Bolt",
+    "min_penetration_in": 2.5,
+    "max_load_lbs": 750,
+    "sealant": "Polyether",
+
+    "certifications": ["UL 2703", "ICC-ESR-4568"],
+    "code_compliance": ["IRC R905.2", "IFC 605.11"],
+
+    "installation_steps": [
+      "Remove shingles at mount location, exposing deck",
+      "Install FlashFoot2 base plate with lag screw into rafter",
+      "Apply sealant under flashing skirt",
+      "Replace shingles over flashing, maintaining weather seal",
+      "Attach L-foot to base plate, torque to 15 ft-lbs"
+    ]
+  },
+  {
+    "id": "k2-multi-mount",
+    "manufacturer": "K2 Systems",
+    "model": "Multi Mount Kit",
+    "type": "deck_mount",
+
+    "compatible_roof_materials": ["asphalt_shingle", "composite_shingle"],
+    "compatible_racking_ids": ["k2-crossrail-48x"],
+
+    "flashing_material": "Aluminum with EPDM gasket",
+    "flashing_dimensions_in": {"width": 10, "height": 14},
+    "fastener_spec": "5/16\" x 3\" SS Lag Bolt",
+    "min_penetration_in": 2.0,
+    "max_load_lbs": 320,
+    "sealant": "EPDM integrated gasket",
+
+    "certifications": ["UL 2703"],
+    "code_compliance": ["IRC R905.2"],
+
+    "installation_steps": [
+      "Position Multi Mount base on deck over rafter",
+      "Drive lag bolt through EPDM gasket and base plate into rafter",
+      "Attach standoff post to base plate",
+      "Slide CrossRail onto standoff bracket",
+      "Torque rail bolt to specified value"
+    ]
+  },
+  {
+    "id": "s5-protea",
+    "manufacturer": "S-5!",
+    "model": "ProteaBracket",
+    "type": "clamp_mount",
+
+    "compatible_roof_materials": ["metal_standing_seam"],
+    "compatible_racking_ids": ["ironridge-xr10", "k2-crossrail-48x"],
+
+    "flashing_material": "N/A (non-penetrating)",
+    "flashing_dimensions_in": {},
+    "fastener_spec": "Stainless steel set screws",
+    "min_penetration_in": 0.0,
+    "max_load_lbs": 600,
+    "sealant": "N/A",
+
+    "certifications": ["UL 2703"],
+    "code_compliance": [],
+
+    "installation_steps": [
+      "Position clamp on standing seam rib",
+      "Tighten set screws to specified torque (per seam gauge)",
+      "Attach rail bracket to clamp body",
+      "Slide rail onto bracket"
+    ]
+  }
+]

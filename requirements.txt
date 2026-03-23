@@ -1,0 +1,11 @@
+# Solar Planset Tool — Dependencies
+numpy>=1.21
+Pillow>=9.0
+shapely>=2.0
+
+# Optional: PDF output
+# weasyprint>=60.0
+
+# Optional: Roof detection from PDF plansets
+# opencv-python>=4.8
+# fpdf2>=2.7
