@@ -4694,7 +4694,7 @@ class HtmlRenderer:
         _safety_listing = f"{'UL 1741 LISTED' if _is_nec else 'CSA C22.2 No. 107.1 LISTED'}"
         def _lr(nec_ref, cec_ref):
             """Return the appropriate label code ref for the jurisdiction."""
-            return f"NEC {nec_ref}" if _is_nec else f"CEC Rule {cec_ref} | NEC {nec_ref}"
+            return f"NEC {nec_ref}" if _is_nec else f"CEC Rule {cec_ref}"
 
         labels = [
             # DANGER x 2
