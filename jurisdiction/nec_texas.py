@@ -111,7 +111,11 @@ class TexasNECJurisdiction(NECBaseEngine):
     utility auto-selection, and TDLR permit authority.
     """
 
-    def __init__(self, city: str = "", county: str = ""):
+    def __init__(self, city: str = "", county: str = "",
+                 municipality: str = "", state: str = ""):
+        # Accept municipality/state as aliases for city/county (test harness compatibility)
+        if not city and municipality:
+            city = municipality
         self.city = city.lower().strip()
         self.county = county.lower().strip()
         # Determine wind speed at init time
@@ -287,3 +291,22 @@ class TexasNECJurisdiction(NECBaseEngine):
             "12. The backfeed breaker shall be at the opposite end of the bus from the main breaker.",
             "13. All PV source circuits shall have individual overcurrent protection per NEC 2020 690.9.",
         ]
+
+    # ── Convenience summary dict (used by test harness) ───────────────────
+
+    def get_jurisdiction_data(self) -> dict:
+        """Return a flat summary dict for quick validation and rendering."""
+        return {
+            "utility": self.utility_name,
+            "wire_type": self.wire_type,
+            "electrical_code": self.get_code_edition(),
+            "utility_full": self.utility_full_name,
+            "wind_mph": self.wind_speed_mph,
+            "snow_psf": 0,
+            "licensing_body": self.get_licensing_body(),
+            "code_name": self.get_code_name(),
+        }
+
+
+# Alias for test harness compatibility
+TexasJurisdiction = TexasNECJurisdiction

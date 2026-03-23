@@ -49,6 +49,7 @@ try:
     from models.project import ProjectSpec
     from models.equipment import PanelCatalogEntry, InverterCatalogEntry
     from engine.bom_calculator import calculate_bom, BOMItem
+    from engine.electrical_calc import calculate_string_config
     HAS_PROJECT_SPEC = True
 except ImportError:
     HAS_PROJECT_SPEC = False
@@ -260,6 +261,17 @@ class HtmlRenderer:
                 # Ontario: ESA/ECRA licensing, Hydro One or Toronto Hydro
                 from jurisdiction.cec_ontario import OntarioJurisdiction
                 self._jurisdiction_cache = OntarioJurisdiction(city=city)
+            elif jid == "cec_bc" or (not jid and self._project.country == "CA" and (
+                getattr(self._project, 'province_or_state', '').upper() == "BC" or
+                city.lower() in {
+                    "vancouver", "victoria", "kelowna", "surrey", "burnaby",
+                    "richmond", "abbotsford", "coquitlam", "langley", "saanich",
+                    "nanaimo", "kamloops", "prince george", "penticton", "vernon",
+                    "trail", "nelson", "castlegar", "chilliwack", "north vancouver",
+                    "west vancouver", "new westminster", "port coquitlam", "port moody",
+                })):
+                from jurisdiction.cec_bc import BCJurisdiction
+                self._jurisdiction_cache = BCJurisdiction(city=city)
             elif jid == "cec_quebec" or (not jid and self._project.country == "CA"):
                 from jurisdiction.cec_quebec import CECQuebecEngine
                 self._jurisdiction_cache = CECQuebecEngine()
@@ -2698,256 +2710,215 @@ class HtmlRenderer:
         px_per_m = 40
 
         if use_placements:
-            # Collect all roof polygon coords to compute bounding box
-            all_x, all_y = [], []
-            for pr in placements:
-                if pr.roof_face and pr.roof_face.polygon:
-                    for cx2, cy2 in pr.roof_face.polygon.exterior.coords:
-                        all_x.append(cx2)
-                        all_y.append(cy2)
+            # Layout each roof face in its own horizontal slot so all faces are
+            # visible side by side regardless of their absolute coordinate positions.
+            # Filter to faces that have a polygon; prefer faces with panels first.
+            faces_to_draw = [pr for pr in placements
+                             if pr.roof_face and pr.roof_face.polygon and pr.panels]
+            if not faces_to_draw:
+                faces_to_draw = [pr for pr in placements
+                                 if pr.roof_face and pr.roof_face.polygon]
 
-            if all_x and all_y:
-                bb_x0, bb_x1 = min(all_x), max(all_x)
-                bb_y0, bb_y1 = min(all_y), max(all_y)
-                bb_w = max(bb_x1 - bb_x0, 1.0)
-                bb_h = max(bb_y1 - bb_y0, 1.0)
+            num_faces = max(len(faces_to_draw), 1)
+            slot_gap = 50  # px gap between face slots
+            slot_w = (draw_w - (num_faces - 1) * slot_gap) / num_faces
+            available_h = draw_h - 70  # reserve space for labels above/below
 
-                # Scale to fit drawing area with margin for labels/annotations
-                margin_h = 60
-                margin_v = 40
-                fit_w = draw_w - 2 * margin_h
-                fit_h = draw_h - 2 * margin_v
-                sc = min(fit_w / bb_w, fit_h / bb_h)
+            # Estimate px_per_m from the largest face for the scale bar
+            largest_pr2 = max(faces_to_draw, key=lambda pr: pr.roof_face.area_sqft
+                              if pr.roof_face else 0)
+            if largest_pr2.roof_face and largest_pr2.roof_face.area_sqft > 0:
+                face_bb2 = largest_pr2.roof_face.polygon.bounds
+                face_w2 = max(face_bb2[2] - face_bb2[0], 1.0)
+                face_h2 = max(face_bb2[3] - face_bb2[1], 1.0)
+                sc2 = min(slot_w * 0.8 / face_w2, available_h * 0.8 / face_h2)
+                rf_area_sqft2 = largest_pr2.roof_face.area_sqft
+                rf_diag_ft2 = math.sqrt(rf_area_sqft2 * 5.0)
+                poly_diag_pts2 = math.hypot(face_w2, face_h2)
+                pts_per_ft_est2 = poly_diag_pts2 / max(rf_diag_ft2, 1.0)
+                px_per_m = sc2 * pts_per_ft_est2 * 3.281
+                px_per_m = max(px_per_m, 8)
 
-                # Center the drawing
-                ox = draw_x + margin_h + (fit_w - bb_w * sc) / 2
-                oy = draw_y + margin_v + (fit_h - bb_h * sc) / 2
+            # Draw each face in its allocated slot
+            panel_num = 0
+            for pri, pr in enumerate(faces_to_draw):
+                rf = pr.roof_face
+                face_bb = rf.polygon.bounds  # (minx, miny, maxx, maxy) in pts
+                face_w = max(face_bb[2] - face_bb[0], 1.0)
+                face_h = max(face_bb[3] - face_bb[1], 1.0)
 
-                def pt2svg(px2, py2):
-                    """Convert page-pts to SVG coordinates."""
-                    return (ox + (px2 - bb_x0) * sc,
-                            oy + (py2 - bb_y0) * sc)
+                # Scale to fit slot with inner margin for annotations
+                margin_inner = 30
+                sc = min((slot_w - 2 * margin_inner) / face_w,
+                         (available_h - 2 * margin_inner) / face_h) * 0.88
 
-                # Estimate px_per_m for scale bar from the largest roof face polygon
-                largest_pr = max(placements, key=lambda pr: pr.roof_face.area_sqft
-                                 if pr.roof_face else 0)
-                if largest_pr.roof_face and largest_pr.roof_face.area_sqft > 0:
-                    poly_b = largest_pr.roof_face.polygon.bounds
-                    poly_diag_pts = math.hypot(poly_b[2] - poly_b[0], poly_b[3] - poly_b[1])
-                    rf_area_sqft = largest_pr.roof_face.area_sqft
-                    # Estimate pts per foot from polygon diagonal vs area-derived diagonal
-                    rf_diag_ft = math.sqrt(rf_area_sqft * 5.0)
+                # Slot x origin (left edge of this face's column)
+                slot_x0 = draw_x + pri * (slot_w + slot_gap)
+
+                # Center the face within the slot
+                face_draw_w = face_w * sc
+                face_draw_h = face_h * sc
+                ox = slot_x0 + margin_inner + (slot_w - 2 * margin_inner - face_draw_w) / 2
+                oy = draw_y + 30 + (available_h - face_draw_h) / 2
+
+                def _make_pt2svg(ox_=ox, oy_=oy, sc_=sc, bb_=face_bb):
+                    def pt2svg(px2, py2):
+                        return (ox_ + (px2 - bb_[0]) * sc_,
+                                oy_ + (py2 - bb_[1]) * sc_)
+                    return pt2svg
+
+                pt2svg = _make_pt2svg()
+
+                # Face-local px_per_m for rafter spacing
+                if rf.area_sqft > 0:
+                    rf_diag_ft = math.sqrt(rf.area_sqft * 5.0)
+                    poly_diag_pts = math.hypot(face_w, face_h)
                     pts_per_ft_est = poly_diag_pts / max(rf_diag_ft, 1.0)
-                    px_per_m = sc * pts_per_ft_est * 3.281
-                    px_per_m = max(px_per_m, 8)
+                    face_px_per_m = sc * pts_per_ft_est * 3.281
+                    face_px_per_m = max(face_px_per_m, 8)
+                else:
+                    face_px_per_m = px_per_m
 
-                # Draw each roof face and its placed panels
-                panel_num = 0
-                for pri, pr in enumerate(placements):
-                    rf = pr.roof_face
-                    if rf is None or rf.polygon is None:
-                        continue
+                # Roof face outline
+                coords = [pt2svg(x, y) for x, y in rf.polygon.exterior.coords]
+                pts_str = " ".join(f"{x:.1f},{y:.1f}" for x, y in coords)
+                svg.append(f'<polygon points="{pts_str}" fill="#fafafa" '
+                           f'stroke="#000" stroke-width="2"/>')
 
-                    # Roof face outline
-                    coords = [pt2svg(x, y) for x, y in rf.polygon.exterior.coords]
-                    pts_str = " ".join(f"{x:.1f},{y:.1f}" for x, y in coords)
-                    svg.append(f'<polygon points="{pts_str}" fill="#fafafa" '
-                               f'stroke="#000" stroke-width="2"/>')
-
-                    # Fire setback inner boundary (red dashed) from usable polygon
-                    if rf.usable_polygon and not rf.usable_polygon.is_empty:
-                        try:
-                            u_pts = " ".join(
-                                f"{pt2svg(x, y)[0]:.1f},{pt2svg(x, y)[1]:.1f}"
-                                for x, y in rf.usable_polygon.exterior.coords
-                            )
-                            svg.append(f'<polygon points="{u_pts}" fill="none" '
-                                       f'stroke="#cc0000" stroke-width="1.2" '
-                                       f'stroke-dasharray="6,3"/>')
-                        except Exception:
-                            pass
-
-                    # Rafter lines: orange vertical lines at 24" spacing across roof face
-                    RAFTER_M = 0.610
-                    rafter_px2 = RAFTER_M * px_per_m
-                    rf_bb = rf.polygon.bounds
-                    rf_sv_x0, rf_sv_y0 = pt2svg(rf_bb[0], rf_bb[1])
-                    rf_sv_x1, rf_sv_y1 = pt2svg(rf_bb[2], rf_bb[3])
-                    if rafter_px2 > 2:
-                        ri = 0
-                        while True:
-                            rx2 = rf_sv_x0 + ri * rafter_px2
-                            if rx2 > rf_sv_x1 + rafter_px2 * 0.1:
-                                break
-                            svg.append(f'<line x1="{rx2:.1f}" y1="{rf_sv_y0:.1f}" '
-                                       f'x2="{rx2:.1f}" y2="{rf_sv_y1:.1f}" '
-                                       f'stroke="#d08020" stroke-width="0.9" opacity="0.55"/>')
-                            ri += 1
-
-                    # Draw panels
-                    for panel in pr.panels:
-                        panel_num += 1
-                        svg_cx, svg_cy = pt2svg(panel.center_x, panel.center_y)
-                        pw2 = panel.width_pts * sc
-                        ph2 = panel.height_pts * sc
-                        rot = panel.rotation_deg
-
-                        svg.append(
-                            f'<g transform="translate({svg_cx:.1f},{svg_cy:.1f})'
-                            f' rotate({rot:.1f})">'
+                # Fire setback inner boundary (red dashed) from usable polygon
+                if rf.usable_polygon and not rf.usable_polygon.is_empty:
+                    try:
+                        u_pts = " ".join(
+                            f"{pt2svg(x, y)[0]:.1f},{pt2svg(x, y)[1]:.1f}"
+                            for x, y in rf.usable_polygon.exterior.coords
                         )
+                        svg.append(f'<polygon points="{u_pts}" fill="none" '
+                                   f'stroke="#cc0000" stroke-width="1.2" '
+                                   f'stroke-dasharray="6,3"/>')
+                    except Exception:
+                        pass
+
+                # Rafter lines: orange vertical lines at 24" spacing across roof face
+                RAFTER_M = 0.610
+                rafter_px2 = RAFTER_M * face_px_per_m
+                rf_sv_x0, rf_sv_y0 = pt2svg(face_bb[0], face_bb[1])
+                rf_sv_x1, rf_sv_y1 = pt2svg(face_bb[2], face_bb[3])
+                if rafter_px2 > 2:
+                    ri = 0
+                    while True:
+                        rx2 = rf_sv_x0 + ri * rafter_px2
+                        if rx2 > rf_sv_x1 + rafter_px2 * 0.1:
+                            break
+                        svg.append(f'<line x1="{rx2:.1f}" y1="{rf_sv_y0:.1f}" '
+                                   f'x2="{rx2:.1f}" y2="{rf_sv_y1:.1f}" '
+                                   f'stroke="#d08020" stroke-width="0.9" opacity="0.55"/>')
+                        ri += 1
+
+                # Draw panels
+                for panel in pr.panels:
+                    panel_num += 1
+                    svg_cx, svg_cy = pt2svg(panel.center_x, panel.center_y)
+                    pw2 = panel.width_pts * sc
+                    ph2 = panel.height_pts * sc
+                    rot = panel.rotation_deg
+
+                    svg.append(
+                        f'<g transform="translate({svg_cx:.1f},{svg_cy:.1f})'
+                        f' rotate({rot:.1f})">'
+                    )
+                    svg.append(
+                        f'<rect x="{-pw2/2:.1f}" y="{-ph2/2:.1f}" '
+                        f'width="{pw2:.1f}" height="{ph2:.1f}" '
+                        f'fill="#ffffff" stroke="#333" stroke-width="0.8"/>'
+                    )
+                    # Cell lines (3 subdivisions)
+                    for ci2 in range(1, 3):
+                        cell_y2 = -ph2/2 + ph2/3 * ci2
                         svg.append(
-                            f'<rect x="{-pw2/2:.1f}" y="{-ph2/2:.1f}" '
-                            f'width="{pw2:.1f}" height="{ph2:.1f}" '
-                            f'fill="#ffffff" stroke="#333" stroke-width="0.8"/>'
+                            f'<line x1="{-pw2/2:.1f}" y1="{cell_y2:.1f}" '
+                            f'x2="{pw2/2:.1f}" y2="{cell_y2:.1f}" '
+                            f'stroke="#bbb" stroke-width="0.3"/>'
                         )
-                        # Cell lines (3 subdivisions)
-                        for ci2 in range(1, 3):
-                            cell_y2 = -ph2/2 + ph2/3 * ci2
-                            svg.append(
-                                f'<line x1="{-pw2/2:.1f}" y1="{cell_y2:.1f}" '
-                                f'x2="{pw2/2:.1f}" y2="{cell_y2:.1f}" '
-                                f'stroke="#bbb" stroke-width="0.3"/>'
-                            )
-                        # Panel number
-                        fs = max(5, min(8, int(pw2 * 0.35)))
-                        svg.append(
-                            f'<text x="0" y="{fs//2}" text-anchor="middle" '
-                            f'font-size="{fs}" font-family="Arial" fill="#000">'
-                            f'{panel_num}</text>'
-                        )
-                        svg.append('</g>')
-
-                    # Racking rails: green lines at top/bottom of each panel row
-                    if pr.panels:
-                        # Group panels by approximate row (cluster by center_y)
-                        panels_sorted = sorted(pr.panels, key=lambda p: p.center_y)
-                        row_groups = []
-                        current_row = [panels_sorted[0]]
-                        for p in panels_sorted[1:]:
-                            if abs(p.center_y - current_row[0].center_y) < p.height_pts * 0.8:
-                                current_row.append(p)
-                            else:
-                                row_groups.append(current_row)
-                                current_row = [p]
-                        row_groups.append(current_row)
-
-                        for row_panels in row_groups:
-                            min_cx_pts = min(p.center_x for p in row_panels)
-                            max_cx_pts = max(p.center_x for p in row_panels)
-                            sample_p = row_panels[0]
-                            half_w = sample_p.width_pts / 2
-                            half_h = sample_p.height_pts / 2
-                            rail_top_pts = sample_p.center_y - half_h + 2
-                            rail_bot_pts = sample_p.center_y + half_h - 2
-                            rx0, ry_t = pt2svg(min_cx_pts - half_w - 4, rail_top_pts)
-                            rx1, _ = pt2svg(max_cx_pts + half_w + 4, rail_top_pts)
-                            _, ry_b = pt2svg(min_cx_pts, rail_bot_pts)
-                            svg.append(f'<line x1="{rx0:.1f}" y1="{ry_t:.1f}" '
-                                       f'x2="{rx1:.1f}" y2="{ry_t:.1f}" '
-                                       f'stroke="#4a9e4a" stroke-width="1.8"/>')
-                            svg.append(f'<line x1="{rx0:.1f}" y1="{ry_b:.1f}" '
-                                       f'x2="{rx1:.1f}" y2="{ry_b:.1f}" '
-                                       f'stroke="#4a9e4a" stroke-width="1.8"/>')
-                            # Attachment points at rail ends
-                            for att_x_pts in [min_cx_pts - half_w, max_cx_pts + half_w]:
-                                ax, _ = pt2svg(att_x_pts, rail_top_pts)
-                                svg.append(f'<circle cx="{ax:.1f}" cy="{ry_t:.1f}" r="3" '
-                                           f'fill="#1a6ea8" stroke="#000" stroke-width="0.5"/>')
-                                svg.append(f'<circle cx="{ax:.1f}" cy="{ry_b:.1f}" r="3" '
-                                           f'fill="#1a6ea8" stroke="#000" stroke-width="0.5"/>')
-
-                    # Segment label above polygon
-                    poly_cx2, _ = pt2svg(rf.polygon.centroid.x, rf.polygon.centroid.y)
-                    poly_top_svg = min(pt2svg(x, y)[1] for x, y in rf.polygon.exterior.coords)
-                    direction = self._azimuth_label(rf.azimuth_deg)
+                    # Panel number
+                    fs = max(5, min(8, int(pw2 * 0.35)))
                     svg.append(
-                        f'<text x="{poly_cx2:.1f}" y="{poly_top_svg - 18:.0f}" '
-                        f'text-anchor="middle" font-size="11" font-weight="700" '
-                        f'font-family="Arial" fill="#000">ROOF #{pri+1}</text>'
+                        f'<text x="0" y="{fs//2}" text-anchor="middle" '
+                        f'font-size="{fs}" font-family="Arial" fill="#000">'
+                        f'{panel_num}</text>'
                     )
-                    svg.append(
-                        f'<text x="{poly_cx2:.1f}" y="{poly_top_svg - 6:.0f}" '
-                        f'text-anchor="middle" font-size="8" font-family="Arial" fill="#555">'
-                        f'{direction} ({rf.azimuth_deg:.0f}°) — {rf.pitch_deg:.0f}° tilt'
-                        f' — {len(pr.panels)} panels</text>'
-                    )
+                    svg.append('</g>')
 
-                    # 3'-0" setback callout on right side of polygon
-                    poly_right_svg = max(pt2svg(x, y)[0] for x, y in rf.polygon.exterior.coords)
-                    sb_callout_px = SETBACK_M * px_per_m
-                    ann_x_r = poly_right_svg + 8
-                    ann_top = poly_top_svg
-                    svg.append(
-                        f'<line x1="{ann_x_r:.1f}" y1="{ann_top:.1f}" '
-                        f'x2="{ann_x_r:.1f}" y2="{ann_top + sb_callout_px:.1f}" '
-                        f'stroke="#cc0000" stroke-width="1" '
-                        f'marker-start="url(#dim-l)" marker-end="url(#dim-r)"/>'
-                    )
-                    svg.append(
-                        f'<text x="{ann_x_r + 4:.1f}" y="{ann_top + sb_callout_px/2 + 3:.1f}" '
-                        f'font-size="7.5" font-weight="700" font-family="Arial" fill="#cc0000">'
-                        f'3\'-0&quot; TYP.</text>'
-                    )
-
-                # ── Ridge lines: draw thick black line between opposite-facing roof faces ──
-                # For each pair of faces where azimuth differs by ~180°, find the ridge at
-                # their shared boundary in the top-down plan view.
-                drawn_ridge_pairs: set = set()
-                faces_with_polys = [(pi2, pr2) for pi2, pr2 in enumerate(placements)
-                                    if pr2.roof_face and pr2.roof_face.polygon]
-                for pi_a, pr_a in faces_with_polys:
-                    for pi_b, pr_b in faces_with_polys:
-                        if pi_b <= pi_a:
-                            continue
-                        pair_key = (pi_a, pi_b)
-                        if pair_key in drawn_ridge_pairs:
-                            continue
-                        az_a = pr_a.roof_face.azimuth_deg % 360
-                        az_b = pr_b.roof_face.azimuth_deg % 360
-                        az_diff = abs(az_a - az_b)
-                        if not (150 <= az_diff <= 210):
-                            continue  # not opposite faces
-                        drawn_ridge_pairs.add(pair_key)
-
-                        # In plan view, the ridge is between the two faces.
-                        # Face A's ridge edge = its closest edge to face B's centroid.
-                        # Simple heuristic: average the y-centroids' boundary edges.
-                        bb_a = pr_a.roof_face.polygon.bounds  # (minx, miny, maxx, maxy) in pts
-                        bb_b = pr_b.roof_face.polygon.bounds
-                        # Ridge x-range = overlap of x-extents
-                        ridge_x0_pts = max(bb_a[0], bb_b[0])
-                        ridge_x1_pts = min(bb_a[2], bb_b[2])
-                        if ridge_x1_pts <= ridge_x0_pts:
-                            # No x-overlap: use union extent instead
-                            ridge_x0_pts = min(bb_a[0], bb_b[0])
-                            ridge_x1_pts = max(bb_a[2], bb_b[2])
-                        # Ridge y = midpoint between closest edges of the two faces
-                        # Determine which face is "above" (lower y) and which is "below" (higher y)
-                        cy_a = (bb_a[1] + bb_a[3]) / 2
-                        cy_b = (bb_b[1] + bb_b[3]) / 2
-                        if cy_a < cy_b:
-                            # face A is above: use its max-y; face B is below: use its min-y
-                            edge_upper = bb_a[3]
-                            edge_lower = bb_b[1]
+                # Racking rails: green lines at top/bottom of each panel row
+                if pr.panels:
+                    # Group panels by approximate row (cluster by center_y)
+                    panels_sorted = sorted(pr.panels, key=lambda p: p.center_y)
+                    row_groups = []
+                    current_row = [panels_sorted[0]]
+                    for p in panels_sorted[1:]:
+                        if abs(p.center_y - current_row[0].center_y) < p.height_pts * 0.8:
+                            current_row.append(p)
                         else:
-                            edge_upper = bb_b[3]
-                            edge_lower = bb_a[1]
-                        ridge_y_pts = (edge_upper + edge_lower) / 2
+                            row_groups.append(current_row)
+                            current_row = [p]
+                    row_groups.append(current_row)
 
-                        rx0_svg, ry_svg = pt2svg(ridge_x0_pts, ridge_y_pts)
-                        rx1_svg, _ = pt2svg(ridge_x1_pts, ridge_y_pts)
-                        svg.append(
-                            f'<line x1="{rx0_svg:.1f}" y1="{ry_svg:.1f}" '
-                            f'x2="{rx1_svg:.1f}" y2="{ry_svg:.1f}" '
-                            f'stroke="#000" stroke-width="2.5" stroke-dasharray="8,4"/>'
-                        )
-                        ridge_mid_svg = (rx0_svg + rx1_svg) / 2
-                        svg.append(
-                            f'<text x="{ridge_mid_svg:.1f}" y="{ry_svg - 5:.1f}" '
-                            f'text-anchor="middle" font-size="8" font-weight="700" '
-                            f'font-family="Arial" fill="#000">RIDGE</text>'
-                        )
+                    for row_panels in row_groups:
+                        min_cx_pts = min(p.center_x for p in row_panels)
+                        max_cx_pts = max(p.center_x for p in row_panels)
+                        sample_p = row_panels[0]
+                        half_w = sample_p.width_pts / 2
+                        half_h = sample_p.height_pts / 2
+                        rail_top_pts = sample_p.center_y - half_h + 2
+                        rail_bot_pts = sample_p.center_y + half_h - 2
+                        rx0, ry_t = pt2svg(min_cx_pts - half_w - 4, rail_top_pts)
+                        rx1, _ = pt2svg(max_cx_pts + half_w + 4, rail_top_pts)
+                        _, ry_b = pt2svg(min_cx_pts, rail_bot_pts)
+                        svg.append(f'<line x1="{rx0:.1f}" y1="{ry_t:.1f}" '
+                                   f'x2="{rx1:.1f}" y2="{ry_t:.1f}" '
+                                   f'stroke="#4a9e4a" stroke-width="1.8"/>')
+                        svg.append(f'<line x1="{rx0:.1f}" y1="{ry_b:.1f}" '
+                                   f'x2="{rx1:.1f}" y2="{ry_b:.1f}" '
+                                   f'stroke="#4a9e4a" stroke-width="1.8"/>')
+                        # Attachment points at rail ends
+                        for att_x_pts in [min_cx_pts - half_w, max_cx_pts + half_w]:
+                            ax, _ = pt2svg(att_x_pts, rail_top_pts)
+                            svg.append(f'<circle cx="{ax:.1f}" cy="{ry_t:.1f}" r="3" '
+                                       f'fill="#1a6ea8" stroke="#000" stroke-width="0.5"/>')
+                            svg.append(f'<circle cx="{ax:.1f}" cy="{ry_b:.1f}" r="3" '
+                                       f'fill="#1a6ea8" stroke="#000" stroke-width="0.5"/>')
+
+                # Segment label above polygon
+                poly_cx2, _ = pt2svg(rf.polygon.centroid.x, rf.polygon.centroid.y)
+                poly_top_svg = min(pt2svg(x, y)[1] for x, y in rf.polygon.exterior.coords)
+                direction = self._azimuth_label(rf.azimuth_deg)
+                svg.append(
+                    f'<text x="{poly_cx2:.1f}" y="{poly_top_svg - 18:.0f}" '
+                    f'text-anchor="middle" font-size="11" font-weight="700" '
+                    f'font-family="Arial" fill="#000">ROOF #{pri+1}</text>'
+                )
+                svg.append(
+                    f'<text x="{poly_cx2:.1f}" y="{poly_top_svg - 6:.0f}" '
+                    f'text-anchor="middle" font-size="8" font-family="Arial" fill="#555">'
+                    f'{direction} ({rf.azimuth_deg:.0f}°) — {rf.pitch_deg:.0f}° tilt'
+                    f' — {len(pr.panels)} panels</text>'
+                )
+
+                # 3'-0" setback callout on right side of polygon
+                poly_right_svg = max(pt2svg(x, y)[0] for x, y in rf.polygon.exterior.coords)
+                sb_callout_px = SETBACK_M * face_px_per_m
+                ann_x_r = poly_right_svg + 8
+                ann_top = poly_top_svg
+                svg.append(
+                    f'<line x1="{ann_x_r:.1f}" y1="{ann_top:.1f}" '
+                    f'x2="{ann_x_r:.1f}" y2="{ann_top + sb_callout_px:.1f}" '
+                    f'stroke="#cc0000" stroke-width="1" '
+                    f'marker-start="url(#dim-l)" marker-end="url(#dim-r)"/>'
+                )
+                svg.append(
+                    f'<text x="{ann_x_r + 4:.1f}" y="{ann_top + sb_callout_px/2 + 3:.1f}" '
+                    f'font-size="7.5" font-weight="700" font-family="Arial" fill="#cc0000">'
+                    f'3\'-0&quot; TYP.</text>'
+                )
 
         else:
             # ── Fallback: draw abstract segments when no placements available ──
@@ -4533,6 +4504,40 @@ class HtmlRenderer:
         tbl_svg, ly = _table(lx, ly, f"DC CONDUCTOR SIZING \u2014 PER PANEL  [{_dc_sizing_rule}]",
                              ["Parameter", "Value"], dc_wire_rows, [250, 350], row_h=21)
         svg.append(tbl_svg)
+        ly += 8
+
+        # ── 5. String Configuration ───────────────────────────────────────────
+        if self._project:
+            try:
+                _str_cfg = calculate_string_config(
+                    self._project.panel, self._project.inverter, total_panels)
+            except Exception:
+                _str_cfg = None
+        else:
+            _str_cfg = None
+
+        if _str_cfg and _str_cfg.get('type') == 'microinverter':
+            _br_a = _str_cfg.get('branch_current_a', 0.0)
+            _br_wire = _wire_gauge(_br_a)
+            str_rows = [
+                ("Configuration",          f"{_str_cfg['num_branches']} \u00d7 1-module branch circuits"),
+                ("Branch circuit current",  f"1.25 \u00d7 Isc = {_br_a:.2f} A  \u2192  {_br_wire} {self._wire_type}"),
+                ("System voltage (Voc)",   f"{_str_cfg.get('system_voltage_v', 0):.1f} V"),
+            ]
+            _str_rule = f"{_cp} {'690.8' if _is_nec else 'Rule 14-100'}"
+            tbl_svg, ly = _table(lx, ly, f"STRING CONFIGURATION  [{_str_rule}]",
+                                 ["Parameter", "Value"], str_rows, [250, 350], row_h=21)
+            svg.append(tbl_svg)
+        elif _str_cfg and _str_cfg.get('type') == 'string':
+            str_rows = [
+                ("Panels per string",       f"{_str_cfg.get('string_length', 0)}"),
+                ("Number of strings",       f"{_str_cfg.get('num_strings', 0)}"),
+                ("String Voc",             f"{_str_cfg.get('string_voc_v', 0):.1f} V"),
+                ("String Vmp",             f"{_str_cfg.get('string_vmp_v', 0):.1f} V"),
+            ]
+            tbl_svg, ly = _table(lx, ly, "STRING CONFIGURATION",
+                                 ["Parameter", "Value"], str_rows, [250, 350], row_h=21)
+            svg.append(tbl_svg)
 
         # ══════════════════════════════════════════════════════════════════════
         # RIGHT COLUMN (x=650 … 1240)

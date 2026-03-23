@@ -381,6 +381,55 @@ EGC_TABLE = [
 ]
 
 
+def calculate_string_config(panel, inverter, num_panels: int) -> dict:
+    """Returns optimal string configuration.
+
+    For microinverters: 1 panel per branch circuit, N branch circuits.
+    For string inverters: compute series string length from Voc/MPPT window,
+    then parallel strings needed.
+    """
+    inv_name = (getattr(inverter, 'model', '') or getattr(inverter, 'name', '') or '').upper()
+    inv_type = (getattr(inverter, 'type', '') or getattr(inverter, 'inverter_type', '') or '').upper()
+    is_micro = getattr(inverter, 'is_micro', False) or any(
+        kw in inv_name + inv_type for kw in ('IQ8', 'IQ7', 'ENPHASE', 'MICRO')
+    )
+
+    isc = getattr(panel, 'isc_a', 0.0) or 0.0
+    voc = getattr(panel, 'voc_v', 0.0) or 0.0
+    vmp = getattr(panel, 'vmp_v', 0.0) or 0.0
+
+    if is_micro:
+        return {
+            'type': 'microinverter',
+            'modules_per_branch': 1,
+            'num_branches': num_panels,
+            'branch_current_a': round(isc * 1.25, 2),  # NEC 690.8 125% factor
+            'system_voltage_v': voc,
+        }
+    else:
+        max_input_v = (getattr(inverter, 'max_dc_voltage_v', None)
+                       or getattr(inverter, 'max_input_voltage_v', 600) or 600)
+        mppt_min_v = (getattr(inverter, 'mppt_voltage_min_v', None)
+                      or getattr(inverter, 'mppt_min_v', 100) or 100)
+
+        max_series = math.floor(max_input_v / voc * 0.80) if voc > 0 else 10
+        min_series = math.ceil(mppt_min_v / vmp) if vmp > 0 else 1
+        max_series = max(max_series, min_series)
+        string_length = min(max_series, math.floor((max_series + min_series) / 2))
+        string_length = max(string_length, 1)
+        num_strings = math.ceil(num_panels / string_length)
+
+        return {
+            'type': 'string',
+            'string_length': string_length,
+            'num_strings': num_strings,
+            'max_series': max_series,
+            'min_series': min_series,
+            'string_voc_v': round(string_length * voc, 1),
+            'string_vmp_v': round(string_length * vmp, 1),
+        }
+
+
 def _conductor_for_amps(amps: float) -> str:
     """Look up minimum conductor size for given ampacity."""
     for rating, wire in CONDUCTOR_AMPACITY_75C:

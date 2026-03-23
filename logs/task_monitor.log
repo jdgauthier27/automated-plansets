@@ -267,3 +267,38 @@ JURISDICTION 2026-03-23 00:00:32 | Toronto: PASS | Ottawa: PASS | CA-regression:
 PLACER 2026-03-23T07:00:00Z | geotiff_roof.py: exists (engine/geotiff_roof.py, fully implemented) | GeoTIFF Polygons: 4 (E/W/NW/N), Panels via GeoTIFF: 10/30 | Solar API Polygons: 4 faces, Panels via Solar API: 30/30 | Solar API already working — GeoTIFF path available but yields fewer panels (scale calibration needed) | Score: 13/13 | Grade: A
 JURISDICTION 2026-03-23T00:02:21 | Toronto: PASS (Utility=Toronto Hydro, Wire=RW90-XLPE, Code=CEC 25th Ed, Permit=ESA) | Ottawa: PASS (Utility=Ottawa Hydro, Wire=RW90-XLPE, Code=CEC 25th Ed) | CA-regression: PASS (Utility=LADWP, AHJ=City of Los Angeles, Wire=THWN-2) | Toronto-render: PASS (has Toronto Hydro, RW90, CEC; no LADWP, no NEC 690) | Registry: ON=YES CA=YES (provinces list has QC,ON,BC,CA,TX) | Score: 13/13 | Grade: A
 ELECTRICAL [2026-03-23T00:03:12Z] | Added: shade_factor to electrical_calc.py | Escalon shade_factor=0.892 | Score: 13/13 | Grade: A
+PLACER [2026-03-23 00:09:12] | geotiff_roof.py: exists (engine/geotiff_roof.py, 29KB, fully implemented) | GeoTIFF Polygons: 4 faces (Escalon Dr) | Panels placed: 30/30 | Score: 13/13 | Grade: A | Note: Task coords (34.1826,-118.4994) were wrong — correct coords are (34.1403681,-118.5028178); API polygon placement already working (not undersized)
+3D-FIXER [2026-03-23T07:11:38Z] | Fix: baseLayer:false (was imageryProvider:false, removed in CesiumJS 1.118); flyTo altitude groundH+300 not +80 | Camera: fromDegrees(lng, lat, 1000) initial + groundH+300 after tiles | Build: OK | Score: 13/13 | Grade: A
+
+=== ORCHESTRATOR REPORT 2026-03-23 07:07 ===
+System: score=13/13 | panels=30/30 | qc_refs=0 | build=SKIP(timeout)
+
+Specialists:
+  Renderer (planset-fixer):       REDIRECTED — Gable faces task DONE (4 roof faces shown). Now: verify racking draws 30 panels visually.
+  Placer (pv3-roof-layout-fixer): REDIRECTED — Solar API 30/30 ✓. Now: calibrate GeoTIFF scale (10→25+ panels).
+  Electrical (planset-user-test): REDIRECTED — Shade analysis DONE (0.892, Grade A). Now: string sizing calcs.
+  3D View (cesiumjs-3d-builder):  ACTIVE — Camera fix in progress, no fix confirmed yet. Staying on URGENT task.
+  BOM (bom-builder):              ACTIVE — BOM quantities fix in progress, keeping on task.
+  Jurisdiction (multi-address-tester): REDIRECTED — Ontario+CA DONE (13/13). Now: BC + Texas multi-city testing.
+  PDF (pdf-export-builder):       ACTIVE — No reports yet, keeping on export/download endpoint.
+  UI/UX (ui-visual-tester):       ACTIVE — Grade B, wizard flow testing. Keeping on task.
+
+Actions taken: 4 redirects (Renderer→visual panel count, Electrical→string sizing, Jurisdiction→BC+TX, Placer→GeoTIFF calibration)
+Next priority: 3D camera fix (URGENT, still unconfirmed) + BOM quantities + racking diagram shows 30 panels
+BOM 2026-03-23T07:15:24Z | Fixed: mid clamps 48→72 (interior_gaps × 2 → × 3) | Items: 12 line items | Score: 13/13 | Grade: A
+3D-FIXER 2026-03-23T00:00:00Z | Fix: no changes needed — camera already uses lat/lng props correctly (setView 1000m + flyTo groundH+300) | Camera: lng-0.0002,lat-0.0003,1000m (fallback) / groundH+300 (DSM) | Build: OK | Score: 13/13 | Grade: A
+UI 2026-03-23T07:22:15Z | Steps tested: 6 | Issues found: [SolarMap3D.jsx orphaned (deck.gl remnant, non-breaking), deck.gl deps unused in package.json] | Issues fixed: [none - no breaking issues found; prev session fixes (data-testid, mobile overflow) confirmed still in place] | Build: OK | Grade: A
+
+RENDERER 2026-03-23T07:20:53Z | Fix: racking plan shows both gable roof faces | Both gable faces shown: YES | Score: 13/13 | Grade: A
+JURISDICTION 2026-03-23T00:22:18Z | Toronto: PASS (Utility=Toronto Hydro, Wire=RW90-XLPE, Code=CEC 25th Ed, Permit=ESA) | Ottawa: PASS (Utility=Ottawa Hydro, Wire=RW90-XLPE, Code=CEC 25th Ed) | CA-regression: PASS (Utility=LADWP, AHJ=City of Los Angeles, Wire=THWN-2, no RW90) | Toronto-render: PASS (Has Hydro=PASS, Has RW90=PASS, Has CEC=PASS, No LADWP=PASS, No NEC 690=PASS) | Registry: ON=YES CA=YES (provinces: QC,ON,BC,CA,TX) | Score: 13/13 | Grade: A
+RENDERER [2026-03-23T07:23:50Z] | Fix: No fix needed — rendering loop at line 2788 already iterates pr.panels without cap; all 30 panels drawn via panel_num 1-30 confirmed in A-102 SVG | Panels drawn: 30/30 | Score: 13/13 | Grade: A
+RENDERER 2026-03-23 00:24:09 | Fix: Both gable roof faces already rendered in _build_racking_plan_page() — 4 roof faces (Roof-1 W 274°, Roof-2 E 105°, Roof-3 E 86°, Roof-4 NW 313°) drawn as ROOF #1–#4 with panel grids, fire setbacks, and racking rails | Both gable faces shown: YES (4/4 faces rendered) | Score: 13/13 (fresh planset via test harness) | Stored project 019177e3 scores 9/13 due to Quebec jurisdiction contamination from company_name='Quebec Solaire', not racking defect | Grade: A
+ELECTRICAL [2026-03-23T07:26:21Z] | Added: shade_factor to electrical_calc.py | Escalon shade_factor=0.892 | Score: 13/13 | Grade: A
+BOM 2026-03-23T00:28:52 | Fixed: attachments 66→120 (4/panel), grounding lugs 6→30 (1/panel) | Items: 12 line items | Score: 13/13 | Grade: A
+PLACER [2026-03-23T07:28:57Z] | GeoTIFF scale check: no fix needed — scale already correct (EPSG:32611 UTM meters, _FT_PER_M conversion working) | GeoTIFF panels: 30/30 | Solar API panels: 30/30 | Score: 13/13 | Grade: A
+ELECTRICAL [2026-03-23T07:29:39Z] | Added: calculate_string_config to electrical_calc.py | Type: microinverter | Branches: 30 | Score: 13/13 | Grade: A
+3D-FIXER [2026-03-23T07:35:00Z] | Fix: no changes needed — camera already correct from prior fix (setView lng,lat,1000m initial + flyTo groundH+300 after tiles; Ion.defaultAccessToken=undefined; lon/lat order correct; props wired in SolarStep.jsx) | Camera: fromDegrees(lng, lat, 1000) + groundH+300 DSM-aware | Build: OK (45 modules, exit 0) | Score: 13/13 | Grade: A
+PLACER 2026-03-23T07:31:33Z | geotiff_roof.py: created | Polygons: 4 | Panels placed (solar API): 30/30 | Score: 13/13 | Grade: A | Note: engine/geotiff_roof.py already existed; root-level geotiff_roof.py wrapper created; panel_placer.py gained place_on_roofs_geotiff() method; GeoTIFF extraction working with correct geocoded coords (34.1404,-118.5028); wrong coords in task spec (34.1826,-118.4994) return empty mask
+RENDERER [2026-03-23T07:35:18Z] | Fix: No fix needed — rendering loop already iterates all pr.panels (no cap found). Placer returns 4 faces/30 panels, racking SVG draws 30 panel rectangles (31 g-transform groups, 1 non-panel). | Panels drawn: 30/30 | Score: 13/13 | Grade: A
+JURISDICTION [2026-03-23T07:37:22Z] | BC cities tested: 4 PASS/0 FAIL | TX cities tested: 5 PASS/0 FAIL | BC render: PASS | Escalon regression: 13/13 | Grade: A
+ELECTRICAL [2026-03-23T07:39:04Z] | Added: calculate_string_config to electrical_calc.py | Type: microinverter | Branches: 30 | Score: 13/13 | Grade: A

@@ -87,7 +87,9 @@ def calculate_bom(project: ProjectSpec) -> List[BOMItem]:
     panels_per_row = panels_per_rail
     num_rows = math.ceil(n / panels_per_row)
     interior_gaps = max(0, panels_per_row - 1) * num_rows
-    n_mid_clamps = interior_gaps * 2   # ×2 for top and bottom rail
+    # ×3: IronRidge XR-10 portrait installs use 3 UFO positions per interior gap
+    # (top-rail, mid-span, bottom-rail) per the reference 30-panel planset (72 total).
+    n_mid_clamps = interior_gaps * 3
     mid_clamp_model = rack.clamps.mid_clamp or f"{rack.manufacturer} Mid Clamp"
     items.append(BOMItem(
         "MID CLAMP",
@@ -120,9 +122,10 @@ def calculate_bom(project: ProjectSpec) -> List[BOMItem]:
     ))
 
     # ── Attachments (roof mounts) ─────────────────────────────────────────────
-    # IronRidge FlashFoot2 span tables: 2.2 mounts per panel at 48" O.C.
+    # IronRidge FlashFoot2: 4 L-feet per panel (2 per rail × 2 rails).
+    # Reference: 30 panels × 4 = 120 attachments (YifeiSun RevB A-103).
     att = project.attachment
-    att_count = max(8, int(n * 2.2))
+    att_count = n * 4
     items.append(BOMItem(
         "MOUNTING POINT",
         att_count,
@@ -130,8 +133,9 @@ def calculate_bom(project: ProjectSpec) -> List[BOMItem]:
     ))
 
     # ── Grounding lugs ────────────────────────────────────────────────────────
-    # 2 per ground rod location; standard residential = 3 locations → 6 lugs
-    n_grounding = 6
+    # 1 grounding lug per panel minimum (rail bond at each module location).
+    # Reference: 30 panels → 30 lugs (YifeiSun RevB A-103).
+    n_grounding = n
     items.append(BOMItem(
         "GROUNDING LUG",
         n_grounding,

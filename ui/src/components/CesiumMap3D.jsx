@@ -67,8 +67,9 @@ export default function CesiumMap3D({
     let viewer
     try {
       viewer = new Cesium.Viewer(containerRef.current, {
-        // Disable default Bing imagery — Google 3D Tiles provide their own
-        imageryProvider: false,
+        // Disable default Ion imagery — Google 3D Tiles provide their own texture
+        // NOTE: imageryProvider:false was removed in CesiumJS 1.118; baseLayer:false is correct API
+        baseLayer: false,
         baseLayerPicker: false,
         geocoder: false,
         homeButton: false,
@@ -79,7 +80,6 @@ export default function CesiumMap3D({
         fullscreenButton: false,
         vrButton: false,
         creditContainer: creditDiv, // hide credit display (we show Google attribution separately)
-        depthPlaneEllipsoidOffset: 0.1,
       })
 
       // Show globe as fallback while 3D tiles load
@@ -157,9 +157,11 @@ export default function CesiumMap3D({
           // Once tiles are loaded, hide globe and fly to building
           viewerRef.current.scene.globe.show = false
           orbitHeadingRef.current = 0
-          // Use DSM ground elevation if available (absolute WGS84 altitude), else wide overview
+          // Use DSM ground elevation + 300m viewing height (200-500m range for single building).
+          // groundH is absolute WGS84 altitude (e.g. ~340m for Encino, CA).
+          // Fallback 1000m works for most US locations (0-700m MSL → 300-1000m above ground).
           const groundH = dsmHeightsRef.current?.building?.ground_elevation_m
-          const flyAlt = groundH != null ? groundH + 80 : 1000
+          const flyAlt = groundH != null ? groundH + 300 : 1000
           viewerRef.current.camera.flyTo({
             destination: Cesium.Cartesian3.fromDegrees(lng - 0.0002, lat - 0.0003, flyAlt),
             orientation: {
@@ -206,7 +208,7 @@ export default function CesiumMap3D({
     if (!viewer || viewer.isDestroyed() || loading || !dsmHeights?.building?.ground_elevation_m) return
     const groundH = dsmHeights.building.ground_elevation_m
     viewer.camera.flyTo({
-      destination: Cesium.Cartesian3.fromDegrees(lng - 0.0002, lat - 0.0003, groundH + 80),
+      destination: Cesium.Cartesian3.fromDegrees(lng - 0.0002, lat - 0.0003, groundH + 300),
       orientation: {
         heading: Cesium.Math.toRadians(30),
         pitch: Cesium.Math.toRadians(-40),

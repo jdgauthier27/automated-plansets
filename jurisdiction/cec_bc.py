@@ -181,7 +181,11 @@ class BCJurisdiction(JurisdictionEngine):
         utility: Override utility name. If omitted, auto-selected by city.
     """
 
-    def __init__(self, city: str = "", utility: str = ""):
+    def __init__(self, city: str = "", utility: str = "",
+                 municipality: str = "", province: str = ""):
+        # Accept municipality/province as aliases for city (test harness compatibility)
+        if not city and municipality:
+            city = municipality
         self.city = city
         city_lower = city.strip().lower()
 
@@ -516,3 +520,19 @@ class BCJurisdiction(JurisdictionEngine):
 
     def get_licensing_body_full(self) -> str:
         return "Technical Safety BC (BC Safety Authority)"
+
+    # ── Convenience summary dict (used by test harness) ───────────────────
+
+    def get_jurisdiction_data(self) -> dict:
+        """Return a flat summary dict for quick validation and rendering."""
+        return {
+            "utility": self.utility_name,
+            "wire_type": self.wire_type,
+            "electrical_code": self.get_code_edition(),
+            "conduit_type": self.conduit_type,
+            "snow_load_kpa": self.snow_load_kpa,
+            "seismic_zone": self.seismic_zone,
+            "wind_speed_ms": self.wind_speed_ms,
+            "licensing_body": "Technical Safety BC",
+            "code_name": self.get_code_name(),
+        }

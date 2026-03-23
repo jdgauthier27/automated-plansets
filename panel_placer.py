@@ -115,9 +115,37 @@ class PanelPlacer:
     along the eave direction, producing contiguous rectangular arrays.
     """
 
-    def __init__(self, panel: PanelSpec, config: PlacementConfig):
+    def __init__(self, panel: PanelSpec, config: PlacementConfig, use_geotiff: bool = False):
         self.panel = panel
         self.config = config
+        self.use_geotiff = use_geotiff
+
+    def place_on_roofs_geotiff(
+        self,
+        lat: float,
+        lng: float,
+        api_key: Optional[str] = None,
+    ) -> List[PlacementResult]:
+        """Place panels using GeoTIFF-derived roof geometry.
+
+        Downloads the Google Solar dataLayers mask + DSM GeoTIFF to get
+        accurate roof polygons (the buildingInsights polygons are ~40% too
+        small), then delegates to the normal place_on_roofs() logic.
+
+        Falls back to an empty list if GeoTIFF extraction fails.
+        """
+        try:
+            from geotiff_roof import get_roof_geometry_from_geotiff
+            geom = get_roof_geometry_from_geotiff(lat, lng, api_key)
+        except Exception as exc:
+            logger.error("GeoTIFF roof extraction failed: %s", exc)
+            return []
+
+        if not geom.roof_faces:
+            logger.warning("GeoTIFF returned no roof faces — cannot place panels")
+            return []
+
+        return self.place_on_roofs(geom.roof_faces, geom.scale_factor)
 
     def place_on_roofs(
         self,
