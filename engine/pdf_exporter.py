@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 def export_planset_pdf(
     html_path: str,
     output_pdf: str,
-    page_size: str = "11x8.5",
+    page_size: str = "17x11",
 ) -> str:
     """
     Convert an HTML planset file to a multi-page PDF using Playwright.
@@ -30,7 +30,7 @@ def export_planset_pdf(
     Args:
         html_path: Path to the source HTML planset file.
         output_pdf: Destination path for the generated PDF.
-        page_size: "11x8.5" (tabloid landscape, default) or "24x36" (ARCH D).
+        page_size: "17x11" (tabloid landscape, default) or "24x36" (ARCH D).
 
     Returns:
         Absolute path to the generated PDF.
