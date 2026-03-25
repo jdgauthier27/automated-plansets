@@ -687,7 +687,8 @@ export default function CesiumMap3D({
       allLngs.push(cLng)
 
       const segIdx = panel.segment_index || 0
-      const azimuth = segments[segIdx]?.azimuth_deg || 180
+      // Use per-panel azimuth from grouped data if available, else fall back to segment
+      const azimuth = panel.azimuth_deg ?? segments[segIdx]?.azimuth_deg ?? 180
       const orientation = panel.orientation === 'PORTRAIT' ? 90 : 0
       const totalAngle = azimuth + orientation
 
@@ -763,11 +764,10 @@ export default function CesiumMap3D({
         }
 
         // Compute corner heights using roof pitch + azimuth
-        // Each corner's height offset from center depends on its position
-        // relative to the roof slope direction
-        const segIdx = selectedPanels[pg.i]?.segment_index || 0
-        const pitchDeg = segments[segIdx]?.pitch_deg || 0
-        const azimuthDeg = segments[segIdx]?.azimuth_deg || 180
+        const panel = selectedPanels[pg.i]
+        const segIdx = panel?.segment_index || 0
+        const pitchDeg = panel?.pitch_deg ?? segments[segIdx]?.pitch_deg ?? 0
+        const azimuthDeg = panel?.azimuth_deg ?? segments[segIdx]?.azimuth_deg ?? 180
         const pitchRad = pitchDeg * Math.PI / 180
         const azimuthRad = azimuthDeg * Math.PI / 180
 

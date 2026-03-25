@@ -10,6 +10,7 @@ import CesiumMap3D from './CesiumMap3D'
 export default function SolarStep({ lat, lng, apiKey, panelCount, panelDimensions, panelWattage, onPanelCountChange, onDataLoaded, targetProductionKwh, onTargetProductionChange }) {
   const [viewMode, setViewMode] = useState('2d') // '3d' or '2d' — default 2D until 3D coverage verified
   const [buildingData, setBuildingData] = useState(null)
+  const [groupedData, setGroupedData] = useState(null)
   const [dsmHeights, setDsmHeights] = useState(null)
   const [roofGeometry, setRoofGeometry] = useState(null)
 
@@ -25,6 +26,20 @@ export default function SolarStep({ lat, lng, apiKey, panelCount, panelDimension
   useEffect(() => {
     setViewMode('2d')
   }, [apiKey])
+
+  // Fetch grouped panels — single source of truth for both 2D and 3D views
+  useEffect(() => {
+    if (!lat || !lng) return
+    fetch(`/api/solar/panels-grouped?lat=${lat}&lng=${lng}&count=${panelCount}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setGroupedData(data) })
+      .catch(() => {})
+  }, [lat, lng, panelCount])
+
+  // Flatten grouped panels into a single array for shared use
+  const groupedPanels = groupedData?.arrays?.flatMap(arr =>
+    arr.panels.map(p => ({ ...p, azimuth_deg: arr.azimuth_deg, pitch_deg: arr.pitch_deg }))
+  ) || []
 
   // Fetch DSM heights for panel positions
   useEffect(() => {
@@ -152,7 +167,7 @@ export default function SolarStep({ lat, lng, apiKey, panelCount, panelDimension
         <CesiumMap3D
           lat={lat} lng={lng} apiKey={apiKey}
           panelCount={panelCount}
-          panels={buildingData?.panels || []}
+          panels={groupedPanels.length > 0 ? groupedPanels : (buildingData?.panels || [])}
           segments={buildingData?.roof_segments || []}
           panelDimensions={panelDimensions || buildingData?.panel_dimensions}
           dsmHeights={dsmHeights}
@@ -160,7 +175,7 @@ export default function SolarStep({ lat, lng, apiKey, panelCount, panelDimension
           onPanelCountChange={onPanelCountChange}
           onDataLoaded={handleDataLoaded}
           maxPanels={buildingData?.max_panels || 78}
-          totalKwh={buildingData?.panels?.slice(0, panelCount).reduce((s, p) => s + (p.yearly_energy_kwh || 0), 0) || 0}
+          totalKwh={groupedPanels.slice(0, panelCount).reduce((s, p) => s + (p.yearly_energy_kwh || 0), 0) || 0}
           carbonOffset={buildingData?.carbon_offset || 0}
           panelCapacityW={panelWattage || buildingData?.panel_capacity_w || 400}
         />
@@ -175,6 +190,7 @@ export default function SolarStep({ lat, lng, apiKey, panelCount, panelDimension
           panelWattage={panelWattage}
           onPanelCountChange={onPanelCountChange}
           onDataLoaded={handleDataLoaded}
+          groupedData={groupedData}
         />
       )}
     </div>
