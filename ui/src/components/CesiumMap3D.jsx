@@ -274,46 +274,57 @@ export default function CesiumMap3D({
     stopOrbit(viewer)
     setIsOrbiting(false)
 
-    // Use lookAt to CENTER the building in view
-    const groundH = dsmHeightsRef.current?.building?.ground_elevation_m ?? 0
-    const buildingH = dsmHeightsRef.current?.building?.building_height_m ?? 6
-    const rooftopH = groundH + buildingH
+    // Use the actual panel positions to find the true building center
+    // (the geocode lat/lng is often at the street curb, not the roof)
+    let targetLat = lat
+    let targetLng = lng
+    if (panels.length > 0) {
+      const selected = panels.slice(0, Math.min(panelCount, panels.length))
+      const validPanels = selected.filter(p => p.lat && p.lng)
+      if (validPanels.length > 0) {
+        targetLat = validPanels.reduce((s, p) => s + p.lat, 0) / validPanels.length
+        targetLng = validPanels.reduce((s, p) => s + p.lng, 0) / validPanels.length
+      }
+    }
 
-    // Target = building rooftop center
-    const target = Cesium.Cartesian3.fromDegrees(lng, lat, rooftopH)
-
-    // Camera heading: look from SE toward the roof
-    const primaryAzimuth = segments.length > 0 ? (segments[0].azimuth_deg || 180) : 180
-    const headingDeg = (primaryAzimuth + 135) % 360
-
-    // Range = distance from target (40m gives a tight residential view)
-    const range = 40
-
-    console.log(`[focusRoof] lookAt lat=${lat}, lng=${lng}, rooftop=${rooftopH.toFixed(0)}m, range=${range}m, heading=${headingDeg.toFixed(0)}°`)
-
-    viewer.camera.flyTo({
-      destination: target,
-      orientation: {
-        heading: Cesium.Math.toRadians(headingDeg),
-        pitch: Cesium.Math.toRadians(-45),
-        roll: 0,
-      },
-      duration: immediate ? 0.85 : 1.5,
-      complete: () => {
-        // After fly-to, use lookAt to lock view on building
-        if (!viewer.isDestroyed()) {
-          viewer.camera.lookAt(
-            target,
-            new Cesium.HeadingPitchRange(
-              Cesium.Math.toRadians(headingDeg),
-              Cesium.Math.toRadians(-45),
-              range,
-            )
-          )
-          viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY)
+    // Sample the actual tile mesh height at building center for accurate target
+    ;(async () => {
+      let rooftopH = 280 // fallback: high enough to be safe
+      try {
+        const cart = Cesium.Cartographic.fromDegrees(targetLng, targetLat)
+        const results = await viewer.scene.sampleHeightMostDetailed([cart])
+        if (results[0]?.height > 0) {
+          rooftopH = results[0].height + 2 // just above roof surface
         }
-      },
-    })
+      } catch (_) {
+        // Fallback: use DSM + geoid estimate
+        const groundH = dsmHeightsRef.current?.building?.ground_elevation_m ?? 0
+        const buildingH = dsmHeightsRef.current?.building?.building_height_m ?? 6
+        if (groundH > 0) {
+          // Rough geoid offset for this area
+          rooftopH = groundH + buildingH - 29
+        }
+      }
+
+      if (viewer.isDestroyed()) return
+
+      const target = Cesium.Cartesian3.fromDegrees(targetLng, targetLat, rooftopH)
+      const primaryAzimuth = segments.length > 0 ? (segments[0].azimuth_deg || 180) : 180
+      const headingDeg = (primaryAzimuth + 135) % 360
+      const range = 55
+
+      console.log(`[focusRoof] lookAt center=(${targetLat.toFixed(5)}, ${targetLng.toFixed(5)}), rooftopH=${rooftopH.toFixed(1)}m, range=${range}m`)
+
+      viewer.camera.lookAt(
+        target,
+        new Cesium.HeadingPitchRange(
+          Cesium.Math.toRadians(headingDeg),
+          Cesium.Math.toRadians(-40),
+          range,
+        )
+      )
+      viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY)
+    })()
   }
 
   // Fetch building data if not already provided
