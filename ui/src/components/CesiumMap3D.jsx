@@ -692,20 +692,30 @@ export default function CesiumMap3D({
       const orientation = panel.orientation === 'PORTRAIT' ? 90 : 0
       const totalAngle = azimuth + orientation
 
-      const cosLat = Math.cos(cLat * Math.PI / 180)
-      const halfW = (panelW / 2) / (111319.5 * cosLat)
-      const halfH = (panelH / 2) / 111319.5
+      // Match SolarMap's corner math exactly: polar coords (distance + bearing)
+      // then geodesic offset. This ensures 2D and 3D panel shapes are identical.
+      const hw = panelW / 2 // half-width in meters
+      const hh = panelH / 2 // half-height in meters
+      const rawCorners = [
+        { x: +hw, y: +hh },
+        { x: +hw, y: -hh },
+        { x: -hw, y: -hh },
+        { x: -hw, y: +hh },
+      ]
 
-      const corners = [
-        { dx: +halfW, dy: +halfH },
-        { dx: +halfW, dy: -halfH },
-        { dx: -halfW, dy: -halfH },
-        { dx: -halfW, dy: +halfH },
-      ].map(({ dx, dy }) => {
-        const angleRad = totalAngle * Math.PI / 180
-        const rotX = dx * Math.cos(angleRad) - dy * Math.sin(angleRad)
-        const rotY = dx * Math.sin(angleRad) + dy * Math.cos(angleRad)
-        return [cLng + rotX, cLat + rotY]
+      const cosLat = Math.cos(cLat * Math.PI / 180)
+      const metersPerDegLng = 111319.5 * cosLat
+      const metersPerDegLat = 111319.5
+
+      const corners = rawCorners.map(({ x, y }) => {
+        const distance = Math.sqrt(x * x + y * y)
+        const baseAngle = Math.atan2(y, x) * (180 / Math.PI)
+        const bearing = baseAngle + totalAngle
+        const bearingRad = bearing * Math.PI / 180
+        // Offset in meters → degrees (same as computeOffset for short distances)
+        const dLng = (distance * Math.sin(bearingRad)) / metersPerDegLng
+        const dLat = (distance * Math.cos(bearingRad)) / metersPerDegLat
+        return [cLng + dLng, cLat + dLat]
       })
 
       const kwhPerYear = (panel.yearly_energy_kwh || 0).toFixed(0)
