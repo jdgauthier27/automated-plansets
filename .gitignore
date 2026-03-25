@@ -1,11 +1,35 @@
+# Dependencies
 node_modules/
+
+# Python
 __pycache__/
 *.pyc
 *.pyo
+*.egg-info/
+.venv/
+venv/
+
+# Environment
 .env
 .env.local
-dist/
-*.tif
-.DS_Store
-logs/
 
+# Build artifacts
+dist/
+
+# Generated data
+data/projects/
+
+# GeoTIFF files (large binary)
+*.tif
+
+# IDE / OS
+.DS_Store
+.vscode/
+.idea/
+
+# Logs & caches
+logs/
+.pytest_cache/
+
+# Claude Code
+.claude/

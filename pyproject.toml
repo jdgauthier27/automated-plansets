@@ -1,0 +1,30 @@
+[project]
+name = "solar-planset-tool"
+version = "0.1.0"
+description = "Automated solar permit planset generator with multi-jurisdiction support"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.100",
+    "uvicorn>=0.20",
+    "numpy>=1.21",
+    "Pillow>=9.0",
+    "shapely>=2.0",
+    "rasterio>=1.3",
+    "scipy>=1.10",
+    "ezdxf>=0.18",
+]
+
+[project.optional-dependencies]
+pdf = ["playwright>=1.40"]
+dev = ["pytest>=7.0", "ruff>=0.1"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
