@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import SolarMap from './SolarMap'
-import ThreeMap3D from './ThreeMap3D'
+import CesiumMap3D from './CesiumMap3D'
 
 /**
  * Solar Potential Step — Orchestrator
@@ -147,9 +147,9 @@ export default function SolarStep({ lat, lng, apiKey, panelCount, panelDimension
         )
       })()}
 
-      {/* 3D View */}
+      {/* 3D View — CesiumJS with Google Photorealistic 3D Tiles */}
       {viewMode === '3d' && (
-        <ThreeMap3D
+        <CesiumMap3D
           lat={lat} lng={lng} apiKey={apiKey}
           panelCount={panelCount}
           panels={buildingData?.panels || []}
