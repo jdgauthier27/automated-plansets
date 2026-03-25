@@ -274,25 +274,45 @@ export default function CesiumMap3D({
     stopOrbit(viewer)
     setIsOrbiting(false)
 
-    // Simple: fly to building lat/lng at a close altitude
+    // Use lookAt to CENTER the building in view
     const groundH = dsmHeightsRef.current?.building?.ground_elevation_m ?? 0
     const buildingH = dsmHeightsRef.current?.building?.building_height_m ?? 6
-    const altitudeM = groundH + buildingH + 40 // ~40m above rooftop
+    const rooftopH = groundH + buildingH
 
-    // Primary roof face azimuth for heading
+    // Target = building rooftop center
+    const target = Cesium.Cartesian3.fromDegrees(lng, lat, rooftopH)
+
+    // Camera heading: look from SE toward the roof
     const primaryAzimuth = segments.length > 0 ? (segments[0].azimuth_deg || 180) : 180
     const headingDeg = (primaryAzimuth + 135) % 360
 
-    console.log(`[focusRoof] Flying to lat=${lat}, lng=${lng}, alt=${altitudeM.toFixed(0)}m, heading=${headingDeg.toFixed(0)}°`)
+    // Range = distance from target (40m gives a tight residential view)
+    const range = 40
+
+    console.log(`[focusRoof] lookAt lat=${lat}, lng=${lng}, rooftop=${rooftopH.toFixed(0)}m, range=${range}m, heading=${headingDeg.toFixed(0)}°`)
 
     viewer.camera.flyTo({
-      destination: Cesium.Cartesian3.fromDegrees(lng, lat, altitudeM),
+      destination: target,
       orientation: {
         heading: Cesium.Math.toRadians(headingDeg),
-        pitch: Cesium.Math.toRadians(-50),
+        pitch: Cesium.Math.toRadians(-45),
         roll: 0,
       },
       duration: immediate ? 0.85 : 1.5,
+      complete: () => {
+        // After fly-to, use lookAt to lock view on building
+        if (!viewer.isDestroyed()) {
+          viewer.camera.lookAt(
+            target,
+            new Cesium.HeadingPitchRange(
+              Cesium.Math.toRadians(headingDeg),
+              Cesium.Math.toRadians(-45),
+              range,
+            )
+          )
+          viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY)
+        }
+      },
     })
   }
 
