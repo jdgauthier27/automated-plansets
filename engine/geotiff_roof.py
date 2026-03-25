@@ -608,38 +608,144 @@ def _azimuth_to_label(az: float) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Public API
+# Geographic conversion helpers
 # ---------------------------------------------------------------------------
-def get_roof_faces_from_geotiff(
+def _strip_closed_ring(coords: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
+    """Remove a duplicated closing vertex from a ring if present."""
+    if len(coords) > 1:
+        first = coords[0]
+        last = coords[-1]
+        if abs(first[0] - last[0]) < 1e-9 and abs(first[1] - last[1]) < 1e-9:
+            return coords[:-1]
+    return coords
+
+
+def _xy_to_latlng(x: float, y: float, crs: str) -> Optional[Tuple[float, float]]:
+    """Convert projected CRS coordinates to WGS84 lat/lng."""
+    if not crs or crs == "unknown":
+        return None
+
+    try:
+        from rasterio.crs import CRS
+        from rasterio.warp import transform as rio_transform
+
+        src_crs = CRS.from_string(crs)
+        lngs, lats = rio_transform(src_crs, "EPSG:4326", [x], [y])
+        if lngs and lats:
+            return float(lats[0]), float(lngs[0])
+    except Exception:
+        pass
+
+    try:
+        from pyproj import Transformer
+
+        transformer = Transformer.from_crs(crs, "EPSG:4326", always_xy=True)
+        lng, lat = transformer.transform(x, y)
+        return float(lat), float(lng)
+    except Exception:
+        return None
+
+
+def _points_m_to_latlng(points_m: List[Tuple[float, float]], crs: str) -> List[Dict[str, float]]:
+    """Convert a projected polygon ring in meters to JSON-friendly lat/lng points."""
+    latlng: List[Dict[str, float]] = []
+    for x_m, y_m in _strip_closed_ring(points_m):
+        point = _xy_to_latlng(x_m, y_m, crs)
+        if point is None:
+            continue
+        lat, lng = point
+        latlng.append({"lat": round(lat, 8), "lng": round(lng, 8)})
+    return latlng
+
+
+def _page_to_meters(
+    px: float,
+    py: float,
+    cx_page: float,
+    cy_page: float,
+    cx_m: float,
+    cy_m: float,
+    pts_per_ft: float,
+) -> Tuple[float, float]:
+    """Convert page-point coordinates back into projected CRS meters."""
+    dx_ft = (px - cx_page) / pts_per_ft
+    dy_ft = (cy_page - py) / pts_per_ft
+    return (
+        cx_m + dx_ft / _FT_PER_M,
+        cy_m + dy_ft / _FT_PER_M,
+    )
+
+
+def _page_polygon_to_meters(
+    polygon: Polygon,
+    cx_page: float,
+    cy_page: float,
+    cx_m: float,
+    cy_m: float,
+    pts_per_ft: float,
+) -> List[Tuple[float, float]]:
+    """Convert a page-space polygon back into projected CRS meters."""
+    return [
+        _page_to_meters(px, py, cx_page, cy_page, cx_m, cy_m, pts_per_ft)
+        for px, py in _strip_closed_ring(list(polygon.exterior.coords))
+    ]
+
+
+def _polygon_centroid_latlng(points_m: List[Tuple[float, float]], crs: str) -> Optional[Dict[str, float]]:
+    """Return the centroid of a projected polygon as a lat/lng dictionary."""
+    if len(points_m) < 3:
+        return None
+
+    poly = Polygon(points_m)
+    if poly.is_empty:
+        return None
+
+    centroid = poly.centroid
+    point = _xy_to_latlng(centroid.x, centroid.y, crs)
+    if point is None:
+        return None
+
+    lat, lng = point
+    return {"lat": round(lat, 8), "lng": round(lng, 8)}
+
+
+def _latlng_bounds(points: List[Dict[str, float]]) -> Optional[Dict[str, float]]:
+    """Compute a bounding box from JSON-friendly lat/lng points."""
+    if not points:
+        return None
+
+    lats = [p["lat"] for p in points]
+    lngs = [p["lng"] for p in points]
+    return {
+        "south": round(min(lats), 8),
+        "north": round(max(lats), 8),
+        "west": round(min(lngs), 8),
+        "east": round(max(lngs), 8),
+    }
+
+
+def _build_roof_scene(
     lat: float,
     lng: float,
-    api_key: Optional[str] = None,
+    api_key: Optional[str],
     page_width: int = _PAGE_WIDTH,
     page_height: int = _PAGE_HEIGHT,
-) -> Tuple[List, float]:
-    """Download GeoTIFF layers, segment roof, return RoofFace list + scale.
-
-    Returns:
-        (roof_faces, pts_per_ft) — same interface as
-        solar_insight_to_roof_faces() in google_solar.py.
-    """
+) -> Optional[Dict[str, object]]:
+    """Build both page-space and geographic roof geometry from GeoTIFF layers."""
     from roof_detector import RoofFace
 
     api_key = api_key or os.environ.get("GOOGLE_SOLAR_API_KEY", "")
     if not api_key:
         raise ValueError("No Google Solar API key provided")
 
-    # 1. Fetch data layer URLs
     layers = _fetch_data_layers(lat, lng, api_key)
     mask_url = layers.get("maskUrl", "")
     dsm_url = layers.get("dsmUrl", "")
     if not mask_url or not dsm_url:
         raise RuntimeError(
-            f"dataLayers response missing maskUrl or dsmUrl: "
-            f"keys={list(layers.keys())}"
+            f"dataLayers response missing maskUrl or dsmUrl: keys={list(layers.keys())}"
         )
 
-    # 2. Download and parse GeoTIFFs
     mask_tiff = _parse_geotiff(_download_geotiff(mask_url, api_key))
     dsm_tiff = _parse_geotiff(_download_geotiff(dsm_url, api_key))
     logger.info("Mask: %s, shape=%s, res=%.3f m/px",
@@ -647,36 +753,33 @@ def get_roof_faces_from_geotiff(
     logger.info("DSM:  %s, shape=%s, res=%.3f m/px",
                 dsm_tiff.crs, dsm_tiff.data.shape, dsm_tiff.resolution)
 
-    # 3. Isolate the target building
     building_mask = _isolate_building(mask_tiff, lat, lng)
     if building_mask.sum() < 20:
         logger.error("Could not isolate building from mask")
-        return [], 1.0
+        return None
 
-    # 4. Segment roof faces
     raw_faces = _segment_roof_faces(dsm_tiff, building_mask, mask_tiff)
     if not raw_faces:
         logger.error("No roof faces segmented from DSM")
-        return [], 1.0
+        return None
 
-    # 5. Convert to page-coordinate RoofFace objects
-    #    Build a bounding box of all face polygons (in meters), then
-    #    compute a scale so the building fills ~55% of the page.
-    all_xs = []
-    all_ys = []
-    for f in raw_faces:
-        for x, y in f.polygon_m:
-            all_xs.append(x)
-            all_ys.append(y)
+    outline_m = _extract_outline(building_mask, mask_tiff)
+
+    all_xs: List[float] = []
+    all_ys: List[float] = []
+    for face in raw_faces:
+        for x_m, y_m in face.polygon_m:
+            all_xs.append(x_m)
+            all_ys.append(y_m)
+
+    if outline_m:
+        all_xs.extend(x for x, _ in outline_m)
+        all_ys.extend(y for _, y in outline_m)
 
     min_x_m, max_x_m = min(all_xs), max(all_xs)
     min_y_m, max_y_m = min(all_ys), max(all_ys)
-    building_w_m = max_x_m - min_x_m
-    building_h_m = max_y_m - min_y_m
-
-    # Avoid division by zero
-    building_w_m = max(building_w_m, 1.0)
-    building_h_m = max(building_h_m, 1.0)
+    building_w_m = max(max_x_m - min_x_m, 1.0)
+    building_h_m = max(max_y_m - min_y_m, 1.0)
 
     building_w_ft = building_w_m * _FT_PER_M
     building_h_ft = building_h_m * _FT_PER_M
@@ -690,16 +793,17 @@ def get_roof_faces_from_geotiff(
     cx_m = (min_x_m + max_x_m) / 2
     cy_m = (min_y_m + max_y_m) / 2
 
-    roof_faces: List[RoofFace] = []
+    roof_faces: List["RoofFace"] = []
+    geo_roof_faces: List[Dict[str, object]] = []
+    geo_points_all: List[Dict[str, float]] = []
 
     for idx, face in enumerate(raw_faces):
-        # Convert polygon from CRS meters to page points
         page_coords = []
         for x_m, y_m in face.polygon_m:
             dx_ft = (x_m - cx_m) * _FT_PER_M
             dy_ft = (y_m - cy_m) * _FT_PER_M
             px = cx_page + dx_ft * pts_per_ft
-            py = cy_page - dy_ft * pts_per_ft   # y-axis flipped for page coords
+            py = cy_page - dy_ft * pts_per_ft
             page_coords.append((px, py))
 
         if len(page_coords) < 3:
@@ -709,7 +813,6 @@ def get_roof_faces_from_geotiff(
         if not poly.is_valid:
             poly = poly.buffer(0)
 
-        # Setback inset (3 ft)
         setback_pts = 3.0 * pts_per_ft
         usable = poly.buffer(-setback_pts)
         if usable.is_empty or usable.area < 100:
@@ -721,8 +824,13 @@ def get_roof_faces_from_geotiff(
             usable = max(usable.geoms, key=lambda g: g.area)
 
         usable_sqft = usable.area / (pts_per_ft ** 2)
+        usable_m = _page_polygon_to_meters(usable, cx_page, cy_page, cx_m, cy_m, pts_per_ft)
 
-        rf = RoofFace(
+        full_polygon_latlng = _points_m_to_latlng(face.polygon_m, mask_tiff.crs)
+        usable_polygon_latlng = _points_m_to_latlng(usable_m, mask_tiff.crs)
+        centroid_latlng = _polygon_centroid_latlng(face.polygon_m, mask_tiff.crs)
+
+        roof_faces.append(RoofFace(
             id=idx,
             polygon=poly,
             area_sqft=round(face.area_sqft, 1),
@@ -732,12 +840,119 @@ def get_roof_faces_from_geotiff(
             label=face.label,
             detection_method="geotiff_dsm",
             usable_polygon=usable,
-        )
-        roof_faces.append(rf)
+        ))
 
-    logger.info("Returning %d RoofFace objects, scale=%.3f pts/ft",
-                len(roof_faces), pts_per_ft)
-    return roof_faces, pts_per_ft
+        geo_roof_faces.append({
+            "id": idx,
+            "label": face.label,
+            "pitch_deg": round(face.avg_pitch_deg, 1),
+            "azimuth_deg": round(face.avg_azimuth_deg, 1),
+            "area_sqft": round(face.area_sqft, 1),
+            "usable_area_sqft": round(usable_sqft, 1),
+            "center_lat": centroid_latlng["lat"] if centroid_latlng else None,
+            "center_lng": centroid_latlng["lng"] if centroid_latlng else None,
+            "polygon_latlng": full_polygon_latlng,
+            "usable_polygon_latlng": usable_polygon_latlng,
+            "is_usable": bool(usable_polygon_latlng),
+        })
+        geo_points_all.extend(full_polygon_latlng)
+        geo_points_all.extend(usable_polygon_latlng)
+
+    outline_latlng = _points_m_to_latlng(outline_m, mask_tiff.crs)
+    if not outline_latlng:
+        outline_latlng = []
+        for x_m, y_m in zip(all_xs, all_ys):
+            point = _xy_to_latlng(x_m, y_m, mask_tiff.crs)
+            if point is None:
+                continue
+            lat_p, lng_p = point
+            outline_latlng.append({"lat": round(lat_p, 8), "lng": round(lng_p, 8)})
+    geo_points_all.extend(outline_latlng)
+
+    outline_ft = [
+        ((x_m - cx_m) * _FT_PER_M, (y_m - cy_m) * _FT_PER_M)
+        for x_m, y_m in outline_m
+    ]
+    bounds_latlng = _latlng_bounds(geo_points_all)
+    if bounds_latlng is None and outline_latlng:
+        bounds_latlng = _latlng_bounds(outline_latlng)
+
+    centroid_latlng = None
+    if outline_m:
+        centroid_latlng = _polygon_centroid_latlng(outline_m, mask_tiff.crs)
+    if centroid_latlng is None and bounds_latlng is not None:
+        centroid_latlng = {
+            "lat": round((bounds_latlng["north"] + bounds_latlng["south"]) / 2, 8),
+            "lng": round((bounds_latlng["east"] + bounds_latlng["west"]) / 2, 8),
+        }
+
+    width_m = (bounds_latlng["east"] - bounds_latlng["west"]) * 111319.49079327357 * math.cos(math.radians(centroid_latlng["lat"])) if bounds_latlng and centroid_latlng else 0.0
+    height_m = (bounds_latlng["north"] - bounds_latlng["south"]) * 111319.49079327357 if bounds_latlng else 0.0
+    camera_radius_m = math.sqrt((width_m / 2) ** 2 + (height_m / 2) ** 2) if bounds_latlng else 0.0
+
+    return {
+        "source": "geotiff_dsm",
+        "roof_faces": roof_faces,
+        "geo_roof_faces": geo_roof_faces,
+        "scale_pts_per_ft": pts_per_ft,
+        "building_outline_ft": outline_ft,
+        "building_outline_latlng": outline_latlng,
+        "centroid_latlng": centroid_latlng,
+        "bounds_latlng": bounds_latlng,
+        "camera_hint": {
+            "center_lat": centroid_latlng["lat"] if centroid_latlng else lat,
+            "center_lng": centroid_latlng["lng"] if centroid_latlng else lng,
+            "radius_m": round(camera_radius_m, 2),
+            "width_m": round(width_m, 2),
+            "height_m": round(height_m, 2),
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
+def get_roof_geometry_from_geotiff(
+    lat: float,
+    lng: float,
+    api_key: Optional[str] = None,
+    page_width: int = _PAGE_WIDTH,
+    page_height: int = _PAGE_HEIGHT,
+) -> Dict[str, object]:
+    """Return roof geometry in both page-space and lat/lng space."""
+    scene = _build_roof_scene(lat, lng, api_key, page_width=page_width, page_height=page_height)
+    if scene is None:
+        return {
+            "source": "geotiff_dsm",
+            "roof_faces": [],
+            "geo_roof_faces": [],
+            "scale_pts_per_ft": 1.0,
+            "building_outline_ft": [],
+            "building_outline_latlng": [],
+            "centroid_latlng": None,
+            "bounds_latlng": None,
+            "camera_hint": None,
+        }
+    return scene
+
+
+def get_roof_faces_from_geotiff(
+    lat: float,
+    lng: float,
+    api_key: Optional[str] = None,
+    page_width: int = _PAGE_WIDTH,
+    page_height: int = _PAGE_HEIGHT,
+) -> Tuple[List, float]:
+    """Download GeoTIFF layers, segment roof, return RoofFace list + scale.
+
+    Returns:
+        (roof_faces, pts_per_ft) — same interface as
+        solar_insight_to_roof_faces() in google_solar.py.
+    """
+    scene = _build_roof_scene(lat, lng, api_key, page_width=page_width, page_height=page_height)
+    if scene is None:
+        return [], 1.0
+    return scene["roof_faces"], float(scene["scale_pts_per_ft"])
 
 
 def get_building_outline(
@@ -749,37 +964,22 @@ def get_building_outline(
 
     Origin is at the building centroid.
     """
-    api_key = api_key or os.environ.get("GOOGLE_SOLAR_API_KEY", "")
-    if not api_key:
-        raise ValueError("No Google Solar API key provided")
-
-    layers = _fetch_data_layers(lat, lng, api_key)
-    mask_url = layers.get("maskUrl", "")
-    if not mask_url:
-        raise RuntimeError("dataLayers response missing maskUrl")
-
-    mask_tiff = _parse_geotiff(_download_geotiff(mask_url, api_key))
-    building_mask = _isolate_building(mask_tiff, lat, lng)
-
-    if building_mask.sum() < 20:
-        logger.error("Could not isolate building from mask for outline")
+    scene = _build_roof_scene(lat, lng, api_key)
+    if scene is None:
         return []
+    return list(scene["building_outline_ft"])
 
-    outline_m = _extract_outline(building_mask, mask_tiff)
-    if not outline_m:
+
+def get_building_outline_latlng(
+    lat: float,
+    lng: float,
+    api_key: Optional[str] = None,
+) -> List[Dict[str, float]]:
+    """Return building outline as lat/lng coordinates."""
+    scene = _build_roof_scene(lat, lng, api_key)
+    if scene is None:
         return []
-
-    # Convert to feet relative to centroid
-    xs = [p[0] for p in outline_m]
-    ys = [p[1] for p in outline_m]
-    cx = sum(xs) / len(xs)
-    cy = sum(ys) / len(ys)
-
-    outline_ft = [
-        ((x - cx) * _FT_PER_M, (y - cy) * _FT_PER_M)
-        for x, y in outline_m
-    ]
-    return outline_ft
+    return list(scene["building_outline_latlng"])
 
 
 # ---------------------------------------------------------------------------

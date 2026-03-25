@@ -98,6 +98,9 @@ class PanelCatalogEntry:
     # Datasheet rendering hints
     datasheet_drawing: DatasheetDrawing = field(default_factory=DatasheetDrawing)
 
+    # Pricing
+    unit_cost_usd: float = 0.0
+
     # -- Convenience properties --
 
     @property
@@ -189,6 +192,9 @@ class InverterCatalogEntry:
     compatible_panel_wattage_min_w: int = 0
     compatible_panel_wattage_max_w: int = 9999
 
+    # Pricing
+    unit_cost_usd: float = 0.0
+
     # -- Convenience properties --
 
     @property
@@ -256,6 +262,9 @@ class RackingCatalogEntry:
     # Inverter compatibility
     compatible_inverter_types: List[str] = field(default_factory=lambda: ["string", "micro"])
 
+    # Pricing (per rail unit at longest available length)
+    unit_cost_usd: float = 0.0
+
 
 # ---------------------------------------------------------------------------
 # Attachment (roof mount)
@@ -292,3 +301,6 @@ class AttachmentCatalogEntry:
 
     # Installation
     installation_steps: List[str] = field(default_factory=list)
+
+    # Pricing (per unit/point)
+    unit_cost_usd: float = 0.0

@@ -29,6 +29,12 @@
             "type": "command",
             "command": "cd '/Users/jdelafontaine/Quebec Solaire/Automated plans/solar_planset_tool' && echo $CLAUDE_FILE_PATHS | grep -qE '\\.py$' && python3 -c \"import py_compile,sys; [py_compile.compile(f,doraise=True) for f in sys.argv[1:]]\" $CLAUDE_FILE_PATHS 2>&1 | head -5 || true",
             "statusMessage": "Syntax checking..."
+          },
+          {
+            "type": "command",
+            "command": "bash '/Users/jdelafontaine/Quebec Solaire/Automated plans/solar_planset_tool/.claude/rebuild-frontend.sh' 2>/dev/null || true",
+            "statusMessage": "Rebuilding frontend...",
+            "timeout": 30
           }
         ]
       },

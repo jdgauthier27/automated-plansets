@@ -2,15 +2,20 @@
 CEC Quebec Jurisdiction Engine
 ===============================
 Implements JurisdictionEngine for Quebec, Canada under:
-  - CEC CSA C22.1-2021 (Canadian Electrical Code)
+  - CEC CSA C22.1-2021 (Canadian Electrical Code, 25th Edition)
   - CCQ Chapter V (Quebec Construction Code — Electricity)
+  - CMEQ (Corporation des maîtres électriciens du Québec) regulations
   - IFC 2021 (International Fire Code)
   - CSA C22.2 No.107.1 (Inverter safety standard)
 
-Hydro-Quebec net metering:
+Utility: Hydro-Québec (sole distributor across all of Quebec).
+  - Net metering program: Autoproduction solaire (2025)
   - Max single-phase: 20 kW
   - Rate D: $0.0738/kWh
   - Incentive: $1,000/kW (2025 program)
+
+Permit authority: CMEQ / Régie du bâtiment du Québec (RBQ)
+Wire type: RW90-XLPE (Canadian standard — NOT THWN-2)
 """
 
 from typing import List
@@ -18,7 +23,7 @@ from typing import List
 from .base import JurisdictionEngine
 
 
-# ── Conductor ampacity table (CEC Table 2 / 75 deg C copper) ──────────
+# ── Conductor ampacity table (CEC Table 2 / 75 °C copper) ─────────────
 
 CONDUCTOR_AMPACITY_75C = [
     (15,  "#14 AWG Cu"),
@@ -36,7 +41,7 @@ CONDUCTOR_AMPACITY_75C = [
     (195, "#4/0 AWG Cu"),
 ]
 
-# ── EGC sizing table (CEC 10-814) ────────────────────────────────────
+# ── EGC sizing table (CEC 10-814) ─────────────────────────────────────
 
 EGC_TABLE = [
     (15,  "#14 AWG Cu"),
@@ -51,27 +56,103 @@ EGC_TABLE = [
     (800, "#1/0 AWG Cu"),
 ]
 
-# ── Standard breaker sizes ────────────────────────────────────────────
+# ── Standard breaker sizes ─────────────────────────────────────────────
 
 STANDARD_BREAKER_SIZES = [15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 100, 125, 150, 200]
 
-# ── Design temperatures by city ──────────────────────────────────────
+# ── Design temperatures by city (NBCC 2020 Appendix C) ────────────────
 
 CITY_DESIGN_TEMPS = {
     "gatineau":        -25,
     "montreal":        -23,
     "quebec city":     -28,
+    "ville de québec": -28,
     "sherbrooke":      -26,
     "trois-rivieres":  -27,
+    "trois-rivières":  -27,
     "laval":           -23,
     "longueuil":       -23,
+    "saguenay":        -31,   # Saguenay–Lac-Saint-Jean, coldest major city QC
+    "lévis":           -28,   # Same climatic zone as Quebec City
+    "levis":           -28,
+    "terrebonne":      -23,   # North shore of Montreal, same zone
 }
 
-DEFAULT_COLD_TEMP_C = -25
+DEFAULT_COLD_TEMP_C = -25   # Conservative Quebec default
+
+# ── Snow loads by city (PSF) — NBCC 2020 Appendix C ──────────────────
+# Quebec has heavy snowfall; all residential racking must be designed for full load.
+
+CITY_SNOW_LOAD_PSF = {
+    "montreal":        40,
+    "laval":           40,
+    "longueuil":       40,
+    "terrebonne":      40,
+    "gatineau":        40,
+    "sherbrooke":      45,
+    "trois-rivieres":  42,
+    "trois-rivières":  42,
+    "quebec city":     50,
+    "ville de québec": 50,
+    "lévis":           50,
+    "levis":           50,
+    "saguenay":        55,   # Saguenay–Lac-Saint-Jean — highest snow region
+}
+
+DEFAULT_SNOW_LOAD_PSF = 40   # Montreal/southern Quebec baseline
+
+# ── Wind design speed by city (mph, NBCC 2020 / ASCE 7 equivalent) ────
+
+CITY_WIND_MPH = {
+    "montreal":        90,
+    "laval":           90,
+    "longueuil":       90,
+    "terrebonne":      90,
+    "gatineau":        90,
+    "sherbrooke":      90,
+    "trois-rivieres":  90,
+    "trois-rivières":  90,
+    "quebec city":     90,
+    "ville de québec": 90,
+    "lévis":           90,
+    "levis":           90,
+    "saguenay":        90,
+}
+
+DEFAULT_WIND_MPH = 90   # Standard inland Quebec; coastal/Gaspésie = 100 mph
 
 
 class CECQuebecEngine(JurisdictionEngine):
-    """Quebec / CEC jurisdiction engine for solar PV planset generation."""
+    """Quebec / CEC jurisdiction engine for solar PV planset generation.
+
+    Args:
+        city:       Quebec city name for climate data and load lookups.
+        utility:    Override utility name (default: Hydro-Québec).
+        municipality: Alias for city (test-harness compatibility).
+        province:   Accepted but ignored (always Quebec).
+    """
+
+    def __init__(self, city: str = "", utility: str = "",
+                 municipality: str = "", province: str = ""):
+        # Accept municipality as alias for city
+        if not city and municipality:
+            city = municipality
+        self.city = city
+        city_lower = city.strip().lower()
+
+        # Quebec-specific identity
+        self.wire_type = "RW90-XLPE"
+        self.conduit_type = "EMT (exposed); Schedule-40 PVC (concealed)"
+        self.electrical_code = "CEC 25th Edition"
+        self.cmeq = True   # CMEQ supervision required for all Quebec electrical work
+
+        # Utility — always Hydro-Québec in Quebec
+        self.utility_name = utility if utility else "Hydro-Québec"
+        self.utility = self.utility_name  # alias for compatibility
+
+        # Design loads from NBCC 2020
+        self.snow_load_psf = CITY_SNOW_LOAD_PSF.get(city_lower, DEFAULT_SNOW_LOAD_PSF)
+        self.wind_speed_mph = CITY_WIND_MPH.get(city_lower, DEFAULT_WIND_MPH)
 
     # ── Identity ──────────────────────────────────────────────────────
 
@@ -79,12 +160,12 @@ class CECQuebecEngine(JurisdictionEngine):
         return "CEC"
 
     def get_code_edition(self) -> str:
-        return "CSA C22.1-2021"
+        return "CEC 25th Edition (CSA C22.1-2021) + CMEQ"
 
     # ── Climate / design conditions ───────────────────────────────────
 
-    def get_design_temperatures(self, city: str) -> dict:
-        key = city.strip().lower()
+    def get_design_temperatures(self, city: str = "") -> dict:
+        key = (city or self.city).strip().lower()
         cold_c = CITY_DESIGN_TEMPS.get(key, DEFAULT_COLD_TEMP_C)
         return {
             "cold_c": cold_c,
@@ -92,10 +173,18 @@ class CECQuebecEngine(JurisdictionEngine):
             "stc_c": 25,
         }
 
+    def get_wind_snow_loads(self, city: str = "") -> dict:
+        """Return design wind speed (mph) and snow load (PSF) per NBCC 2020."""
+        key = (city or self.city).strip().lower()
+        return {
+            "wind_mph": CITY_WIND_MPH.get(key, DEFAULT_WIND_MPH),
+            "snow_psf": CITY_SNOW_LOAD_PSF.get(key, DEFAULT_SNOW_LOAD_PSF),
+        }
+
     # ── Electrical sizing ─────────────────────────────────────────────
 
     def calculate_ac_breaker(self, continuous_amps: float) -> int:
-        """CEC Rule 4-004 / 64-100: breaker = continuous x 1.25, rounded to standard size."""
+        """CEC Rule 4-004 / 64-100: breaker = continuous × 1.25, rounded to standard size."""
         min_breaker = continuous_amps * 1.25
         for size in STANDARD_BREAKER_SIZES:
             if size >= min_breaker:
@@ -103,7 +192,7 @@ class CECQuebecEngine(JurisdictionEngine):
         return STANDARD_BREAKER_SIZES[-1]
 
     def calculate_dc_conductor(self, isc: float, num_strings: int) -> str:
-        """CEC Rule 14-100: DC conductor sized for Isc x 1.56 (1.25 x 1.25)."""
+        """CEC Rule 14-100: DC conductor sized for Isc × 1.56 (1.25 × 1.25)."""
         required_ampacity = isc * num_strings * 1.56
         for ampacity, conductor in CONDUCTOR_AMPACITY_75C:
             if ampacity >= required_ampacity:
@@ -135,7 +224,7 @@ class CECQuebecEngine(JurisdictionEngine):
     ) -> dict:
         """CEC Rule 64-112 / 64-404: 120% rule.
 
-        PV breaker + main breaker <= 1.2 x bus rating.
+        PV breaker + main breaker <= 1.2 × bus rating.
         """
         max_allowed = int(bus_rating_a * 1.20)
         total = pv_breaker_a + main_breaker_a
@@ -182,7 +271,7 @@ class CECQuebecEngine(JurisdictionEngine):
             },
             {
                 "level": "WARNING",
-                "text": "BIDIRECTIONAL METER\nNet Metering — Hydro-Quebec\nDO NOT REMOVE",
+                "text": f"BIDIRECTIONAL METER\nNet Metering — {self.utility_name}\nDO NOT REMOVE",
                 "location": "Utility Meter",
                 "color": "orange",
             },
@@ -246,7 +335,6 @@ class CECQuebecEngine(JurisdictionEngine):
         elif bt in ("commercial", "industrial", "multi-family"):
             return {"ridge_ft": 6, "eave_ft": 3, "pathway_ft": 4}
         else:
-            # Default to residential
             return {"ridge_ft": 3, "eave_ft": 1.5, "pathway_ft": 3}
 
     # ── Notes ─────────────────────────────────────────────────────────
@@ -254,13 +342,14 @@ class CECQuebecEngine(JurisdictionEngine):
     def get_general_notes(self) -> List[str]:
         """17 general notes for Quebec solar installations."""
         return [
-            "Notify Hydro-Quebec prior to activating the PV system. Net metering application must be approved before grid connection.",
+            f"Notify {self.utility_name} prior to activating the PV system. Net metering application must be approved under the Autoproduction solaire program before grid connection.",
             "All electrical equipment shall be CSA-listed and installed per manufacturer's installation instructions.",
             "Installer shall verify all dimensions and conditions at the job site. Report discrepancies to designer before proceeding.",
             "All system components not specified herein shall be reviewed and approved by the manufacturer's representative.",
             "All work shall be performed by or under the direct supervision of a licensed electrician (CMEQ/AECQ, Quebec).",
             "Installer shall verify adequate roof access pathways per NBCC and AHJ requirements before beginning work.",
             "Installer shall verify structural integrity of roof rafters/trusses prior to installing the racking system.",
+            f"Racking system shall be designed for snow load of {self.snow_load_psf} PSF and wind speed of {self.wind_speed_mph} mph per NBCC 2020.",
             'Lag screws used for racking attachment shall penetrate a minimum of 63 mm (2.5") into solid wood framing members.',
             "Roof access pathways (ridge, eave, and ventilation access) shall be maintained per IFC Section 605.11.",
             "All DC conductors shall be contained in conduit unless listed as PV wire or RW90-XLPE rated for sunlight exposure.",
@@ -269,7 +358,6 @@ class CECQuebecEngine(JurisdictionEngine):
             "Racking system shall be bonded to the grounding electrode system per CEC Rule 64-104.",
             "PV module frames shall be bonded using WEEB (Washer/Lug Bonding) clip or equivalent listed bonding hardware.",
             "All inverters shall be CSA C22.2 No.107.1 listed and certified for grid-interactive (GTI) operation.",
-            "Racking system shall be UL 2703 listed or carry equivalent Canadian certification per manufacturer specifications.",
             "A grounding electrode shall be provided per CEC Rule 64-104 and interconnected with the utility grounding system.",
         ]
 
@@ -287,8 +375,8 @@ class CECQuebecEngine(JurisdictionEngine):
             "GFCI protection and rapid shutdown shall be provided per CEC Rule 64-218(8) and AHJ requirements.",
             "PV module frame bonding shall use listed bonding hardware (WEEB clip or equivalent) per CEC Rule 64-104.",
             "Racking rail-to-rail bonding shall be maintained using listed splice connectors or WEEB bonding hardware.",
-            "Inverter shall be CSA C22.2 No.107.1 listed and approved for grid-interactive operation per Hydro-Quebec standards.",
-            "Racking system shall be rated for design wind and snow loads per NBCC Part 4 Structural Design requirements.",
+            f"Inverter shall be CSA C22.2 No.107.1 listed and approved for grid-interactive operation per {self.utility_name} standards.",
+            f"Racking system shall be rated for design snow load of {self.snow_load_psf} PSF and wind speed of {self.wind_speed_mph} mph per NBCC 2020.",
             "A continuous grounding path shall be maintained from all module frames to the grounding electrode conductor.",
             "All bus bar splices shall be rated for the conditions of use per applicable CEC requirements.",
             "The PV backfed breaker shall be positioned at the opposite end of the bus bar from the main breaker per CEC Rule 64-404.",
@@ -301,13 +389,18 @@ class CECQuebecEngine(JurisdictionEngine):
         return [
             {
                 "code": "CEC",
-                "title": "Canadian Electrical Code",
-                "edition": "CSA C22.1-2021",
+                "title": "Canadian Electrical Code, Part I",
+                "edition": "CSA C22.1-2021 (25th Edition)",
             },
             {
                 "code": "CCQ Ch. V",
-                "title": "Code de construction du Quebec — Chapitre V, Electricite",
+                "title": "Code de construction du Québec — Chapitre V, Électricité",
                 "edition": "2021",
+            },
+            {
+                "code": "NBCC",
+                "title": "National Building Code of Canada",
+                "edition": "2020",
             },
             {
                 "code": "IFC",
@@ -325,14 +418,37 @@ class CECQuebecEngine(JurisdictionEngine):
 
     def get_utility_info(self, city: str = "") -> dict:
         return {
-            "name": "Hydro-Quebec",
+            "name": "Hydro-Québec",
             "net_metering_max_kw": 20,
             "rate_per_kwh": 0.0738,
             "incentive_per_kw": 1000,
             "program_name": "Autoproduction solaire (2025)",
             "voltage": "240V split-phase",
             "frequency_hz": 60,
-            "interconnection_standard": "CEC Section 64 / Hydro-Quebec E.21-V",
+            "interconnection_standard": "CEC Section 64 / Hydro-Québec E.21-V",
+        }
+
+    # ── Licensing / authority ─────────────────────────────────────────
+
+    def get_code_references(self) -> List[str]:
+        """Return list of applicable code reference strings."""
+        return [
+            "CEC CSA C22.1-2021 (25th Edition)",
+            "CCQ Chapitre V — Électricité (2021)",
+            "NBCC 2020",
+            "IFC 2021 Section 605.11",
+            "CSA C22.2 No.107.1",
+        ]
+
+    def get_licensing_info(self) -> dict:
+        """Return CMEQ/RBQ licensing requirements for Quebec."""
+        return {
+            "licensing_body": "RBQ / CMEQ",
+            "licensing_body_full": "Régie du bâtiment du Québec (RBQ) / Corporation des maîtres électriciens du Québec (CMEQ)",
+            "permit_required": "Permis de construction — RBQ",
+            "inspector": "Inspecteur RBQ",
+            "contractor_license": "Licence RBQ — sous-catégorie électricité",
+            "master_electrician": "Maître électricien — CMEQ (licence maîtrise)",
         }
 
     def get_contractor_license_type(self) -> str:
@@ -345,3 +461,18 @@ class CECQuebecEngine(JurisdictionEngine):
     def get_licensing_body_full(self) -> str:
         return "Régie du bâtiment du Québec (RBQ) / Corporation des maîtres électriciens du Québec (CMEQ)"
 
+    # ── Convenience summary dict (used by test harness) ──────────────
+
+    def get_jurisdiction_data(self) -> dict:
+        """Return a flat summary dict for quick validation and rendering."""
+        return {
+            "utility": self.utility_name,
+            "wire_type": self.wire_type,
+            "electrical_code": self.get_code_edition(),
+            "conduit_type": self.conduit_type,
+            "snow_load_psf": self.snow_load_psf,
+            "wind_speed_mph": self.wind_speed_mph,
+            "cmeq": self.cmeq,
+            "licensing_body": "RBQ / CMEQ",
+            "code_name": self.get_code_name(),
+        }

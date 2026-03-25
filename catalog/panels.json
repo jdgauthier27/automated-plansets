@@ -44,7 +44,8 @@
       "cell_grid": [12, 11],
       "junction_box_position": "center_bottom",
       "busbar_count": 9
-    }
+    },
+    "unit_cost_usd": 200.00
   },
   {
     "id": "canadian-solar-hiku7-440",
@@ -91,7 +92,8 @@
       "cell_grid": [12, 11],
       "junction_box_position": "center_bottom",
       "busbar_count": 6
-    }
+    },
+    "unit_cost_usd": 190.00
   },
   {
     "id": "mission-solar-mse395",
@@ -138,7 +140,8 @@
       "cell_grid": [12, 10],
       "junction_box_position": "center_bottom",
       "busbar_count": 6
-    }
+    },
+    "unit_cost_usd": 180.00
   },
   {
     "id": "rec-alpha-405",
@@ -185,7 +188,8 @@
       "cell_grid": [12, 11],
       "junction_box_position": "center_bottom",
       "busbar_count": 6
-    }
+    },
+    "unit_cost_usd": 220.00
   },
   {
     "id": "silfab-sil-380",
@@ -232,7 +236,8 @@
       "cell_grid": [12, 10],
       "junction_box_position": "center_bottom",
       "busbar_count": 6
-    }
+    },
+    "unit_cost_usd": 170.00
   },
   {
     "id": "qcells-qpeak-395",
@@ -279,6 +284,7 @@
       "cell_grid": [12, 10],
       "junction_box_position": "center_bottom",
       "busbar_count": 6
-    }
+    },
+    "unit_cost_usd": 175.00
   }
 ]

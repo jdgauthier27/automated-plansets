@@ -3,8 +3,8 @@ numpy>=1.21
 Pillow>=9.0
 shapely>=2.0
 
-# Optional: PDF output
-# weasyprint>=60.0
+# PDF output via Playwright (WeasyPrint requires native Pango/Cairo on macOS)
+# playwright>=1.40  — install with: pip install playwright && python -m playwright install chromium
 
 # Optional: Roof detection from PDF plansets
 # opencv-python>=4.8

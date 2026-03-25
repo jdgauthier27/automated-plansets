@@ -34,7 +34,8 @@
     "certifications": ["UL 1741-SA", "UL 9540", "UL 3741", "IEEE 1547-2018", "CSA C22.2 No. 107.1"],
 
     "compatible_panel_wattage_min_w": 300,
-    "compatible_panel_wattage_max_w": 600
+    "compatible_panel_wattage_max_w": 600,
+    "unit_cost_usd": 800.00
   },
   {
     "id": "hoymiles-hms-800",
@@ -71,7 +72,8 @@
     "certifications": ["UL 1741", "CSA C22.2 No. 107.1", "IEEE 1547", "FCC Part 15"],
 
     "compatible_panel_wattage_min_w": 320,
-    "compatible_panel_wattage_max_w": 540
+    "compatible_panel_wattage_max_w": 540,
+    "unit_cost_usd": 130.00
   },
   {
     "id": "enphase-iq8plus",
@@ -108,7 +110,8 @@
     "certifications": ["UL 1741-SA", "UL 62109", "CSA C22.2 No. 107.1", "IEEE 1547-2018", "FCC Part 15"],
 
     "compatible_panel_wattage_min_w": 235,
-    "compatible_panel_wattage_max_w": 440
+    "compatible_panel_wattage_max_w": 440,
+    "unit_cost_usd": 165.00
   },
   {
     "id": "solaredge-se7600h",
@@ -145,7 +148,8 @@
     "certifications": ["UL 1741-SA", "UL 9540", "IEEE 1547-2018", "CSA C22.2 No. 107.1"],
 
     "compatible_panel_wattage_min_w": 300,
-    "compatible_panel_wattage_max_w": 600
+    "compatible_panel_wattage_max_w": 600,
+    "unit_cost_usd": 1200.00
   },
   {
     "id": "sma-sunny-boy-7700",
@@ -182,7 +186,8 @@
     "certifications": ["UL 1741-SA", "UL 9540", "IEEE 1547-2018", "CSA C22.2 No. 107.1"],
 
     "compatible_panel_wattage_min_w": 300,
-    "compatible_panel_wattage_max_w": 600
+    "compatible_panel_wattage_max_w": 600,
+    "unit_cost_usd": 1100.00
   },
   {
     "id": "enphase-iq8m",
@@ -219,6 +224,7 @@
     "certifications": ["UL 1741-SA", "UL 62109", "CSA C22.2 No. 107.1", "IEEE 1547-2018", "FCC Part 15"],
 
     "compatible_panel_wattage_min_w": 235,
-    "compatible_panel_wattage_max_w": 460
+    "compatible_panel_wattage_max_w": 460,
+    "unit_cost_usd": 175.00
   }
 ]

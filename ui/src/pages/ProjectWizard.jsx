@@ -6,6 +6,8 @@ import SolarMap from '../components/SolarMap'
 import SolarStep from '../components/SolarStep'
 
 const STEPS = ['Address', 'Roof', 'Equipment', 'Solar', 'Electrical', 'Review']
+const STORAGE_KEY = 'solar_wizard_state'
+const STALE_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
 
 const ROOF_MATERIALS = [
   { value: 'asphalt_shingle', label: 'Asphalt Shingle' },
@@ -16,31 +18,70 @@ const ROOF_MATERIALS = [
   { value: 'flat_membrane', label: 'Flat Membrane (TPO/EPDM)' },
 ]
 
+const DEFAULT_FORM = {
+  address: '',
+  latitude: 0,
+  longitude: 0,
+  addressConfirmed: false,
+  streetViewB64: null,
+  satelliteB64: null,
+  roof_material: 'asphalt_shingle',
+  roof_pitch: 25,
+  panel_id: '',
+  inverter_id: '',
+  racking_id: '',
+  panel_wattage_w: 0,
+  panel_dimensions_mm: null,
+  main_panel_breaker_a: 200,
+  main_panel_bus_rating_a: 225,
+  num_panels: 13,
+  company_name: 'Quebec Solaire',
+  designer_name: '',
+  project_name: '',
+}
+
+function loadSavedState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    const saved = JSON.parse(raw)
+    if (!saved.savedAt || Date.now() - saved.savedAt > STALE_MS) {
+      localStorage.removeItem(STORAGE_KEY)
+      return null
+    }
+    return saved
+  } catch {
+    return null
+  }
+}
+
 export default function ProjectWizard() {
   const navigate = useNavigate()
-  const [step, setStep] = useState(0)
   const [submitting, setSubmitting] = useState(false)
-  const [form, setForm] = useState({
-    address: '',
-    latitude: 0,
-    longitude: 0,
-    addressConfirmed: false,
-    streetViewB64: null,
-    satelliteB64: null,
-    roof_material: 'asphalt_shingle',
-    roof_pitch: 25,
-    panel_id: '',
-    inverter_id: '',
-    racking_id: '',
-    panel_wattage_w: 0,
-    panel_dimensions_mm: null, // { length, width } from selected panel
-    main_panel_breaker_a: 200,
-    main_panel_bus_rating_a: 225,
-    num_panels: 13,
-    company_name: 'Quebec Solaire',
-    designer_name: '',
-    project_name: '',
+
+  const [step, setStep] = useState(() => {
+    const saved = loadSavedState()
+    return saved?.step ?? 0
   })
+
+  const [form, setForm] = useState(() => {
+    const saved = loadSavedState()
+    if (saved?.form) return { ...DEFAULT_FORM, ...saved.form }
+    return DEFAULT_FORM
+  })
+
+  // Persist state to localStorage on every change
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ step, form, savedAt: Date.now() }))
+    } catch {}
+  }, [step, form])
+
+  const clearState = () => {
+    localStorage.removeItem(STORAGE_KEY)
+    setStep(0)
+    setForm(DEFAULT_FORM)
+  }
 
   const update = (fields) => setForm(prev => ({ ...prev, ...fields }))
   const canNext = () => {
@@ -77,6 +118,7 @@ export default function ProjectWizard() {
       })
       const data = await res.json()
       if (res.ok) {
+        localStorage.removeItem(STORAGE_KEY)
         navigate(`/project/${data.project_id}`)
       } else {
         alert(data.detail || 'Error creating project')
@@ -118,16 +160,28 @@ export default function ProjectWizard() {
       {/* Step content */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         {step === 0 && (
-          <AddressConfirm
-            address={form.address}
-            streetViewB64={form.streetViewB64}
-            satelliteB64={form.satelliteB64}
-            confirmed={form.addressConfirmed}
-            latitude={form.latitude}
-            longitude={form.longitude}
-            apiKey={window.__GOOGLE_API_KEY || ''}
-            onUpdate={update}
-          />
+          <>
+            <AddressConfirm
+              address={form.address}
+              streetViewB64={form.streetViewB64}
+              satelliteB64={form.satelliteB64}
+              confirmed={form.addressConfirmed}
+              latitude={form.latitude}
+              longitude={form.longitude}
+              apiKey={window.__GOOGLE_API_KEY || ''}
+              onUpdate={update}
+            />
+            {(form.address || form.addressConfirmed) && (
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <button
+                  onClick={clearState}
+                  className="text-sm text-red-500 hover:text-red-700 underline"
+                >
+                  Start Over
+                </button>
+              </div>
+            )}
+          </>
         )}
 
         {step === 1 && (
@@ -184,6 +238,8 @@ export default function ProjectWizard() {
             panelDimensions={form.panel_dimensions_mm}
             panelWattage={form.panel_wattage_w}
             onPanelCountChange={(count) => update({ num_panels: count })}
+            targetProductionKwh={form.target_production_kwh || 0}
+            onTargetProductionChange={(kwh) => update({ target_production_kwh: kwh })}
             onDataLoaded={(data) => {
               if (data.roof_segments?.length > 0) {
                 const mainSeg = data.roof_segments[0]

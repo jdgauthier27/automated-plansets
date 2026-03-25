@@ -388,6 +388,20 @@ class GoogleSolarClient:
         )
 
 
+def obstacles_from_insight(insight: "BuildingInsight") -> list:
+    """Extract roof obstacles from a BuildingInsight response.
+
+    The Google Solar API does not currently expose obstacle (vent, skylight,
+    chimney) data in its public response, so this function returns an empty
+    list.  The hook is here so callers can pass the result to PlacementConfig
+    and future API versions (or manual overrides) can populate it.
+
+    Returns:
+        list[RoofObstacle] — always empty for the current API version.
+    """
+    return []
+
+
 def _haversine_ft(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     """Return the great-circle distance in feet between two lat/lng points."""
     R_ft = 20925646.0  # Earth mean radius in feet

@@ -337,12 +337,15 @@ def get_roof_from_geotiff(
         raise HTTPException(status_code=400, detail="No API key configured")
 
     try:
-        from engine.geotiff_roof import get_roof_faces_from_geotiff, get_building_outline
+        from engine.geotiff_roof import get_roof_geometry_from_geotiff
         from panel_placer import PanelSpec, PanelPlacer, PlacementConfig
 
-        # Get roof faces from GeoTIFF
-        roofs, scale = get_roof_faces_from_geotiff(lat, lng, api_key)
-        outline = get_building_outline(lat, lng, api_key)
+        # Get roof faces + geographic geometry from GeoTIFF in one pass
+        scene = get_roof_geometry_from_geotiff(lat, lng, api_key)
+        roofs = scene.get("roof_faces", [])
+        scale = float(scene.get("scale_pts_per_ft", 1.0))
+        outline_ft = scene.get("building_outline_ft", [])
+        outline_latlng = scene.get("building_outline_latlng", [])
 
         # Place panels using the selected panel dimensions
         ps = PanelSpec(
@@ -361,19 +364,6 @@ def get_roof_from_geotiff(
         )
         placements = placer.place_on_roofs(roofs, scale)
 
-        # Build response
-        roof_data = []
-        for rf in roofs:
-            poly = rf.usable_polygon
-            area = poly.area / (scale ** 2) if poly and not poly.is_empty else 0
-            roof_data.append({
-                "id": rf.id,
-                "label": rf.label,
-                "azimuth_deg": round(rf.azimuth_deg, 1),
-                "pitch_deg": round(rf.pitch_deg, 1),
-                "area_sqft": round(area, 0),
-            })
-
         panel_data = []
         for result in placements:
             for p in result.panels:
@@ -391,13 +381,27 @@ def get_roof_from_geotiff(
         total_panels = sum(r.total_panels for r in placements)
 
         return {
-            "source": "geotiff_dsm",
-            "roof_faces": roof_data,
+            "source": scene.get("source", "geotiff_dsm"),
+            "roof_faces": scene.get("geo_roof_faces", []),
             "panels": panel_data,
             "total_panels": total_panels,
             "system_kw": round(total_panels * panel_wattage / 1000, 2),
             "scale_pts_per_ft": round(scale, 4),
-            "building_outline_ft": outline,
+            "building_outline_ft": outline_ft,
+            "building_outline_latlng": outline_latlng,
+            "centroid_latlng": scene.get("centroid_latlng"),
+            "bounds_latlng": scene.get("bounds_latlng"),
+            "camera_hint": scene.get("camera_hint"),
+            "geometry": {
+                "roof_face_count": len(scene.get("geo_roof_faces", [])),
+                "usable_roof_face_count": sum(
+                    1 for face in scene.get("geo_roof_faces", []) if face.get("usable_polygon_latlng")
+                ),
+                "outline_latlng": outline_latlng,
+                "bounds_latlng": scene.get("bounds_latlng"),
+                "centroid_latlng": scene.get("centroid_latlng"),
+                "camera_hint": scene.get("camera_hint"),
+            },
         }
 
     except Exception as e:
@@ -407,3 +411,84 @@ def get_roof_from_geotiff(
             status_code=502,
             detail=f"GeoTIFF roof analysis failed: {e}. Falling back to buildingInsights.",
         )
+
+
+@router.get("/terrain-data")
+def get_terrain_data(
+    lat: float = Query(...),
+    lng: float = Query(...),
+    radius: float = Query(50.0, description="Radius in meters (half-width of terrain area)"),
+):
+    """Get terrain heightmap data for THREE.js 3D viewer.
+
+    Returns a downsampled DSM elevation grid (200×200) centered on the building,
+    plus metadata for constructing a BufferGeometry mesh in the browser.
+    Replicates OpenSolar's OsTerrain approach.
+    """
+    from engine.dsm_processor import fetch_dsm
+    from engine.terrain_mesh import build_terrain_data
+
+    dsm = fetch_dsm(lat, lng, radius_m=max(radius, 50) + 20)
+    if not dsm:
+        raise HTTPException(status_code=502, detail="Could not fetch DSM data")
+
+    terrain = build_terrain_data(dsm, lat, lng, radius_m=radius)
+    if not terrain:
+        raise HTTPException(status_code=502, detail="Could not build terrain mesh data")
+
+    return terrain
+
+
+@router.get("/satellite-image")
+def get_satellite_image(
+    lat: float = Query(...),
+    lng: float = Query(...),
+    zoom: int = Query(20),
+    w: int = Query(1024),
+    h: int = Query(1024),
+):
+    """Get satellite imagery for terrain texture.
+
+    Returns a JPEG image centered on the building, sized for use as a
+    THREE.js MeshStandardMaterial texture on the terrain mesh.
+    """
+    api_key = os.environ.get("GOOGLE_SOLAR_API_KEY", "")
+    if not api_key:
+        raise HTTPException(status_code=400, detail="No API key configured")
+
+    try:
+        # Fix macOS Python SSL cert issue
+        import ssl as _ssl
+        _ctx = _ssl.create_default_context()
+        _ctx.check_hostname = False
+        _ctx.verify_mode = _ssl.CERT_NONE
+        import satellite_fetch as _sf
+        # Monkey-patch ssl context if satellite_fetch uses urllib
+        _orig_urlopen = urllib.request.urlopen
+        def _patched_urlopen(req, **kwargs):
+            kwargs.setdefault('context', _ctx)
+            return _orig_urlopen(req, **kwargs)
+        urllib.request.urlopen = _patched_urlopen
+        try:
+            img_array = _sf.fetch_satellite_mosaic(lat=lat, lng=lng, api_key=api_key, zoom=zoom, out_w=w, out_h=h)
+        finally:
+            urllib.request.urlopen = _orig_urlopen
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Satellite image fetch failed: {e}")
+
+    if img_array is None:
+        raise HTTPException(status_code=502, detail="No satellite imagery returned")
+
+    # Convert numpy RGB array to JPEG bytes
+    from PIL import Image
+    import io
+    img = Image.fromarray(img_array)
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=85)
+    buf.seek(0)
+
+    return Response(
+        content=buf.read(),
+        media_type="image/jpeg",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )

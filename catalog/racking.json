@@ -27,7 +27,8 @@
     "bonding_method": "Bonded Splice (integrated grounding)",
 
     "certifications": ["UL 2703", "ICC-ESR"],
-    "compatible_inverter_types": ["string", "micro"]
+    "compatible_inverter_types": ["string", "micro"],
+    "unit_cost_usd": 45.00
   },
   {
     "id": "k2-crossrail-48x",
@@ -57,7 +58,8 @@
     "bonding_method": "UL 2703 Integrated Bonding (one lug per row)",
 
     "certifications": ["UL 2703", "ICC-ESR"],
-    "compatible_inverter_types": ["string", "micro"]
+    "compatible_inverter_types": ["string", "micro"],
+    "unit_cost_usd": 40.00
   },
   {
     "id": "unirac-solarmount",
@@ -87,7 +89,8 @@
     "bonding_method": "UL 2703 Integrated Bonding",
 
     "certifications": ["UL 2703", "ICC-ESR"],
-    "compatible_inverter_types": ["string", "micro"]
+    "compatible_inverter_types": ["string", "micro"],
+    "unit_cost_usd": 35.00
   },
   {
     "id": "snapnrack-series-100",
@@ -117,6 +120,7 @@
     "bonding_method": "UL 2703 Integrated Bonding",
 
     "certifications": ["UL 2703", "ICC-ESR"],
-    "compatible_inverter_types": ["string", "micro"]
+    "compatible_inverter_types": ["string", "micro"],
+    "unit_cost_usd": 38.00
   }
 ]

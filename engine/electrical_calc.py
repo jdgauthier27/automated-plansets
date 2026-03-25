@@ -430,6 +430,233 @@ def calculate_string_config(panel, inverter, num_panels: int) -> dict:
         }
 
 
+@dataclass
+class MonthlyProduction:
+    """Monthly solar energy production estimate."""
+    month: int           # 1-12
+    month_name: str      # "January", etc.
+    kwh: float           # estimated production
+    peak_sun_hours: float
+
+
+# Monthly insolation fractions by latitude band (fractions sum to 1.0)
+# Derived from NREL TMY data for representative cities.
+_MONTHLY_FRACTIONS_BY_LAT = {
+    # lat_max: [jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec]
+    35: [0.065, 0.072, 0.088, 0.095, 0.102, 0.108, 0.105, 0.100, 0.092, 0.080, 0.065, 0.028],  # California (~34°N)
+    40: [0.055, 0.065, 0.088, 0.098, 0.108, 0.112, 0.110, 0.103, 0.090, 0.075, 0.055, 0.041],  # Mid-US (~38°N)
+    45: [0.048, 0.060, 0.087, 0.100, 0.112, 0.115, 0.113, 0.105, 0.090, 0.072, 0.050, 0.048],  # Oregon/Quebec border (~43°N)
+    55: [0.038, 0.055, 0.088, 0.104, 0.117, 0.118, 0.116, 0.105, 0.088, 0.068, 0.042, 0.061],  # Quebec (~46°N)
+    90: [0.030, 0.050, 0.090, 0.108, 0.120, 0.122, 0.120, 0.108, 0.088, 0.065, 0.038, 0.061],  # Northern Canada
+}
+
+_MONTH_NAMES = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+]
+
+# Approximate latitudes for common cities (fallback lookup)
+_CITY_LATITUDES = {
+    "los angeles": 34.0, "encino": 34.2, "san jose": 37.3, "san francisco": 37.8,
+    "sacramento": 38.6, "fresno": 36.7, "san diego": 32.7, "bakersfield": 35.4,
+    "ontario": 34.1, "riverside": 33.9, "anaheim": 33.8, "irvine": 33.7,
+    "phoenix": 33.4, "tucson": 32.2, "dallas": 32.8, "houston": 29.8,
+    "austin": 30.3, "denver": 39.7, "seattle": 47.6, "portland": 45.5,
+    "new york": 40.7, "chicago": 41.9, "boston": 42.4, "miami": 25.8,
+    "montreal": 45.5, "quebec city": 46.8, "toronto": 43.7, "ottawa": 45.4,
+    "vancouver": 49.3, "calgary": 51.0, "edmonton": 53.5,
+}
+
+
+def _estimate_latitude(project) -> float:
+    """Estimate latitude from project fields."""
+    # Use direct latitude if set
+    if getattr(project, "latitude", 0.0) and project.latitude != 0.0:
+        return float(project.latitude)
+
+    # Try city lookup from municipality or address
+    municipality = (getattr(project, "municipality", "") or "").lower().strip()
+    address = (getattr(project, "address", "") or "").lower()
+
+    for city, lat in _CITY_LATITUDES.items():
+        if city in municipality or city in address:
+            return lat
+
+    # Default by country
+    country = (getattr(project, "country", "CA") or "CA").upper()
+    if country == "US":
+        return 37.0   # central California default
+    return 46.0       # Quebec default
+
+
+def calculate_monthly_production(project, annual_kwh: float = None) -> list:
+    """Calculate monthly solar energy production breakdown.
+
+    Args:
+        project: ProjectSpec with address/latitude for insolation fractions.
+        annual_kwh: Total annual production in kWh to distribute across months.
+                    Defaults to project.target_production_kwh or estimated_annual_kwh.
+
+    Returns:
+        List of 12 MonthlyProduction objects (January through December).
+    """
+    if annual_kwh is None:
+        annual_kwh = float(getattr(project, 'target_production_kwh', 0.0) or 0.0)
+        if annual_kwh <= 0:
+            annual_kwh = float(project.estimated_annual_kwh)
+    annual_kwh = max(0.0, float(annual_kwh))
+    lat = _estimate_latitude(project)
+
+    # Pick the right fraction table based on latitude
+    fractions = None
+    for lat_max in sorted(_MONTHLY_FRACTIONS_BY_LAT.keys()):
+        if lat <= lat_max:
+            fractions = _MONTHLY_FRACTIONS_BY_LAT[lat_max]
+            break
+    if fractions is None:
+        fractions = _MONTHLY_FRACTIONS_BY_LAT[90]
+
+    # Normalise fractions in case they don't exactly sum to 1
+    total_frac = sum(fractions)
+    normalised = [f / total_frac for f in fractions]
+
+    # Default PSH for context (not strictly needed but useful in dataclass)
+    psh_default = getattr(project, "sun_hours_peak", 0.0) or 0.0
+    if psh_default <= 0:
+        psh_default = 5.5 if getattr(project, "country", "CA") == "US" else 3.8
+
+    result = []
+    for i, frac in enumerate(normalised):
+        kwh = round(annual_kwh * frac, 1)
+        # Approximate monthly peak sun hours proportional to fraction × 12
+        monthly_psh = round(psh_default * frac * 12, 2)
+        result.append(MonthlyProduction(
+            month=i + 1,
+            month_name=_MONTH_NAMES[i],
+            kwh=kwh,
+            peak_sun_hours=monthly_psh,
+        ))
+
+    return result
+
+
+def calculate_structural_loads(project, roof_pitch_deg: float = 22.5) -> dict:
+    """Calculate structural loading per IBC / ASCE 7-16.
+
+    Args:
+        project: ProjectSpec instance with panel, municipality, country.
+        roof_pitch_deg: Roof pitch in degrees (used for future slope factor).
+
+    Returns:
+        dict with psf (pounds per square foot) load values:
+          panel_dead_load_psf, racking_dead_load_psf, total_dead_load_psf,
+          roof_live_load_psf, snow_load_psf, wind_uplift_psf,
+          controlling_load_psf, attachment_spacing_ft
+    """
+    # ── Dead Loads ──────────────────────────────────────────────────────
+    panel = getattr(project, 'panel', None)
+    if panel:
+        weight_lbs = getattr(panel, 'weight_lbs', 44.0) or 44.0
+        area_sqft = (getattr(panel, 'width_ft', 3.33) or 3.33) * (getattr(panel, 'height_ft', 5.25) or 5.25)
+        panel_width_ft = getattr(panel, 'width_ft', 3.33) or 3.33
+    else:
+        weight_lbs, area_sqft, panel_width_ft = 44.0, 17.5, 3.33
+    if area_sqft <= 0:
+        area_sqft = 17.5
+    if panel_width_ft <= 0:
+        panel_width_ft = 3.33
+
+    panel_dead_load_psf = round(weight_lbs / area_sqft, 2)
+    racking_dead_load_psf = 3.0   # IronRidge XR10 standard
+    total_dead_load_psf = round(panel_dead_load_psf + racking_dead_load_psf, 2)
+
+    # ── Live Load (IBC Table 1607.1 residential) ────────────────────────
+    roof_live_load_psf = 20.0
+
+    # ── Snow Load — jurisdiction lookup ─────────────────────────────────
+    municipality = (getattr(project, 'municipality', '') or '').lower().strip()
+    address = (getattr(project, 'address', '') or '').lower()
+    country = (getattr(project, 'country', 'CA') or 'CA').upper()
+    addr_lower = address + ' ' + municipality
+
+    _CA_CITIES = {
+        'encino', 'los angeles', 'san jose', 'san francisco', 'sacramento',
+        'fresno', 'san diego', 'bakersfield', 'ontario', 'riverside',
+        'anaheim', 'irvine', 'ventura', 'long beach', 'pasadena',
+        'glendale', 'burbank', 'torrance', 'pomona', 'escondido',
+    }
+    _FL_CITIES = {
+        'miami', 'orlando', 'jacksonville', 'tampa', 'fort lauderdale',
+        'tallahassee', 'gainesville', 'pensacola', 'st. petersburg',
+    }
+    _CANADA_CITIES = {
+        'montreal', 'quebec city', 'laval', 'gatineau', 'longueuil',
+        'sherbrooke', 'levis', 'terrebonne', 'repentigny',
+        'toronto', 'ottawa', 'mississauga', 'hamilton', 'brampton',
+        'london', 'windsor', 'kitchener', 'markham', 'vaughan',
+        'vancouver', 'calgary', 'edmonton',
+    }
+
+    is_california = (
+        municipality in _CA_CITIES
+        or any(c in addr_lower for c in _CA_CITIES)
+        or ', ca ' in addr_lower or ', ca,' in addr_lower
+        or ' ca 9' in addr_lower or 'california' in addr_lower
+    )
+    is_florida = (
+        municipality in _FL_CITIES
+        or any(c in addr_lower for c in _FL_CITIES)
+        or ', fl ' in addr_lower or 'florida' in addr_lower
+    )
+    is_canada = (
+        country == 'CA'
+        or municipality in _CANADA_CITIES
+        or any(c in addr_lower for c in _CANADA_CITIES)
+        or 'quebec' in addr_lower or 'ontario' in addr_lower
+        or ' qc ' in addr_lower or ' on ' in addr_lower
+    )
+    is_northeast = (
+        'new york' in addr_lower or ', ny ' in addr_lower
+        or 'boston' in addr_lower or ', ma ' in addr_lower
+        or ', ct ' in addr_lower or ', nj ' in addr_lower
+    )
+
+    if is_california or is_florida:
+        snow_load_psf = 0.0
+    elif is_canada:
+        snow_load_psf = 40.0
+    elif is_northeast:
+        snow_load_psf = 25.0
+    else:
+        snow_load_psf = 20.0
+
+    # ── Wind Uplift (ASCE 7-16 Method 2 simplified) ─────────────────────
+    # Interior: 12 psf, Edge: 18 psf — use edge (conservative)
+    wind_uplift_psf = 18.0
+
+    # ── Controlling Load ─────────────────────────────────────────────────
+    gravity_load = total_dead_load_psf + snow_load_psf
+    controlling_load_psf = round(max(gravity_load, wind_uplift_psf), 2)
+
+    # ── Attachment Spacing ───────────────────────────────────────────────
+    # IronRidge lag bolt: 500 lbs capacity → allowable = 250 lbs (FOS = 2)
+    # spacing = allowable / (controlling_load × panel_width)
+    allowable_lb = 250.0
+    load_per_ft = controlling_load_psf * panel_width_ft
+    attachment_spacing_ft = round(allowable_lb / load_per_ft, 2) if load_per_ft > 0 else 4.0
+
+    return {
+        'panel_dead_load_psf': panel_dead_load_psf,
+        'racking_dead_load_psf': racking_dead_load_psf,
+        'total_dead_load_psf': total_dead_load_psf,
+        'roof_live_load_psf': roof_live_load_psf,
+        'snow_load_psf': snow_load_psf,
+        'wind_uplift_psf': wind_uplift_psf,
+        'controlling_load_psf': controlling_load_psf,
+        'attachment_spacing_ft': attachment_spacing_ft,
+    }
+
+
 def _conductor_for_amps(amps: float) -> str:
     """Look up minimum conductor size for given ampacity."""
     for rating, wire in CONDUCTOR_AMPACITY_75C:

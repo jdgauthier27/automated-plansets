@@ -1,27 +1,48 @@
+import { useState, useEffect } from 'react'
 import { Routes, Route, Link } from 'react-router-dom'
 import Dashboard from './pages/Dashboard'
 import ProjectWizard from './pages/ProjectWizard'
 import ProjectDetail from './pages/ProjectDetail'
 
 export default function App() {
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light')
+
+  useEffect(() => {
+    document.body.classList.remove('light', 'dark')
+    document.body.classList.add(theme)
+    localStorage.setItem('theme', theme)
+  }, [theme])
+
+  const toggleTheme = () => setTheme(t => t === 'light' ? 'dark' : 'light')
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--bg)', color: 'var(--text)' }}>
       {/* Navigation */}
-      <nav className="bg-white border-b border-gray-200 px-6 py-3">
+      <nav style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border)' }} className="px-6 py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <div className="w-8 h-8 bg-solar-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">QS</span>
             </div>
-            <span className="text-lg font-semibold text-gray-900">Quebec Solaire</span>
-            <span className="text-sm text-gray-400 ml-1">Planset Generator</span>
+            <span className="text-lg font-semibold" style={{ color: 'var(--text)' }}>Quebec Solaire</span>
+            <span className="text-sm ml-1" style={{ color: 'var(--text-muted)' }}>Planset Generator</span>
           </Link>
-          <Link
-            to="/new"
-            className="bg-solar-600 hover:bg-solar-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-          >
-            + New Project
-          </Link>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={toggleTheme}
+              className="px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+              style={{ backgroundColor: 'var(--border)', color: 'var(--text)' }}
+              aria-label="Toggle dark mode"
+            >
+              {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
+            </button>
+            <Link
+              to="/new"
+              className="bg-solar-600 hover:bg-solar-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              + New Project
+            </Link>
+          </div>
         </div>
       </nav>
 

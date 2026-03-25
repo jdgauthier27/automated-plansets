@@ -24,7 +24,8 @@
       "Apply sealant under flashing skirt",
       "Replace shingles over flashing, maintaining weather seal",
       "Attach L-foot to base plate, torque to 15 ft-lbs"
-    ]
+    ],
+    "unit_cost_usd": 12.00
   },
   {
     "id": "k2-multi-mount",
@@ -51,7 +52,8 @@
       "Attach standoff post to base plate",
       "Slide CrossRail onto standoff bracket",
       "Torque rail bolt to specified value"
-    ]
+    ],
+    "unit_cost_usd": 14.00
   },
   {
     "id": "s5-protea",
@@ -77,6 +79,7 @@
       "Tighten set screws to specified torque (per seam gauge)",
       "Attach rail bracket to clamp body",
       "Slide rail onto bracket"
-    ]
+    ],
+    "unit_cost_usd": 25.00
   }
 ]

@@ -204,3 +204,15 @@ class ProjectSpec:
         """Rough annual kWh estimate using DC capacity and sun hours."""
         shade = self.shade_factor if 0.0 < self.shade_factor <= 1.0 else 1.0
         return self.system_dc_kw * self.sun_hours_peak * 365 * shade * 0.85
+
+    @property
+    def monthly_production(self) -> list:
+        """Monthly energy production breakdown as list of MonthlyProduction objects."""
+        from engine.electrical_calc import calculate_monthly_production
+        return calculate_monthly_production(self, self.estimated_annual_kwh)
+
+    @property
+    def structural_loads(self) -> dict:
+        """Structural loading calculations per IBC / ASCE 7-16."""
+        from engine.electrical_calc import calculate_structural_loads
+        return calculate_structural_loads(self)

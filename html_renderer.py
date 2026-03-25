@@ -43,12 +43,13 @@ from PIL import Image
 
 from panel_placer import PanelPlacement, PanelSpec, PlacementResult
 from pdf_parser import PlansetData
+from shapely.geometry import LineString, Polygon as ShapelyPolygon
 
 # Import ProjectSpec and equipment models (optional — falls back to legacy mode)
 try:
     from models.project import ProjectSpec
     from models.equipment import PanelCatalogEntry, InverterCatalogEntry
-    from engine.bom_calculator import calculate_bom, BOMItem
+    from engine.bom_calculator import calculate_bom, BOMItem, calculate_project_cost
     from engine.electrical_calc import calculate_string_config, calculate_monthly_production
     HAS_PROJECT_SPEC = True
 except ImportError:
@@ -252,7 +253,11 @@ class HtmlRenderer:
                 if len(parts) >= 2:
                     city = parts[1].strip()
 
-            if jid == "nec_california" or (not jid and self._project.country == "US" and
+            if jid == "nec_florida" or (not jid and self._project.country == "US" and
+                any(s in self._project.address.lower() for s in ["florida", ", fl ", ", fl,"])):
+                from jurisdiction.nec_florida import FloridaNECJurisdiction
+                self._jurisdiction_cache = FloridaNECJurisdiction(city=city)
+            elif jid == "nec_california" or (not jid and self._project.country == "US" and
                 any(s in self._project.address.lower() for s in ["california", ", ca ", ", ca,"])):
                 from jurisdiction.nec_california import NECCaliforniaEngine
                 self._jurisdiction_cache = NECCaliforniaEngine(city=city)
@@ -673,6 +678,11 @@ class HtmlRenderer:
         # Build all pages
         pages_html = []
 
+        # A-100: Cover Sheet (new A-series, first page)
+        pages_html.append(self._build_cover_sheet_page(
+            address, today, total_panels, total_kw
+        ))
+
         # PV-1: Cover
         pages_html.append(self._build_cover_page(
             address, total_panels, total_kw, total_kwh, today, building_insight,
@@ -743,6 +753,11 @@ class HtmlRenderer:
 
         # A-200: Electrical Single Line Diagram
         pages_html.append(self._build_single_line_diagram_page(
+            self._project, placements
+        ))
+
+        # A-300: Electrical Details (grounding schedule, conduit routing, OCPD)
+        pages_html.append(self._build_electrical_details_page(
             self._project, placements
         ))
 
@@ -2753,6 +2768,42 @@ class HtmlRenderer:
                            f'font-size="9" font-weight="600" font-family="Arial" fill="#000">{vals[0]}</text>')
             cx2 += cw2
 
+        # ── STRUCTURAL LOADING SUMMARY (below Roof Area table) ───────────
+        _struct = self._project.structural_loads if self._project else {}
+        sl2_x, sl2_y, sl2_w = ra_x, ra_y + ra_h + 3, ra_w
+        _sl2_cols = [
+            ("PANEL DL",    f"{_struct.get('panel_dead_load_psf', 0):.2f} psf"),
+            ("RACKING DL",  f"{_struct.get('racking_dead_load_psf', 0):.1f} psf"),
+            ("TOTAL DL",    f"{_struct.get('total_dead_load_psf', 0):.2f} psf"),
+            ("ROOF LL",     f"{_struct.get('roof_live_load_psf', 0):.0f} psf"),
+            ("SNOW LOAD",   f"{_struct.get('snow_load_psf', 0):.0f} psf"),
+            ("WIND UPLIFT", f"{_struct.get('wind_uplift_psf', 0):.0f} psf"),
+            ("CTRL LOAD",   f"{_struct.get('controlling_load_psf', 0):.2f} psf"),
+            ("ATTACH SPC",  f"{_struct.get('attachment_spacing_ft', 0):.2f} ft OC"),
+        ]
+        _sl2_col_w = sl2_w // len(_sl2_cols)
+        _sl2_hdr_h, _sl2_val_h = 14, 22
+        _sl2_total_h = 12 + _sl2_hdr_h + _sl2_val_h
+        svg.append(f'<rect x="{sl2_x}" y="{sl2_y}" width="{sl2_w}" height="{_sl2_total_h}" '
+                   f'fill="#fff" stroke="#000" stroke-width="1"/>')
+        svg.append(f'<rect x="{sl2_x}" y="{sl2_y}" width="{sl2_w}" height="12" '
+                   f'fill="#e8e8e8" stroke="#000" stroke-width="1"/>')
+        svg.append(f'<text x="{sl2_x + sl2_w // 2}" y="{sl2_y + 9}" text-anchor="middle" '
+                   f'font-size="7.5" font-weight="700" font-family="Arial" fill="#000">'
+                   f'STRUCTURAL LOADING SUMMARY (IBC / ASCE 7-16)</text>')
+        for _ci, (_col_hdr, _col_val) in enumerate(_sl2_cols):
+            _cx = sl2_x + _ci * _sl2_col_w
+            _is_ctrl = "CTRL" in _col_hdr or "ATTACH" in _col_hdr
+            _bg = "#fff7e6" if _is_ctrl else "#fafafa"
+            svg.append(f'<rect x="{_cx}" y="{sl2_y + 12}" width="{_sl2_col_w}" height="{_sl2_hdr_h}" '
+                       f'fill="#d8e8f8" stroke="#000" stroke-width="0.4"/>')
+            svg.append(f'<rect x="{_cx}" y="{sl2_y + 12 + _sl2_hdr_h}" width="{_sl2_col_w}" height="{_sl2_val_h}" '
+                       f'fill="{_bg}" stroke="#000" stroke-width="0.4"/>')
+            svg.append(f'<text x="{_cx + _sl2_col_w // 2}" y="{sl2_y + 12 + _sl2_hdr_h - 3}" '
+                       f'text-anchor="middle" font-size="6.5" font-family="Arial" fill="#333">{_col_hdr}</text>')
+            svg.append(f'<text x="{_cx + _sl2_col_w // 2}" y="{sl2_y + 12 + _sl2_hdr_h + 14}" '
+                       f'text-anchor="middle" font-size="7.5" font-weight="700" font-family="Arial" fill="#000">{_col_val}</text>')
+
         # ── SYSTEM LEGEND (top-right) ─────────────────────────────────────
         sl_x, sl_y, sl_w, sl_h = BORDER + 990, 38, 245, 148
         svg.append(f'<rect x="{sl_x}" y="{sl_y}" width="{sl_w}" height="{sl_h}" '
@@ -2766,6 +2817,7 @@ class HtmlRenderer:
             ("line",  "#d08020","solid",  "ROOF FRAMING (RAFTERS/TRUSS)"),
             ("line",  "#4a9e4a","solid",  "RACKING"),
             ("rect",  "#cc0000","hatch",  "FIRE CODE SETBACK (18\u2033 MIN / 36\u2033 MAX)"),
+            ("line",  "#e07000","dashed", "RIDGE SETBACK (18\u2033 NEC 690.12(B)(2))"),
         ]
         for i, (sym, color, style, label) in enumerate(leg_items_top):
             iy = sl_y + 26 + i * 28
@@ -2773,8 +2825,9 @@ class HtmlRenderer:
                 svg.append(f'<circle cx="{sl_x + 14}" cy="{iy + 4}" r="4" '
                            f'fill="{color}" stroke="#000" stroke-width="0.8"/>')
             elif sym == "line":
+                dash_attr = ' stroke-dasharray="4,3"' if style == "dashed" else ""
                 svg.append(f'<line x1="{sl_x + 4}" y1="{iy + 4}" x2="{sl_x + 24}" y2="{iy + 4}" '
-                           f'stroke="{color}" stroke-width="2"/>')
+                           f'stroke="{color}" stroke-width="2"{dash_attr}/>')
             elif sym == "rect":
                 svg.append(f'<rect x="{sl_x + 4}" y="{iy}" width="20" height="10" '
                            f'fill="url(#hatch-sb)" stroke="{color}" stroke-width="0.5"/>')
@@ -2871,6 +2924,48 @@ class HtmlRenderer:
                         svg.append(f'<polygon points="{u_pts}" fill="none" '
                                    f'stroke="#cc0000" stroke-width="1.2" '
                                    f'stroke-dasharray="6,3"/>')
+                    except Exception:
+                        pass
+
+                # Ridge setback line (NEC 690.12(B)(2)) — dashed orange
+                _ridge_sb = getattr(pr, 'ridge_setback_ft', 0.0)
+                if _ridge_sb > 0 and rf.usable_polygon and not rf.usable_polygon.is_empty:
+                    try:
+                        from shapely.geometry import Polygon as _SPoly
+                        _ridge_sb_pts = _ridge_sb * pts_per_ft_est
+                        _upoly = rf.usable_polygon
+                        _rad2 = math.radians(rf.azimuth_deg)
+                        _cos2 = math.cos(_rad2)
+                        _sin2 = math.sin(_rad2)
+                        _cx2 = _upoly.centroid.x
+                        _cy2 = _upoly.centroid.y
+                        _slope_projs = [
+                            -(_vx - _cx2) * _sin2 + (_vy - _cy2) * _cos2
+                            for _vx, _vy in _upoly.exterior.coords
+                        ]
+                        _max_s = max(_slope_projs)
+                        _clip_s = _max_s - _ridge_sb_pts
+                        _L = 100000
+                        _bx0 = _cx2 - _clip_s * _sin2 - _L * _cos2
+                        _by0 = _cy2 + _clip_s * _cos2 - _L * _sin2
+                        _bx1 = _cx2 - _clip_s * _sin2 + _L * _cos2
+                        _by1 = _cy2 + _clip_s * _cos2 + _L * _sin2
+                        _kx0 = _bx0 + _L * _sin2
+                        _ky0 = _by0 - _L * _cos2
+                        _kx1 = _bx1 + _L * _sin2
+                        _ky1 = _by1 - _L * _cos2
+                        _clip2 = _SPoly([(_bx0, _by0), (_bx1, _by1), (_kx1, _ky1), (_kx0, _ky0)])
+                        _rpoly = _upoly.intersection(_clip2)
+                        if _rpoly.geom_type == "MultiPolygon":
+                            _rpoly = max(_rpoly.geoms, key=lambda g: g.area)
+                        if not _rpoly.is_empty:
+                            r_pts = " ".join(
+                                f"{pt2svg(_vx, _vy)[0]:.1f},{pt2svg(_vx, _vy)[1]:.1f}"
+                                for _vx, _vy in _rpoly.exterior.coords
+                            )
+                            svg.append(f'<polygon points="{r_pts}" fill="none" '
+                                       f'stroke="#e07000" stroke-width="1.2" '
+                                       f'stroke-dasharray="4,4"/>')
                     except Exception:
                         pass
 
@@ -3185,6 +3280,51 @@ class HtmlRenderer:
                    f'<polygon points="0,15 -4,-6 0,-3 4,-6" fill="#fff" stroke="#000" stroke-width="0.8"/>'
                    f'<text x="0" y="-20" text-anchor="middle" font-size="9" font-weight="700" '
                    f'font-family="Arial" fill="#000">N</text></g>')
+
+        # ── Structural Loading Table (ASCE 7-16 / IBC) ───────────────────
+        if self._project:
+            try:
+                from engine.electrical_calc import calculate_structural_loads
+                _sl = calculate_structural_loads(self._project)
+                _sl_x = VW - 15 - 245   # right-aligned, 245px wide, 15px right margin
+                _sl_y = bot_band_y       # top-aligned with other bottom-band elements
+                _sl_w = 245
+                _sl_col1 = 165           # label column width
+                _sl_col2 = _sl_w - _sl_col1  # value column width
+                _sl_rows = [
+                    ("PANEL DEAD LOAD",       f"{_sl['panel_dead_load_psf']:.2f} PSF"),
+                    ("RACKING DEAD LOAD",     f"{_sl['racking_dead_load_psf']:.1f} PSF"),
+                    ("TOTAL DEAD LOAD",       f"{_sl['total_dead_load_psf']:.2f} PSF"),
+                    ("ROOF LIVE LOAD",        f"{_sl['roof_live_load_psf']:.0f} PSF"),
+                    ("DESIGN SNOW LOAD",      f"{_sl['snow_load_psf']:.0f} PSF"),
+                    ("WIND UPLIFT (INT.)",    f"{_sl['wind_uplift_psf']:.0f} PSF"),
+                    ("CONTROLLING LOAD",      f"{_sl['controlling_load_psf']:.2f} PSF"),
+                    ("ATTACHMENT SPACING",    f"{_sl['attachment_spacing_ft']:.2f} FT O.C."),
+                ]
+                _sl_hdr_h = 14
+                _sl_row_h = 11
+                _sl_total_h = _sl_hdr_h + len(_sl_rows) * _sl_row_h
+                svg.append(f'<rect x="{_sl_x}" y="{_sl_y}" width="{_sl_w}" height="{_sl_total_h}" '
+                           f'fill="#fff" stroke="#000" stroke-width="1"/>')
+                svg.append(f'<rect x="{_sl_x}" y="{_sl_y}" width="{_sl_w}" height="{_sl_hdr_h}" '
+                           f'fill="#e8e8e8" stroke="#000" stroke-width="1"/>')
+                svg.append(f'<text x="{_sl_x + _sl_w // 2}" y="{_sl_y + 10}" text-anchor="middle" '
+                           f'font-size="7.5" font-weight="700" font-family="Arial" fill="#000">'
+                           f'STRUCTURAL LOADING SUMMARY (ASCE 7-16)</text>')
+                for _i, (_lbl, _val) in enumerate(_sl_rows):
+                    _ry = _sl_y + _sl_hdr_h + _i * _sl_row_h
+                    _bg = "#fafafa" if _i % 2 == 0 else "#fff"
+                    svg.append(f'<rect x="{_sl_x}" y="{_ry}" width="{_sl_col1}" height="{_sl_row_h}" '
+                               f'fill="{_bg}" stroke="#000" stroke-width="0.3"/>')
+                    svg.append(f'<rect x="{_sl_x + _sl_col1}" y="{_ry}" width="{_sl_col2}" height="{_sl_row_h}" '
+                               f'fill="{_bg}" stroke="#000" stroke-width="0.3"/>')
+                    svg.append(f'<text x="{_sl_x + 3}" y="{_ry + 8}" font-size="6.5" '
+                               f'font-family="Arial" fill="#000">{_lbl}</text>')
+                    svg.append(f'<text x="{_sl_x + _sl_col1 + _sl_col2 // 2}" y="{_ry + 8}" '
+                               f'text-anchor="middle" font-size="6.5" font-weight="700" '
+                               f'font-family="Arial" fill="#000">{_val}</text>')
+            except Exception:
+                pass
 
         # ── Title block ──────────────────────────────────────────────
         svg.append(self._svg_title_block(VW, VH, "A-102", "Racking and Framing Plan",
@@ -5605,8 +5745,12 @@ class HtmlRenderer:
             pitch_deg = f"{insight.roof_segments[0].pitch_deg:.0f}\u00b0"
 
         n = total_panels
+        _cost_summary = None
         if HAS_PROJECT_SPEC and self._project:
-            _bom = {item.equipment: item.qty for item in calculate_bom(self._project)}
+            _bom_result = calculate_bom(self._project)
+            _bom_items = _bom_result['line_items']
+            _bom = {item['description']: item['qty'] for item in _bom_items}
+            _cost_summary = _bom_result
             n_rails      = _bom.get("MOUNTING RAIL", max(4, round(n * 0.77)))
             n_end_clamps = _bom.get("END CLAMP",     n_rails * 2)
             n_mid_clamps = _bom.get("MID CLAMP",     max(4, round(n * 1.85)))
@@ -5970,6 +6114,16 @@ class HtmlRenderer:
              "AS REQ."),
         ]
 
+        # Labor row
+        if _cost_summary and isinstance(_cost_summary, dict) and 'labor_cost_usd' in _cost_summary:
+            _labor_usd = _cost_summary['labor_cost_usd']
+            _sys_w = n * (self._project.panel.wattage_w if self._project else 395)
+            bom_rows.append((
+                "INSTALLATION LABOR",
+                f"Roof-mounted installation — $0.25/W \u00d7 {_sys_w:,}W",
+                f"${_labor_usd:,.0f}",
+            ))
+
         row_y_bom = hdr_y + row_h_bom
         for ri, (equip, make, qty) in enumerate(bom_rows):
             row_fill = "#f9f9f9" if ri % 2 == 0 else "#ffffff"
@@ -5992,8 +6146,31 @@ class HtmlRenderer:
         svg.append(f'<text x="{cc_x}" y="{row_y_bom + 18}" font-size="8" font-family="Arial" fill="#555">'
                    f'TOTAL PV MODULE WEIGHT: {total_wt:.0f} LBS ({total_wt*0.4536:.1f} KG)</text>')
 
+        # ── Cost Summary ─────────────────────────────────────────────────
+        cost_summary_y = row_y_bom + 36
+        if _cost_summary and cost_summary_y < 820:
+            _costs = _cost_summary
+            svg.append(f'<line x1="{cc_x}" y1="{cost_summary_y}" x2="{title_blk_x-10}" y2="{cost_summary_y}" '
+                       f'stroke="#000" stroke-width="0.75"/>')
+            svg.append(f'<text x="{cc_cx}" y="{cost_summary_y + 12}" text-anchor="middle" '
+                       f'font-size="9" font-weight="700" font-family="Arial" fill="#000">ESTIMATED PROJECT COST (USD)</text>')
+            _cost_rows = [
+                ('Equipment',  f"${_costs['equipment_cost_usd']:,.0f}"),
+                ('Labor',      f"${_costs['labor_cost_usd']:,.0f}"),
+                ('TOTAL',      f"${_costs['total_cost_usd']:,.0f}"),
+            ]
+            for ci, (label, value) in enumerate(_cost_rows):
+                _cy = cost_summary_y + 24 + ci * 14
+                _bold = "700" if label == "TOTAL" else "400"
+                svg.append(f'<text x="{cc_x + 4}" y="{_cy}" font-size="8.5" font-weight="{_bold}" '
+                           f'font-family="Arial" fill="#000">{label}</text>')
+                svg.append(f'<text x="{title_blk_x - 14}" y="{_cy}" text-anchor="end" font-size="8.5" '
+                           f'font-weight="{_bold}" font-family="Arial" fill="#000">{value}</text>')
+            notes_y = cost_summary_y + 24 + len(_cost_rows) * 14 + 10
+        else:
+            notes_y = row_y_bom + 38
+
         # Installation notes (if there is room)
-        notes_y = row_y_bom + 38
         note_items = [
             "1. ALL HARDWARE SHALL BE STAINLESS STEEL OR HOT-DIPPED GALVANIZED UNLESS OTHERWISE NOTED.",
             f"2. LAG SCREWS SHALL PENETRATE MIN. 63mm (2.5\") INTO SOLID WOOD FRAMING MEMBERS ({self._code_prefix} {'690.43' if self._code_prefix == 'NEC' else 'RULE 64-104'}).",
@@ -7312,6 +7489,419 @@ class HtmlRenderer:
         svg.append(self._svg_title_block(
             VW, VH, "A-200", "ELECTRICAL SINGLE LINE DIAGRAM",
             "AC Microinverter Single-Line", "14 of 14", _addr, _today
+        ))
+
+        content = "\n".join(svg)
+        return (f'<div class="page">'
+                f'<svg width="100%" height="100%" viewBox="0 0 {VW} {VH}" '
+                f'xmlns="http://www.w3.org/2000/svg" style="background:#fff;">'
+                f'{content}</svg></div>')
+
+    def _build_electrical_details_page(self, project, placements) -> str:
+        """A-300: Electrical Details — grounding schedule, conduit routing, OCPD table."""
+        VW, VH = 1280, 960
+        svg = []
+
+        # Arrow marker defs
+        svg.append(
+            '<defs>'
+            '<marker id="a3_arr_dc" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">'
+            '<path d="M0,0 L0,6 L8,3 z" fill="#0066cc"/></marker>'
+            '<marker id="a3_arr_ac" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">'
+            '<path d="M0,0 L0,6 L8,3 z" fill="#cc0000"/></marker>'
+            '</defs>'
+        )
+
+        # Background + border
+        svg.append('<rect width="1280" height="960" fill="#ffffff"/>')
+        svg.append('<rect x="20" y="20" width="1240" height="820" fill="none" stroke="#000" stroke-width="2"/>')
+
+        # Header band
+        svg.append('<rect x="20" y="20" width="1240" height="42" fill="#f5f5f5" stroke="#000" stroke-width="1"/>')
+        svg.append('<text x="640" y="38" text-anchor="middle" font-size="14" font-weight="700" '
+                   'font-family="Arial" fill="#000000">ELECTRICAL DETAILS</text>')
+        svg.append('<text x="640" y="54" text-anchor="middle" font-size="11" font-family="Arial" '
+                   'fill="#444444">Grounding &amp; Bonding  |  Conduit Routing  |  Overcurrent Protection</text>')
+
+        # Jurisdiction-aware code references
+        is_canada = (project and project.country == "CA")
+        code_ref_egc  = "CEC Rule 10-106" if is_canada else "NEC 690.47(A)"
+        code_ref_gec  = "CEC Rule 10-112" if is_canada else "NEC 250.166"
+        code_ref_bond = "CEC Rule 10-700" if is_canada else "NEC 690.43"
+        code_ref_rack = "CEC Rule 10-700" if is_canada else "NEC 690.43"
+
+        # Gather project values
+        total_panels = sum(pr.total_panels for pr in placements) if placements else 0
+        if project and project.num_panels and project.num_panels > total_panels:
+            total_panels = project.num_panels
+
+        panel_w   = project.panel.wattage_w   if project and project.panel    else 395
+        isc       = project.panel.isc_a        if project and project.panel    else 10.0
+        inv_amps  = project.inverter.max_ac_amps if project and project.inverter else 1.21
+        inv_volt  = project.inverter.ac_voltage_v if project and project.inverter else 240
+        inv_model = project.inverter.model     if project and project.inverter else "IQ8PLUS"
+        is_micro  = project.inverter.is_micro  if project and project.inverter else True
+
+        def _wg(amps):
+            if amps <= 15: return "#14 AWG Cu"
+            if amps <= 20: return "#12 AWG Cu"
+            if amps <= 30: return "#10 AWG Cu"
+            if amps <= 40: return "#8 AWG Cu"
+            if amps <= 55: return "#6 AWG Cu"
+            if amps <= 70: return "#4 AWG Cu"
+            return "#2 AWG Cu"
+
+        total_ac_amps = total_panels * inv_amps
+        system_ocpd   = math.ceil(total_ac_amps * 1.25 / 5) * 5
+        egc_size      = _wg(system_ocpd)
+        gec_size      = "#6 AWG Cu"
+        ac_wire       = _wg(total_ac_amps * 1.25)
+        conduit_ac    = '1" EMT' if total_ac_amps * 1.25 > 30 else '3/4" EMT'
+
+        # ── Section 1: Grounding & Bonding Schedule (left half) ──────────────
+        S1_X, S1_Y = 36, 80
+        svg.append(f'<text x="{S1_X}" y="{S1_Y}" font-size="11" font-weight="700" '
+                   f'font-family="Arial" fill="#000">1.  GROUNDING &amp; BONDING SCHEDULE</text>')
+
+        tbl_x, tbl_y = S1_X, S1_Y + 16
+        col_w = [185, 110, 90, 160]
+        hdrs  = ["COMPONENT", "WIRE SIZE", "MATERIAL", "CODE REF"]
+        svg.append(f'<rect x="{tbl_x}" y="{tbl_y}" width="{sum(col_w)}" height="22" '
+                   f'fill="#1a3a5c" stroke="#000" stroke-width="0.5"/>')
+        hx = tbl_x
+        for h, cw in zip(hdrs, col_w):
+            svg.append(f'<text x="{hx + 5}" y="{tbl_y + 15}" font-size="9" font-weight="700" '
+                       f'font-family="Arial" fill="#fff">{h}</text>')
+            hx += cw
+
+        grnd_rows = [
+            ("Equipment Ground (EGC)",       egc_size,       "Copper", code_ref_egc),
+            ("System Ground (GEC)",           gec_size,       "Copper", code_ref_gec),
+            ("Array Frame Bond",              "#10 AWG Cu",   "Copper", code_ref_bond),
+            ("Racking Bond (rail-to-rail)",   "#10 AWG Cu",   "Copper", code_ref_rack),
+        ]
+        for ri, row in enumerate(grnd_rows):
+            ry = tbl_y + 22 + ri * 22
+            bg = "#f0f4ff" if ri % 2 == 0 else "#ffffff"
+            svg.append(f'<rect x="{tbl_x}" y="{ry}" width="{sum(col_w)}" height="22" '
+                       f'fill="{bg}" stroke="#ccc" stroke-width="0.5"/>')
+            rx = tbl_x
+            for cell, cw in zip(row, col_w):
+                svg.append(f'<text x="{rx + 5}" y="{ry + 15}" font-size="9" '
+                           f'font-family="Arial" fill="#000">{cell}</text>')
+                rx += cw
+
+        # ── Section 2: DC/AC Conduit Routing Diagram (right half) ────────────
+        S2_X, S2_Y = 645, 80
+        svg.append(f'<text x="{S2_X}" y="{S2_Y}" font-size="11" font-weight="700" '
+                   f'font-family="Arial" fill="#000">2.  DC / AC CONDUIT ROUTING DIAGRAM</text>')
+
+        BW, BH = 110, 58
+        CY = S2_Y + 95
+        box_cxs = [S2_X + 62, S2_X + 210, S2_X + 375, S2_X + 535]
+        box_defs = [
+            (f"PV ARRAY",       f"{total_panels}× {panel_w}W", "#e8f0fe"),
+            ("JUNCTION BOX",    "NEMA 3R",                      "#fff3e0"),
+            ("INVERTER / MSP",  inv_model[:14],                 "#fce4ec"),
+            ("UTILITY METER",   "kWh",                          "#e0f2f1"),
+        ]
+        for cx, (t1, t2, fill) in zip(box_cxs, box_defs):
+            bx, by = cx - BW // 2, CY - BH // 2
+            svg.append(f'<rect x="{bx}" y="{by}" width="{BW}" height="{BH}" '
+                       f'fill="{fill}" stroke="#000" stroke-width="1.5" rx="4"/>')
+            svg.append(f'<text x="{cx}" y="{CY - 7}" text-anchor="middle" font-size="9" '
+                       f'font-weight="700" font-family="Arial" fill="#000">{t1}</text>')
+            svg.append(f'<text x="{cx}" y="{CY + 9}" text-anchor="middle" font-size="8" '
+                       f'font-family="Arial" fill="#444">{t2}</text>')
+
+        arrow_defs = [
+            (box_cxs[0] + BW // 2, box_cxs[1] - BW // 2, CY,
+             '3/4" EMT, 2× #10 AWG DC', "#0066cc", "a3_arr_dc"),
+            (box_cxs[1] + BW // 2, box_cxs[2] - BW // 2, CY,
+             '3/4" EMT, 2× #10 AWG + #10 EGC', "#0066cc", "a3_arr_dc"),
+            (box_cxs[2] + BW // 2, box_cxs[3] - BW // 2, CY,
+             f'{conduit_ac}, {ac_wire} AC', "#cc0000", "a3_arr_ac"),
+        ]
+        for x1, x2, ay, lbl, color, marker in arrow_defs:
+            mid = (x1 + x2) // 2
+            svg.append(f'<line x1="{x1}" y1="{ay}" x2="{x2}" y2="{ay}" '
+                       f'stroke="{color}" stroke-width="2" marker-end="url(#{marker})"/>')
+            svg.append(f'<text x="{mid}" y="{ay - 8}" text-anchor="middle" font-size="7.5" '
+                       f'font-family="Arial" fill="{color}">{lbl}</text>')
+
+        # Legend for conduit diagram
+        leg_y = CY + BH // 2 + 20
+        for i, (color, label) in enumerate([("#0066cc", "DC Wiring"), ("#cc0000", "AC Wiring")]):
+            lx = S2_X + i * 180
+            svg.append(f'<line x1="{lx}" y1="{leg_y}" x2="{lx + 32}" y2="{leg_y}" '
+                       f'stroke="{color}" stroke-width="2"/>')
+            svg.append(f'<text x="{lx + 38}" y="{leg_y + 4}" font-size="8" '
+                       f'font-family="Arial" fill="#000">{label}</text>')
+
+        # ── Section 3: Overcurrent Protection (OCPD) Table — full width ──────
+        S3_Y = 310
+        svg.append(f'<text x="{S1_X}" y="{S3_Y}" font-size="11" font-weight="700" '
+                   f'font-family="Arial" fill="#000">3.  OVERCURRENT PROTECTION SCHEDULE (OCPD)</text>')
+
+        tbl2_x, tbl2_y = S1_X, S3_Y + 16
+        col_w2 = [240, 130, 160, 220]
+        hdrs2  = ["CIRCUIT", "OCPD RATING", "TYPE", "LOCATION"]
+        svg.append(f'<rect x="{tbl2_x}" y="{tbl2_y}" width="{sum(col_w2)}" height="22" '
+                   f'fill="#1a3a5c" stroke="#000" stroke-width="0.5"/>')
+        hx2 = tbl2_x
+        for h, cw in zip(hdrs2, col_w2):
+            svg.append(f'<text x="{hx2 + 5}" y="{tbl2_y + 15}" font-size="9" font-weight="700" '
+                       f'font-family="Arial" fill="#fff">{h}</text>')
+            hx2 += cw
+
+        if is_micro:
+            src_ocpd  = "N/A (Self-protected)"
+            src_type  = "Microinverter"
+            out_ocpd  = "15A, 2-Pole"
+            out_type  = "Branch CB"
+        else:
+            src_ocpd  = f"{math.ceil(isc * 1.25 / 5) * 5}A, 2-Pole"
+            src_type  = "String Fuse / CB"
+            out_ocpd  = f"{math.ceil(isc * 1.56 / 5) * 5}A, 2-Pole"
+            out_type  = "DC Disconnect CB"
+
+        ocpd_rows = [
+            ("PV Source Circuit (DC)",       src_ocpd,                 src_type,          "Junction Box"),
+            ("PV Output Circuit (DC/AC)",    out_ocpd,                 out_type,          "AC Combiner / IQ Combiner"),
+            ("AC Output Circuit",            f"{system_ocpd}A, 2-Pole", "Backfeed Breaker", "Main Service Panel"),
+            ("Main Breaker Backfeed",        f"{system_ocpd}A, 2-Pole", "Backfeed Breaker", "MSP Bus (Interconnect)"),
+        ]
+        for ri, row in enumerate(ocpd_rows):
+            ry = tbl2_y + 22 + ri * 22
+            bg = "#f0f4ff" if ri % 2 == 0 else "#ffffff"
+            svg.append(f'<rect x="{tbl2_x}" y="{ry}" width="{sum(col_w2)}" height="22" '
+                       f'fill="{bg}" stroke="#ccc" stroke-width="0.5"/>')
+            rx = tbl2_x
+            for cell, cw in zip(row, col_w2):
+                svg.append(f'<text x="{rx + 5}" y="{ry + 15}" font-size="9" '
+                           f'font-family="Arial" fill="#000">{cell}</text>')
+                rx += cw
+
+        # Notes below OCPD table
+        notes_y = tbl2_y + 22 + len(ocpd_rows) * 22 + 20
+        code_grnd = "NEC 690.47" if not is_canada else "CEC Rule 10"
+        notes = [
+            "1.  All conductors copper, 75°C THWN-2 in EMT conduit unless otherwise noted.",
+            f"2.  System OCPD: {total_panels} modules × {inv_amps:.2f}A × 1.25 = "
+            f"{total_ac_amps * 1.25:.1f}A → {system_ocpd}A 2-pole breaker.",
+            f"3.  {code_grnd} — Grounding electrode system required for all PV arrays.",
+            f"4.  EGC sized per {'NEC Table 250.122' if not is_canada else 'CEC Table 16'}, "
+            f"based on {system_ocpd}A OCPD rating.",
+            "5.  All equipment installed per manufacturer instructions and applicable electrical codes.",
+        ]
+        for ni, note in enumerate(notes):
+            svg.append(f'<text x="{S1_X}" y="{notes_y + ni * 16}" font-size="8" '
+                       f'font-family="Arial" fill="#333">{note}</text>')
+
+        # Title block
+        _addr  = project.address if project else ""
+        _today = date.today().strftime("%Y-%m-%d")
+        svg.append(self._svg_title_block(
+            VW, VH, "A-300", "ELECTRICAL DETAILS",
+            "Grounding · Conduit · OCPD", "15 of 15", _addr, _today
+        ))
+
+        content = "\n".join(svg)
+        return (f'<div class="page">'
+                f'<svg width="100%" height="100%" viewBox="0 0 {VW} {VH}" '
+                f'xmlns="http://www.w3.org/2000/svg" style="background:#fff;">'
+                f'{content}</svg></div>')
+
+    def _build_cover_sheet_page(self, address: str, today: str,
+                                total_panels: int, total_kw: float) -> str:
+        """A-100: Cover Sheet — project summary, sheet index, code references.
+
+        Layout (1280×960px landscape):
+          - Header band: company name + project title
+          - Info strip: address, system size, date
+          - Left column: sheet index table + governing codes
+          - Right column: project summary + revision history + stamp area
+          - Bottom-right: standard title block (A-100 | COVER SHEET)
+        """
+        VW, VH = 1280, 960
+        svg = []
+
+        # Background
+        svg.append('<rect width="1280" height="960" fill="#ffffff"/>')
+
+        # Outer border
+        svg.append('<rect x="20" y="20" width="1240" height="820" fill="none" stroke="#000" stroke-width="2"/>')
+
+        # ── Header band ────────────────────────────────────────────────
+        company = "Solar Contractor"
+        if self._project and self._project.company_name:
+            company = self._project.company_name
+        svg.append('<rect x="20" y="20" width="1240" height="80" fill="#1a3a5c" stroke="#000" stroke-width="1"/>')
+        svg.append(f'<text x="640" y="56" text-anchor="middle" font-size="22" font-weight="700" '
+                   f'font-family="Arial" fill="#ffffff">{company.upper()}</text>')
+        svg.append('<text x="640" y="83" text-anchor="middle" font-size="13" font-family="Arial" '
+                   'fill="#cce0ff">SOLAR PV SYSTEM INSTALLATION PLANSET</text>')
+
+        # ── Project info strip ─────────────────────────────────────────
+        svg.append('<rect x="20" y="100" width="1240" height="58" fill="#f0f4f8" stroke="#000" stroke-width="0.5"/>')
+
+        # Address
+        svg.append('<text x="36" y="118" font-size="8.5" font-weight="700" font-family="Arial" fill="#555">PROJECT ADDRESS</text>')
+        svg.append(f'<text x="36" y="134" font-size="11" font-weight="700" font-family="Arial" fill="#000">{address}</text>')
+        svg.append('<text x="36" y="150" font-size="8" font-family="Arial" fill="#777">Site of Installation</text>')
+
+        # System size
+        if self._project:
+            sys_kw_str = f"{self._project.system_dc_kw:.2f}"
+        else:
+            sys_kw_str = f"{total_kw:.2f}"
+        svg.append('<text x="510" y="118" font-size="8.5" font-weight="700" font-family="Arial" fill="#555">SYSTEM SIZE</text>')
+        svg.append(f'<text x="510" y="134" font-size="12" font-weight="700" font-family="Arial" fill="#000">'
+                   f'{sys_kw_str} kW DC / {total_panels} Panels</text>')
+
+        # Date
+        svg.append('<text x="920" y="118" font-size="8.5" font-weight="700" font-family="Arial" fill="#555">DATE OF ISSUE</text>')
+        svg.append(f'<text x="920" y="134" font-size="11" font-weight="700" font-family="Arial" fill="#000">{today}</text>')
+
+        # ── Sheet index table (left column) ────────────────────────────
+        si_x = 36
+        si_y = 178
+        svg.append(f'<text x="{si_x}" y="{si_y}" font-size="12" font-weight="700" font-family="Arial" fill="#000">SHEET INDEX</text>')
+        si_y += 18
+
+        sheet_index = [
+            ("A-100", "Cover Sheet"),
+            ("A-101", "Site Plan"),
+            ("A-102", "Racking and Framing Plan"),
+            ("A-103", "String Plan"),
+            ("A-200", "Electrical Single Line Diagram"),
+            ("A-300", "Structural / Mounting Details"),
+            ("A-400", "Bill of Materials (BOM)"),
+        ]
+        col_w0, col_w1 = 100, 330
+        tbl_w = col_w0 + col_w1
+
+        # Header row
+        svg.append(f'<rect x="{si_x}" y="{si_y}" width="{tbl_w}" height="20" fill="#1a3a5c" stroke="#000" stroke-width="0.5"/>')
+        svg.append(f'<text x="{si_x + 6}" y="{si_y + 14}" font-size="9" font-weight="700" font-family="Arial" fill="#fff">SHEET NO.</text>')
+        svg.append(f'<text x="{si_x + col_w0 + 6}" y="{si_y + 14}" font-size="9" font-weight="700" font-family="Arial" fill="#fff">TITLE</text>')
+        si_y += 20
+
+        for ri, (sheet_id, title) in enumerate(sheet_index):
+            row_bg = "#e8f0fe" if sheet_id == "A-100" else ("#f5f5f5" if ri % 2 == 0 else "#ffffff")
+            svg.append(f'<rect x="{si_x}" y="{si_y}" width="{tbl_w}" height="22" fill="{row_bg}" stroke="#ccc" stroke-width="0.5"/>')
+            svg.append(f'<line x1="{si_x + col_w0}" y1="{si_y}" x2="{si_x + col_w0}" y2="{si_y + 22}" stroke="#ccc" stroke-width="0.5"/>')
+            svg.append(f'<text x="{si_x + 6}" y="{si_y + 15}" font-size="10" font-weight="700" font-family="Arial" fill="#1a3a5c">{sheet_id}</text>')
+            svg.append(f'<text x="{si_x + col_w0 + 6}" y="{si_y + 15}" font-size="10" font-family="Arial" fill="#000">{title}</text>')
+            si_y += 22
+
+        # ── Governing codes (left column, below sheet index) ──────────
+        codes_y = si_y + 28
+        svg.append(f'<text x="{si_x}" y="{codes_y}" font-size="12" font-weight="700" font-family="Arial" fill="#000">GOVERNING CODES</text>')
+        codes_y += 18
+
+        if self._project and self._project.country == "US":
+            codes = [
+                "2022 California Building Code (CBC)",
+                "2022 California Electrical Code (NEC 2020)",
+                "2022 California Fire Code (CFC)",
+                "2022 California Residential Code (CRC)",
+                "2022 California Energy Code (CEC Title 24)",
+                "IEEE 1547 — Interconnection Standards",
+                "UL 1703 / UL 61730 — PV Module Standard",
+                "UL 1741 — Inverter / Power Converter Standard",
+            ]
+        else:
+            codes = [
+                "Canadian Electrical Code (CEC) 25th Edition",
+                "National Building Code of Canada (NBC) 2020",
+                "Local Authority Having Jurisdiction (AHJ)",
+                "ULC S524 / ULC S561 — Fire Alarm",
+            ]
+
+        for code in codes:
+            svg.append(f'<text x="{si_x + 10}" y="{codes_y}" font-size="9" font-family="Arial" fill="#000">• {code}</text>')
+            codes_y += 15
+
+        # ── Right column ───────────────────────────────────────────────
+        rx = 580
+        ry = 178
+        r_width = 670
+
+        # Project summary box
+        svg.append(f'<rect x="{rx}" y="{ry}" width="{r_width}" height="185" fill="#f8f8f8" stroke="#000" stroke-width="1"/>')
+        svg.append(f'<rect x="{rx}" y="{ry}" width="{r_width}" height="24" fill="#1a3a5c" stroke="#000" stroke-width="0.5"/>')
+        svg.append(f'<text x="{rx + r_width // 2}" y="{ry + 16}" text-anchor="middle" font-size="10" font-weight="700" '
+                   f'font-family="Arial" fill="#ffffff">PROJECT SUMMARY</text>')
+
+        if self._project:
+            p = self._project
+            panel_str = f"{p.panel.manufacturer} {p.panel.model} ({p.panel.wattage_w}W)"
+            inv_str   = f"{p.inverter.manufacturer} {p.inverter.model}"
+            rack_str  = f"{p.racking.manufacturer} {p.racking.model}"
+            dc_kw_str = f"{p.system_dc_kw:.2f} kW DC"
+            ac_kw_str = f"{p.system_ac_kw:.2f} kW AC"
+            prod_kwh  = (f"{int(p.target_production_kwh):,} kWh/yr"
+                         if p.target_production_kwh > 0
+                         else f"{int(p.estimated_annual_kwh):,} kWh/yr")
+        else:
+            panel_str = self._panel_model_full
+            inv_str   = self.INV_MODEL_SHORT
+            rack_str  = self._racking_full
+            dc_kw_str = f"{total_kw:.2f} kW DC"
+            ac_kw_str = "—"
+            prod_kwh  = "—"
+
+        summary_rows = [
+            ("Solar Modules",          f"{total_panels}× {panel_str}"),
+            ("Inverters",              f"{total_panels}× {inv_str}"),
+            ("Racking System",         rack_str),
+            ("DC System Size",         dc_kw_str),
+            ("AC System Size",         ac_kw_str),
+            ("Est. Annual Production", prod_kwh),
+        ]
+        sy = ry + 34
+        for label, value in summary_rows:
+            svg.append(f'<text x="{rx + 12}" y="{sy}" font-size="9" font-weight="700" font-family="Arial" fill="#555">{label}:</text>')
+            svg.append(f'<text x="{rx + 200}" y="{sy}" font-size="9" font-family="Arial" fill="#000">{value}</text>')
+            sy += 22
+
+        # ── Revision history box ───────────────────────────────────────
+        rev_y = ry + 200
+        rev_h = 110
+        svg.append(f'<rect x="{rx}" y="{rev_y}" width="{r_width}" height="{rev_h}" fill="#ffffff" stroke="#000" stroke-width="1"/>')
+        svg.append(f'<rect x="{rx}" y="{rev_y}" width="{r_width}" height="24" fill="#1a3a5c" stroke="#000" stroke-width="0.5"/>')
+        svg.append(f'<text x="{rx + r_width // 2}" y="{rev_y + 16}" text-anchor="middle" font-size="10" font-weight="700" '
+                   f'font-family="Arial" fill="#ffffff">REVISION HISTORY</text>')
+
+        rev_cols = [60, 150, 380, 80]
+        rh_y = rev_y + 24
+        svg.append(f'<rect x="{rx}" y="{rh_y}" width="{r_width}" height="18" fill="#e0e0e0" stroke="#ccc" stroke-width="0.5"/>')
+        rcx = rx
+        for hdr, cw in zip(["REV", "DATE", "DESCRIPTION", "BY"], rev_cols):
+            svg.append(f'<text x="{rcx + 5}" y="{rh_y + 13}" font-size="8.5" font-weight="700" font-family="Arial" fill="#000">{hdr}</text>')
+            rcx += cw
+
+        row0_y = rh_y + 18
+        svg.append(f'<rect x="{rx}" y="{row0_y}" width="{r_width}" height="22" fill="#f9f9f9" stroke="#ccc" stroke-width="0.5"/>')
+        rcx = rx
+        for val, cw in zip(["0", today, "Initial Issue — Permit Submittal", "AI"], rev_cols):
+            svg.append(f'<text x="{rcx + 5}" y="{row0_y + 15}" font-size="9" font-family="Arial" fill="#000">{val}</text>')
+            rcx += cw
+
+        # ── Designer / engineer stamp placeholder ──────────────────────
+        stamp_y = rev_y + rev_h + 18
+        svg.append(f'<rect x="{rx}" y="{stamp_y}" width="{r_width}" height="75" fill="#fafafa" stroke="#aaa" stroke-width="0.8" stroke-dasharray="5,3"/>')
+        svg.append(f'<text x="{rx + r_width // 2}" y="{stamp_y + 22}" text-anchor="middle" font-size="10" font-weight="700" font-family="Arial" fill="#999">ENGINEER / DESIGNER STAMP</text>')
+        svg.append(f'<text x="{rx + r_width // 2}" y="{stamp_y + 42}" text-anchor="middle" font-size="9" font-family="Arial" fill="#bbb">[ Reserved for Official Stamp ]</text>')
+        designer = self._project.designer_name if self._project and self._project.designer_name else "AI Solar Design Engine"
+        svg.append(f'<text x="{rx + r_width // 2}" y="{stamp_y + 62}" text-anchor="middle" font-size="9" font-family="Arial" fill="#777">Prepared by: {designer}</text>')
+
+        # ── Standard title block ───────────────────────────────────────
+        svg.append(self._svg_title_block(
+            VW, VH, "A-100", "COVER SHEET",
+            "Solar PV System Installation Planset", "1 of 14",
+            address, today
         ))
 
         content = "\n".join(svg)

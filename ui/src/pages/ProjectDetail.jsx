@@ -10,6 +10,7 @@ export default function ProjectDetail() {
   const [currentPage, setCurrentPage] = useState(0)
   const [totalPages, setTotalPages] = useState(13)
   const [downloadingPdf, setDownloadingPdf] = useState(false)
+  const [downloadingProposal, setDownloadingProposal] = useState(false)
 
   useEffect(() => {
     fetch(`/api/projects/${id}`)
@@ -49,6 +50,29 @@ export default function ProjectDetail() {
       alert('Error: ' + e.message)
     } finally {
       setDownloadingPdf(false)
+    }
+  }
+
+  const handleDownloadProposal = async () => {
+    setDownloadingProposal(true)
+    try {
+      const res = await fetch(`/api/proposal-pdf/${id}`)
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        alert(data.detail || 'Proposal generation failed')
+        return
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `proposal_${id}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      alert('Error: ' + e.message)
+    } finally {
+      setDownloadingProposal(false)
     }
   }
 
@@ -138,6 +162,13 @@ export default function ProjectDetail() {
               >
                 {downloadingPdf ? 'Generating PDF…' : 'Download PDF'}
               </button>
+              <button
+                onClick={handleDownloadProposal}
+                disabled={downloadingProposal}
+                className="w-full bg-amber-500 hover:bg-amber-600 text-white px-4 py-2.5 rounded-lg font-medium text-sm disabled:opacity-50"
+              >
+                {downloadingProposal ? 'Generating…' : 'Download Proposal'}
+              </button>
             </div>
           ) : (
             <div className="space-y-3">
@@ -179,6 +210,13 @@ export default function ProjectDetail() {
                     className="text-xs bg-solar-600 hover:bg-solar-700 text-white px-3 py-1.5 rounded-md disabled:opacity-50"
                   >
                     {downloadingPdf ? 'Generating…' : 'Download PDF'}
+                  </button>
+                  <button
+                    onClick={handleDownloadProposal}
+                    disabled={downloadingProposal}
+                    className="text-xs bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-md disabled:opacity-50"
+                  >
+                    {downloadingProposal ? 'Generating…' : 'Download Proposal'}
                   </button>
                 </div>
               </div>
