@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@googlemaps/three": "^4.0.13",
     "3d-tiles-renderer": "^0.4.23",
     "cesium": "^1.139.1",
     "react": "^18.3.1",

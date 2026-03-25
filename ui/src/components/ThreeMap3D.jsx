@@ -1,6 +1,6 @@
-// ThreeMap3D — forwards to CesiumMap3D (working photorealistic 3D viewer)
-// THREE.js + 3d-tiles-renderer approach needs ECEF camera engineering — future sprint
-export { default } from './CesiumMap3D'
+// ThreeMap3D — forwards to GoogleMaps3D (WebGL Overlay + THREE.js)
+// Previous approaches: CesiumJS (geoid height mismatch), 3d-tiles-renderer (ECEF black screen)
+export { default } from './GoogleMaps3D'
 
 /* FUTURE: full THREE.js implementation below (disabled)
 import { useEffect, useRef, useState } from 'react'
