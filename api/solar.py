@@ -364,6 +364,7 @@ def get_roof_from_geotiff(
                 max_panels=max_panels,
                 setback_ft=setback_ft,
                 orientation="portrait",
+                latitude=lat,
             ),
         )
         placements = placer.place_on_roofs(roofs, scale)

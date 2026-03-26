@@ -38,7 +38,7 @@ from api.solar import router as solar_router
 
 app = FastAPI(
     title="Solar Planset Tool API",
-    description="Quebec Solaire — Automated solar permit planset generation",
+    description="Automated solar permit planset generation",
     version="1.0.0",
 )
 

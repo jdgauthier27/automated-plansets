@@ -32,7 +32,7 @@ def export_json(
         "project": {
             "address": address,
             "date": date.today().isoformat(),
-            "tool": "Quebec Solaire — Solar Planset Tool",
+            "tool": "Solar Planset Tool",
         },
         "system": {
             "total_panels": total_panels,

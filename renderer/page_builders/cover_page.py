@@ -368,7 +368,7 @@ def build_cover_page(
           <td style="padding:2px 4px; border:1px solid #ccc;">1</td>
           <td style="padding:2px 4px; border:1px solid #ccc;">{today}</td>
           <td style="padding:2px 4px; border:1px solid #ccc;">Initial Issue for Permit</td>
-          <td style="padding:2px 4px; border:1px solid #ccc;">QS</td>
+          <td style="padding:2px 4px; border:1px solid #ccc;">SC</td>
         </tr>
         <tr><td style="padding:2px 4px; border:1px solid #ccc;">&nbsp;</td><td style="padding:2px 4px; border:1px solid #ccc;"></td><td style="padding:2px 4px; border:1px solid #ccc;"></td><td style="padding:2px 4px; border:1px solid #ccc;"></td></tr>
         <tr><td style="padding:2px 4px; border:1px solid #ccc;">&nbsp;</td><td style="padding:2px 4px; border:1px solid #ccc;"></td><td style="padding:2px 4px; border:1px solid #ccc;"></td><td style="padding:2px 4px; border:1px solid #ccc;"></td></tr>

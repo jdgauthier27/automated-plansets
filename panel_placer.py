@@ -55,6 +55,8 @@ class PlacementConfig:
     setback_ft: float = 3.0  # fire setback from edges
     ridge_setback_ft: float = 1.5  # NEC 690.12(B)(2): 18" from ridge/hip/valley
     obstacles: list = field(default_factory=list)  # list[RoofObstacle]
+    latitude: float = 34.0  # site latitude for hemisphere-aware north exclusion
+    exclude_north_facing: bool = True  # skip north-facing faces (azimuth 315°-45°)
 
 
 @dataclass
@@ -196,6 +198,18 @@ class PanelPlacer:
                 results.append(PlacementResultWithSpec(rf, [], self.panel, self.config.sun_hours_peak, ""))
                 continue
 
+            # Skip north-facing faces (azimuth 315°-45°) with meaningful pitch
+            # in the northern hemisphere.  Flat faces (pitch < 10°) are allowed
+            # because they can accept tilted racking.
+            is_north = rf.azimuth_deg < 45 or rf.azimuth_deg > 315
+            if is_north and rf.pitch_deg > 10 and self.config.exclude_north_facing and self.config.latitude >= 0:
+                logger.info(
+                    "%s: skipping north-facing face (azimuth=%.0f°, pitch=%.0f°)",
+                    rf.label, rf.azimuth_deg, rf.pitch_deg,
+                )
+                results.append(PlacementResultWithSpec(rf, [], self.panel, self.config.sun_hours_peak, ""))
+                continue
+
             face_limit = min(remaining, per_face_cap)
             panels, resolved_orientation = self._place_on_face(rf, pts_per_ft, face_limit, panel_id)
             panel_id += len(panels)
@@ -213,6 +227,27 @@ class PanelPlacer:
                 rf.pitch_deg,
                 resolved_orientation,
             )
+
+        # Cross-face overlap deduplication: panels on higher-priority faces
+        # (processed first) take precedence.  Remove any panel from a later
+        # face whose rotated rectangle intersects a previously-placed panel.
+        all_placed_polys: List[Polygon] = []
+        for result in results:
+            kept = []
+            for panel in result.panels:
+                ppoly = panel.polygon
+                overlap = any(
+                    ppoly.intersects(ep) and ppoly.intersection(ep).area > 0.01 * ppoly.area
+                    for ep in all_placed_polys
+                )
+                if overlap:
+                    logger.info("Removed panel %d on %s (cross-face overlap)", panel.id, result.roof_face.label)
+                    remaining += 1
+                else:
+                    kept.append(panel)
+                    all_placed_polys.append(ppoly)
+            if len(kept) != len(result.panels):
+                result.panels = kept
 
         return results
 

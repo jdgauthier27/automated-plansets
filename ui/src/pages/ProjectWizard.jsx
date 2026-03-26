@@ -35,7 +35,7 @@ const DEFAULT_FORM = {
   main_panel_breaker_a: 200,
   main_panel_bus_rating_a: 225,
   num_panels: 13,
-  company_name: 'Quebec Solaire',
+  company_name: 'Solar Contractor',
   designer_name: '',
   project_name: '',
 }

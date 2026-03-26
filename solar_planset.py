@@ -301,6 +301,7 @@ def run_address_mode(args, logger):
         orientation=args.orientation,
         max_panels=max_panels,
         sun_hours_peak=args.sun_hours,
+        latitude=getattr(args, 'lat', 34.0),
     )
 
     placer = PanelPlacer(panel=panel_spec, config=config)
@@ -723,6 +724,7 @@ def run_pdf_mode(args, logger):
         tilt_deg=args.tilt,
         max_panels=args.max_panels,
         sun_hours_peak=args.sun_hours,
+        latitude=getattr(args, 'lat', 34.0),
     )
 
     placer = PanelPlacer(panel=panel_spec, config=config)

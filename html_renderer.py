@@ -32,6 +32,7 @@ import io
 import logging
 import math
 import os
+import re
 import ssl
 import urllib.request
 from datetime import date
@@ -767,6 +768,23 @@ class HtmlRenderer:
 
         # A-300: Electrical Details (grounding schedule, conduit routing, OCPD)
         pages_html.append(self._build_electrical_details_page(self._project, placements))
+
+        # ── Fix page numbering across all sheets ─────────────────────
+        total_pages = len(pages_html)
+        for i in range(total_pages):
+            page_num = i + 1
+            # Fix SVG title blocks: "Sheet X of Y" → "Sheet {page_num} of {total_pages}"
+            pages_html[i] = re.sub(
+                r"(>Sheet )\d+ of \d+(<)",
+                rf"\g<1>{page_num} of {total_pages}\2",
+                pages_html[i],
+            )
+            # Fix HTML cover page: "N of M</div>" in sheet number div
+            pages_html[i] = re.sub(
+                r'(margin-top:4px;">)\d+ of \d+(</div>)',
+                rf"\g<1>{page_num} of {total_pages}\2",
+                pages_html[i],
+            )
 
         # Assemble full HTML
         html = self._assemble_html(pages_html)

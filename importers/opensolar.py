@@ -108,7 +108,7 @@ def import_opensolar_json(filepath: str, catalog: Optional[EquipmentCatalog] = N
 
     # ── Company ─────────────────────────────────────────────────────────
     company = data.get("company", data.get("installer", {}))
-    project.company_name = company.get("name", "Quebec Solaire")
+    project.company_name = company.get("name", "Solar Contractor")
     project.designer_name = company.get("designer", "AI Solar Design Engine")
     project.project_name = data.get("name", data.get("project_name", f"Installation Solaire — {project.address}"))
 

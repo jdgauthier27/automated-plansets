@@ -7,6 +7,7 @@ Split from site_plan.py.
 import math
 
 from renderer.shared.geo_utils import meters_per_pixel, azimuth_label
+from renderer.svg_helpers import ft_in
 from renderer.page_builders.site_plan_satellite import build_site_plan_satellite
 
 
@@ -109,6 +110,15 @@ def _build_site_plan_vector(
     # Property dimensions (typical suburban lot)
     lot_w_m = max(bldg_w_m + 8.0, 18.0)  # min 4m setback each side
     lot_h_m = max(bldg_h_m + 16.0, 30.0)  # front + back setbacks
+
+    # Imperial vs metric for dimension labels
+    use_imperial = (renderer._code_prefix == "NEC")
+
+    def _dim_label(meters: float) -> str:
+        """Format a dimension in imperial (ft-in) or metric (m) based on jurisdiction."""
+        if use_imperial:
+            return ft_in(meters / 0.3048)
+        return f"{meters:.1f}m"
 
     # ── Scale: fit the property into the drawing area ──────────────
     draw_area_w = VW - 120  # margins for labels/dimensions
@@ -222,7 +232,7 @@ def _build_site_plan_vector(
     svg.append(
         f'<text x="{(bx1 + bx2) / 2:.0f}" y="{(by1 + by2) / 2 + 18:.0f}" '
         f'text-anchor="middle" font-size="9" font-family="Arial" fill="#666">'
-        f"{bldg_w_m:.1f}m × {bldg_h_m:.1f}m</text>"
+        f"{_dim_label(bldg_w_m)} × {_dim_label(bldg_h_m)}</text>"
     )
 
     # ── Roof ridge line ────────────────────────────────────────────
@@ -440,7 +450,7 @@ def _build_site_plan_vector(
     svg.append(
         f'<text x="{(lot_x1 + lot_x2) / 2:.0f}" y="{pdim_y - 4:.0f}" '
         f'text-anchor="middle" font-size="9" font-family="Arial" fill="#000">'
-        f"{lot_w_m:.1f} m</text>"
+        f"{_dim_label(lot_w_m)}</text>"
     )
 
     # Left side (lot depth)
@@ -463,7 +473,7 @@ def _build_site_plan_vector(
         f'<text x="{pdim_x - 5:.0f}" y="{(lot_y1 + lot_y2) / 2:.0f}" '
         f'text-anchor="middle" font-size="9" font-family="Arial" fill="#000" '
         f'transform="rotate(-90,{pdim_x - 5:.0f},{(lot_y1 + lot_y2) / 2:.0f})">'
-        f"{lot_h_m:.1f} m</text>"
+        f"{_dim_label(lot_h_m)}</text>"
     )
 
     # ── Building setback dimensions ────────────────────────────────
@@ -481,7 +491,7 @@ def _build_site_plan_vector(
     svg.append(
         f'<text x="{fs_x + 5:.0f}" y="{(fs_y1 + fs_y2) / 2 + 3:.0f}" '
         f'font-size="8" font-family="Arial" fill="#cc0000">'
-        f"{front_setback_m:.1f}m SETBACK</text>"
+        f"{_dim_label(front_setback_m)} SETBACK</text>"
     )
 
     # ── Equipment callout symbols (UM / MP / LC / INV / DCD) ──────────

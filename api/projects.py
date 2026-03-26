@@ -35,7 +35,7 @@ class ProjectCreateRequest(BaseModel):
     main_panel_breaker_a: int = 200
     main_panel_bus_rating_a: int = 225
     num_panels: int = 13
-    company_name: str = "Quebec Solaire"
+    company_name: str = "Solar Contractor"
     designer_name: str = "AI Solar Design Engine"
     project_name: Optional[str] = None
 
@@ -287,7 +287,10 @@ def generate_planset(project_id: str):
         width_ft=panel.width_ft,
         height_ft=panel.height_ft,
     )
-    placer = PanelPlacer(panel=panel_spec, config=PlacementConfig(max_panels=project.num_panels))
+    placer = PanelPlacer(panel=panel_spec, config=PlacementConfig(
+        max_panels=project.num_panels,
+        latitude=project.latitude,
+    ))
     placements = placer.place_on_roofs(roofs, scale)
 
     # Render

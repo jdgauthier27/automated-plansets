@@ -5,7 +5,7 @@ SVG title block generator for planset sheets.
 Extracted from ``HtmlRenderer._svg_title_block``.
 
 Generates a reusable 520 x 130 px SVG title block matching the
-Cubillas / All Valley Solar / Quebec Solaire standard, positioned
+Cubillas / All Valley Solar standard, positioned
 in the bottom-right corner of the sheet.
 
 Layout (520 x 130 px):
@@ -30,10 +30,10 @@ def svg_title_block(
     address: str,
     today: str,
     *,
-    company: str = "Québec Solaire",
+    company: str = "Solar Contractor",
     designer: str = "AI Solar Design Engine",
-    company_license: str = "Lic. Élec. — RBQ / CMEQ",
-    company_email: str = "info@quebecSolaire.ca",
+    company_license: str = "",
+    company_email: str = "",
     transparent: bool = False,
 ) -> str:
     """Generate a reusable SVG title block.

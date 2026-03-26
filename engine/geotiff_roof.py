@@ -833,17 +833,15 @@ def _build_roof_scene(
         if not poly.is_valid:
             poly = poly.buffer(0)
 
-        setback_pts = 3.0 * pts_per_ft
-        usable = poly.buffer(-setback_pts)
-        if usable.is_empty or usable.area < 100:
-            usable = poly.buffer(-pts_per_ft)
-        if usable.is_empty:
-            usable = poly
-
+        # No pre-applied setback — PanelPlacer handles all fire setbacks
+        # internally (consistent with Solar API path in google_solar.py).
+        # Previously a 3ft setback was applied here AND in PanelPlacer,
+        # causing a double setback that over-shrunk usable area.
+        usable = poly
         if isinstance(usable, MultiPolygon):
             usable = max(usable.geoms, key=lambda g: g.area)
 
-        usable_sqft = usable.area / (pts_per_ft**2)
+        usable_sqft = poly.area / (pts_per_ft**2)
         usable_m = _page_polygon_to_meters(usable, cx_page, cy_page, cx_m, cy_m, pts_per_ft)
 
         full_polygon_latlng = _points_m_to_latlng(face.polygon_m, mask_tiff.crs)
