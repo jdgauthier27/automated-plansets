@@ -777,8 +777,8 @@ def _build_site_plan_vector(
     rd_y = 100
     rd_w = 255
     roof_detail_rows = [
-        ("ROOF TYPE:", "ASPHALT SHINGLES"),
-        ("SECTION:", "S-1 (PRIMARY SOUTH FACE)"),
+        ("ROOF TYPE:", renderer._roof_material_display.upper()),
+        ("SECTION:", f"S-1 (PRIMARY {azimuth_label(_az_s)} FACE)"),
         ("MODULE COUNT:", f"{n_panels} MODULES"),
         ("SYSTEM SIZE:", f"{total_kw_display:.2f} kW DC"),
         ("AZIMUTH:", f"{_az_s}\u00b0 ({azimuth_label(_az_s)})"),

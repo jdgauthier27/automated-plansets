@@ -4,7 +4,7 @@ Extracted from HtmlRenderer._build_placard_house_page.
 """
 
 
-def build_placard_house_page(renderer, address: str, today: str) -> str:
+def build_placard_house_page(renderer, address: str, today: str, num_panels: int = 0) -> str:
     """PV-6.1: Placard house — MICROINVERTER topology disconnect locations.
 
     Matches Cubillas PV-9 style: CAUTION header, building elevation with all
@@ -16,6 +16,11 @@ def build_placard_house_page(renderer, address: str, today: str) -> str:
       → Main Service Panel → Main Billing Meter
     All conduit on this diagram is AC (red). There is no DC conduit or DC disconnect.
     """
+    # Dynamic equipment values from project
+    _n_panels = num_panels or (renderer._project.num_panels if renderer._project else 13)
+    _inv_short = renderer.INV_MODEL_SHORT if hasattr(renderer, 'INV_MODEL_SHORT') else "Enphase IQ8A"
+    _is_micro = renderer._project.inverter.is_micro if renderer._project else True
+
     svg_parts = []
 
     svg_parts.append('<rect width="1280" height="960" fill="#ffffff"/>')
@@ -271,8 +276,8 @@ def build_placard_house_page(renderer, address: str, today: str) -> str:
     callouts = [
         {
             "num": "1",
-            "label": "ROOF ARRAY (13 MODULES)",
-            "sublabel": "13x ENPHASE IQ8A MICROINVERTERS",
+            "label": f"ROOF ARRAY ({_n_panels} MODULES)",
+            "sublabel": f"{_n_panels}x {_inv_short.upper()} {'MICROINVERTERS' if _is_micro else 'STRING INVERTER'}",
             "dot_x": roof_cx + 0.45 * (roof_right - roof_cx),
             "dot_y": roof_peak_y + 0.45 * (roof_base_y - roof_peak_y),
             "box_x": 710,
@@ -360,7 +365,7 @@ def build_placard_house_page(renderer, address: str, today: str) -> str:
     )
     legend_items = [
         ("#cc0000", "——", "AC conduit / trunk cable (Microinverters → Junc. Box → PV Load Center → Panel)"),
-        ("#cc0000", "●", "Enphase IQ8A microinverter (one under each panel, AC output only)"),
+        ("#cc0000", "●", f"{_inv_short} {'microinverter' if _is_micro else 'inverter'} ({'one under each panel, AC output only' if _is_micro else 'central inverter'})"),
         ("#000000", "①", "Callout number — matches equipment location on building"),
     ]
     for li, (lc, sym, txt) in enumerate(legend_items):
