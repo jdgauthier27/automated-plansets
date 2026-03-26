@@ -9,7 +9,8 @@ Extracted modules:
   cover_page.py            -> build_cover_page                  (PV-1 / T-00)
   cover_sheet.py           -> build_cover_sheet_page            (A-100)
   property_plan.py         -> build_property_plan_page          (PV-2 / A-101)
-  site_plan.py             -> build_site_plan_page              (PV-3)
+  site_plan_vector.py      -> build_site_plan_page              (PV-3, dispatcher + vector)
+  site_plan_satellite.py   -> build_site_plan_satellite         (PV-3, satellite view)
   racking_plan.py          -> build_racking_plan_page           (PV-3.1 / A-102)
   single_line_diagram.py   -> build_single_line_diagram         (PV-4 / E-601)
   electrical_calcs.py      -> build_electrical_calcs_page       (PV-4.1)
@@ -27,7 +28,7 @@ Extracted modules:
 from renderer.page_builders.cover_page import build_cover_page
 from renderer.page_builders.cover_sheet import build_cover_sheet_page
 from renderer.page_builders.property_plan import build_property_plan_page
-from renderer.page_builders.site_plan import build_site_plan_page
+from renderer.page_builders.site_plan_vector import build_site_plan_page
 from renderer.page_builders.racking_plan import build_racking_plan_page
 from renderer.page_builders.single_line_diagram import build_single_line_diagram
 from renderer.page_builders.electrical_calcs import build_electrical_calcs_page

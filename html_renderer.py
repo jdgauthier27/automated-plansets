@@ -815,8 +815,8 @@ class HtmlRenderer:
         placements,
         total_panels: int = 0,
     ) -> str:
-        """PV-3: Site Plan — delegated to renderer.page_builders.site_plan."""
-        from renderer.page_builders.site_plan import build_site_plan_page
+        """PV-3: Site Plan — delegated to renderer.page_builders.site_plan_vector."""
+        from renderer.page_builders.site_plan_vector import build_site_plan_page
         return build_site_plan_page(
             self, insight, sat_b64, page_w, page_h, num_api_panels,
             address, today, placements, total_panels,
