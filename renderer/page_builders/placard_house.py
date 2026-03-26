@@ -41,7 +41,7 @@ def build_placard_house_page(renderer, address: str, today: str, num_panels: int
     )
     svg_parts.append(
         '<text x="640" y="82" text-anchor="middle" font-size="8" font-family="Arial" fill="#333">'
-        "SERVICE 1 OF 1 — NEW ROOF MOUNT SOLAR PV ARRAY (MICROINVERTER SYSTEM — ALL AC OUTPUT)"
+        f'SERVICE 1 OF 1 — NEW ROOF MOUNT SOLAR PV ARRAY ({"MICROINVERTER SYSTEM — ALL AC OUTPUT" if _is_micro else "STRING INVERTER SYSTEM"})'
         "</text>"
     )
 
@@ -379,7 +379,7 @@ def build_placard_house_page(renderer, address: str, today: str, num_panels: int
         f'<text x="50" y="{notes_y}" font-size="9" font-weight="700" font-family="Arial" fill="#000">NOTES</text>'
     )
     notes = [
-        "This system uses MICROINVERTERS — there is NO DC conduit and NO central inverter on this property.",
+        "This system uses MICROINVERTERS — there is NO DC conduit and NO central inverter on this property." if _is_micro else "This system uses a STRING INVERTER — DC wiring runs from roof array to central inverter.",
         "All conductors from the PV array to the load center are AC. Rapid shutdown is at the PV Load Center.",
         f'All labels must be permanently attached, weather/UV-resistant, min. 3/8" letter height ({renderer._code_prefix} {"690.31(G)" if renderer._code_prefix == "NEC" else "64-060"}).',
         "Labels on roof and equipment must remain visible during inspection walk-through.",
@@ -397,7 +397,7 @@ def build_placard_house_page(renderer, address: str, today: str, num_panels: int
             960,
             "PV-6.1",
             "Placard House",
-            "Disconnect Locations — Microinverter System",
+            f"Disconnect Locations — {'Microinverter' if _is_micro else 'String Inverter'} System",
             "9 of 13",
             address,
             today,

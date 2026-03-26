@@ -78,8 +78,12 @@ def build_mounting_details_page(renderer, total_panels: int, total_kw: float,
         n_end_clamps = n_rails * 2
         n_mid_clamps = max(4, round(n * 1.85))
         n_mounts = max(8, round(n * 1.38))
-        n_inverters = n
-        inverter_row_label = "MICROINVERTERS"
+        if renderer._project and not renderer._project.inverter.is_micro:
+            n_inverters = 1
+            inverter_row_label = "STRING INVERTER"
+        else:
+            n_inverters = n
+            inverter_row_label = "MICROINVERTERS"
     total_ac_current_bom = n * renderer.INV_AC_AMPS_PER_UNIT
     system_ocpd_bom = math.ceil(total_ac_current_bom * 1.25 / 5) * 5
 

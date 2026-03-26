@@ -664,7 +664,7 @@ def build_single_line_diagram(
         f'<line x1="{lg_x}" y1="{lg_y}" x2="{lg_x + 32}" y2="{lg_y}" stroke="#cc0000" stroke-width="2.5"/>'
     )
     svg_parts.append(
-        f'<text x="{lg_x + 37}" y="{lg_y + 4}" font-size="6.5" font-family="Arial" fill="#333">AC (MICROINVERTER OUTPUT)</text>'
+        f'<text x="{lg_x + 37}" y="{lg_y + 4}" font-size="6.5" font-family="Arial" fill="#333">AC ({"MICROINVERTER" if renderer._is_micro else "INVERTER"} OUTPUT)</text>'
     )
     svg_parts.append(
         f'<line x1="{lg_x + 185}" y1="{lg_y}" x2="{lg_x + 217}" y2="{lg_y}" stroke="#00aa00" stroke-width="1.5" stroke-dasharray="4,2"/>'

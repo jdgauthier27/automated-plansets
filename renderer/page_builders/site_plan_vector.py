@@ -402,7 +402,7 @@ def _build_site_plan_vector(
     svg.append(
         f'<text x="{(arr_x1 + arr_x2) / 2:.0f}" y="{dim_y + 14:.0f}" '
         f'text-anchor="middle" font-size="9" font-family="Arial" fill="#000">'
-        f"{arr_w / scale:.2f} m</text>"
+        f"{_dim_label(arr_w / scale)}</text>"
     )
 
     # Right dimension (array depth)
@@ -427,7 +427,7 @@ def _build_site_plan_vector(
         f'<text x="{dim_x - 5:.0f}" y="{(arr_y1 + arr_y2) / 2:.0f}" '
         f'text-anchor="middle" font-size="9" font-family="Arial" fill="#000" '
         f'transform="rotate(-90,{dim_x - 5:.0f},{(arr_y1 + arr_y2) / 2:.0f})">'
-        f"{arr_h / scale:.2f} m</text>"
+        f"{_dim_label(arr_h / scale)}</text>"
     )
 
     # ── Property dimension lines ───────────────────────────────────
@@ -697,11 +697,18 @@ def _build_site_plan_vector(
         f'y2="{_vp_mi_y + _vp_mi_icon_h // 2 + 2}" '
         f'stroke="#aaaaaa" stroke-width="0.5"/>'
     )
-    _vp_mi_lines = [
-        f"({n_panels}) {renderer.panel.name} [{renderer.panel.wattage}W]",
-        f"WITH {renderer.INV_MODEL_SHORT} [240V]",
-        "MICROINVERTERS MOUNTED UNDER EACH MODULE.",
-    ]
+    if renderer._is_micro:
+        _vp_mi_lines = [
+            f"({n_panels}) {renderer.panel.name} [{renderer.panel.wattage}W]",
+            f"WITH {renderer.INV_MODEL_SHORT} [240V]",
+            "MICROINVERTERS MOUNTED UNDER EACH MODULE.",
+        ]
+    else:
+        _vp_mi_lines = [
+            f"({n_panels}) {renderer.panel.name} [{renderer.panel.wattage}W]",
+            f"WITH {renderer.INV_MODEL_SHORT} STRING INVERTER",
+            "CENTRAL INVERTER — DC STRING WIRING.",
+        ]
     for _li, _lt in enumerate(_vp_mi_lines):
         svg.append(
             f'<text x="{leg_x + 38}" y="{_vp_mi_y + 8 + _li * 10}" '

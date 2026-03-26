@@ -29,7 +29,7 @@ def build_single_line_diagram_page(renderer, project, placements) -> str:
     )
     svg.append(
         '<text x="640" y="54" text-anchor="middle" font-size="11" font-family="Arial" '
-        'fill="#444444">AC System — Microinverter Configuration</text>'
+        f'fill="#444444">AC System — {"Microinverter" if renderer._is_micro else "String Inverter"} Configuration</text>'
     )
 
     # Gather equipment values
@@ -127,7 +127,9 @@ def build_single_line_diagram_page(renderer, project, placements) -> str:
                 f'fill="#0c1a2e" stroke="#4a90d9" stroke-width="0.5" rx="1"/>'
             )
 
-    # Microinverter box
+    # Inverter box
+    _inv_box_label = "MICROINVERTER" if renderer._is_micro else "STRING INVERTER"
+    _inv_box_qty = f"{total_panels}x units" if renderer._is_micro else "1x unit"
     svg.append(
         _box(
             X_MICRO,
@@ -135,9 +137,9 @@ def build_single_line_diagram_page(renderer, project, placements) -> str:
             BOX_W,
             BOX_H,
             "#fff3e0",
-            "MICROINVERTER",
+            _inv_box_label,
             f"{inv_mfr[:10]} {inv_model[:10]}",
-            f"{total_panels}x units",
+            _inv_box_qty,
         )
     )
 
@@ -234,10 +236,11 @@ def build_single_line_diagram_page(renderer, project, placements) -> str:
         hdr_x += cw
 
     conduit_sys = '1"' if total_ac_amps * 1.25 > 30 else '3/4"'
+    _inv_type_label = "Microinverter" if renderer._is_micro else "String Inverter"
     tbl_rows = [
-        ("PV Modules to Microinverter (DC quad cable)", "10 AWG", '1/2"', "~30 V DC", "N/A"),
+        (f"PV Modules to {_inv_type_label} (DC {'quad cable' if renderer._is_micro else 'string wiring'})", "10 AWG", '1/2"', "~30 V DC", "N/A"),
         (
-            f"Branch Circuit x{n_branches}: Microinverter to Combiner",
+            f"Branch Circuit x{n_branches}: {_inv_type_label} to Combiner",
             f"#{branch_wire}",
             '3/4"',
             f"{inv_voltage} V AC",
@@ -275,7 +278,7 @@ def build_single_line_diagram_page(renderer, project, placements) -> str:
         "1.  All AC conductors are copper, 75 C rated, THWN-2 in EMT conduit unless noted otherwise.",
         f"2.  Branch circuits protected by {n_branches}x 15A 2-pole breakers in AC Combiner.",
         f"3.  System OCPD: {system_ocpd}A 2-pole breaker backfed at Main Service Panel.",
-        f"4.  Microinverters: {total_panels}x {inv_mfr} {inv_model}, {inv_voltage} V AC, {inv_amps} A each.",
+        f"4.  {_inv_type_label + 's' if renderer._is_micro else _inv_type_label}: {total_panels if renderer._is_micro else 1}x {inv_mfr} {inv_model}, {inv_voltage} V AC, {inv_amps} A each.",
         f"5.  PV modules: {total_panels}x {panel_mfr} {panel_model}, {panel_w} W STC.",
         "6.  All equipment shall be installed per manufacturer instructions and applicable electrical codes.",
     ]
@@ -294,7 +297,7 @@ def build_single_line_diagram_page(renderer, project, placements) -> str:
             VH,
             "A-200",
             "ELECTRICAL SINGLE LINE DIAGRAM",
-            "AC Microinverter Single-Line",
+            f"AC {'Microinverter' if renderer._is_micro else 'String Inverter'} Single-Line",
             "14 of 14",
             _addr,
             _today,

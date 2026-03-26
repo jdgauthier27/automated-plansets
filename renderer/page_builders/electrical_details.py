@@ -127,9 +127,9 @@ def build_electrical_details_page(renderer, project, placements) -> str:
         f'font-family="Arial" fill="#000">2.  DC / AC CONDUIT ROUTING DIAGRAM</text>'
     )
 
-    BW, BH = 110, 58
+    BW, BH = 105, 58
     CY = S2_Y + 95
-    box_cxs = [S2_X + 62, S2_X + 210, S2_X + 375, S2_X + 535]
+    box_cxs = [S2_X + 60, S2_X + 200, S2_X + 340, S2_X + 480]
     box_defs = [
         (f"PV ARRAY", f"{total_panels}× {panel_w}W", "#e8f0fe"),
         ("JUNCTION BOX", "NEMA 3R", "#fff3e0"),
@@ -152,8 +152,8 @@ def build_electrical_details_page(renderer, project, placements) -> str:
         )
 
     arrow_defs = [
-        (box_cxs[0] + BW // 2, box_cxs[1] - BW // 2, CY, '3/4" EMT, 2× #10 AWG DC', "#0066cc", "a3_arr_dc"),
-        (box_cxs[1] + BW // 2, box_cxs[2] - BW // 2, CY, '3/4" EMT, 2× #10 AWG + #10 EGC', "#0066cc", "a3_arr_dc"),
+        (box_cxs[0] + BW // 2, box_cxs[1] - BW // 2, CY, '3/4" EMT, 2×#10 DC', "#0066cc", "a3_arr_dc"),
+        (box_cxs[1] + BW // 2, box_cxs[2] - BW // 2, CY, '3/4" EMT, 2×#10+EGC', "#0066cc", "a3_arr_dc"),
         (box_cxs[2] + BW // 2, box_cxs[3] - BW // 2, CY, f"{conduit_ac}, {ac_wire} AC", "#cc0000", "a3_arr_ac"),
     ]
     for x1, x2, ay, lbl, color, marker in arrow_defs:

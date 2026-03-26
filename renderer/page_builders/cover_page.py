@@ -236,10 +236,10 @@ def build_cover_page(
         MODULE: &nbsp;({total_panels}) {renderer.panel.name} [{renderer.panel.wattage}W] WITH
       </div>
       <div style="font-size:10px; font-weight:700; color:#000; margin-top:1px;">
-        INTEGRATED MICROINVERTERS {renderer.INV_MODEL_SHORT}
+        {"INTEGRATED MICROINVERTERS" if renderer._is_micro else "STRING INVERTER"} {renderer.INV_MODEL_SHORT}
       </div>
       <div style="font-size:10px; font-weight:700; color:#000; margin-top:5px;">
-        MONITORING: &nbsp;ENPHASE ENVOY (AC GATEWAY)
+        MONITORING: &nbsp;{"ENPHASE ENVOY (AC GATEWAY)" if renderer._is_micro else f"{renderer._project.inverter.manufacturer.upper()} MONITORING"}
       </div>
     </div>
 

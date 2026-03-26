@@ -345,7 +345,13 @@ def build_site_plan_satellite(
 
     # ── Scale bar (bottom-left of drawing area) ───────────────────────────
     px_per_m = (1.0 / mpp) * sat_scale
-    bar_m = 5
+    _use_imperial = (renderer._code_prefix == "NEC")
+    if _use_imperial:
+        bar_m = 5 * 0.3048  # 5 feet in meters
+        bar_label = "5'"
+    else:
+        bar_m = 5  # 5 meters
+        bar_label = "5m"
     bar_px = px_per_m * bar_m
     sbar_x = DRAW_X + 20
     sbar_y = DRAW_Y + DRAW_H - 28
@@ -372,7 +378,7 @@ def build_site_plan_satellite(
     svg.append(
         f'<text x="{sbar_x + bar_px:.0f}" y="{sbar_y + 9:.0f}" '
         f'text-anchor="end" font-size="7.5" font-family="Arial" '
-        f'fill="#000">{bar_m}m</text>'
+        f'fill="#000">{bar_label}</text>'
     )
     svg.append(
         f'<text x="{sbar_x + bar_px / 2:.0f}" y="{sbar_y - 9:.0f}" '
@@ -480,12 +486,19 @@ def build_site_plan_satellite(
         f'x2="{_mi_icon_x + _mi_icon_w - 2}" y2="{_mi_icon_y + _mi_icon_h // 2}" '
         f'stroke="#aaaaaa" stroke-width="0.5"/>'
     )
-    # Module + microinverter description text (3 wrapped lines at font-size 6)
-    _mi_lines = [
-        f"({n_panels}) {renderer.panel.name} [{renderer.panel.wattage}W]",
-        f"WITH {renderer.INV_MODEL_SHORT} [240V]",
-        "MICROINVERTERS MOUNTED UNDER EACH MODULE.",
-    ]
+    # Module + inverter description text (3 wrapped lines at font-size 6)
+    if renderer._is_micro:
+        _mi_lines = [
+            f"({n_panels}) {renderer.panel.name} [{renderer.panel.wattage}W]",
+            f"WITH {renderer.INV_MODEL_SHORT} [240V]",
+            "MICROINVERTERS MOUNTED UNDER EACH MODULE.",
+        ]
+    else:
+        _mi_lines = [
+            f"({n_panels}) {renderer.panel.name} [{renderer.panel.wattage}W]",
+            f"WITH {renderer.INV_MODEL_SHORT} STRING INVERTER",
+            "CENTRAL INVERTER — DC STRING WIRING.",
+        ]
     for _li, _lt in enumerate(_mi_lines):
         svg.append(
             f'<text x="{RC_X + 38}" y="{ly + 7 + _li * 11}" '
