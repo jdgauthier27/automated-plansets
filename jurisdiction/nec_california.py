@@ -103,6 +103,9 @@ class NECCaliforniaEngine(NECBaseEngine):
     def ahj_name(self) -> str:
         return self.get_ahj_label()
 
+    def get_building_code(self) -> str:
+        return "CBC"
+
     def get_code_name(self) -> str:
         return "California Electrical Code (NEC 2020)"
 

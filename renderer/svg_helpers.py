@@ -123,6 +123,107 @@ def image_to_b64(img_array: np.ndarray) -> str:
     return base64.b64encode(buf.getvalue()).decode("ascii")
 
 
+def wire_gauge(amps: float) -> str:
+    """Return AWG wire gauge string for given ampacity.
+
+    Shared utility — replaces duplicated inline ``_wire_gauge`` helpers
+    in several page builders.
+    """
+    if amps <= 15:
+        return "#14 AWG"
+    if amps <= 20:
+        return "#12 AWG"
+    if amps <= 30:
+        return "#10 AWG"
+    if amps <= 40:
+        return "#8 AWG"
+    if amps <= 55:
+        return "#6 AWG"
+    if amps <= 70:
+        return "#4 AWG"
+    return "#2 AWG"
+
+
+def svg_page_frame(svg: list, vw: int = PAGE_WIDTH, vh: int = PAGE_HEIGHT,
+                   border: int = 20) -> None:
+    """Append the standard white-background + border rect pair to *svg*.
+
+    Nearly every SVG page builder starts with this identical boilerplate.
+    """
+    svg.append(f'<rect width="{vw}" height="{vh}" fill="#ffffff"/>')
+    svg.append(
+        f'<rect x="{border}" y="{border}" '
+        f'width="{vw - 2 * border}" height="{vh - 2 * border}" '
+        f'fill="none" stroke="#000" stroke-width="2"/>'
+    )
+
+
+def svg_arrow_marker_defs() -> str:
+    """Return SVG ``<defs>`` block with dimension-line arrow markers.
+
+    The markers are used in site plans, racking plans, and detail sheets.
+    Include once per SVG page that needs dimension arrows.
+    """
+    return (
+        '<defs>'
+        '  <marker id="dim-arrow-l" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto">'
+        '    <polygon points="0,3 8,0 8,6" fill="#000"/>'
+        '  </marker>'
+        '  <marker id="dim-arrow-r" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">'
+        '    <polygon points="8,3 0,0 0,6" fill="#000"/>'
+        '  </marker>'
+        '</defs>'
+    )
+
+
+def dim_h(x1: float, x2: float, y: float, lbl: str,
+           gap: int = -14, color: str = "#222") -> str:
+    """Return SVG for a horizontal dimension line with label.
+
+    Draws a horizontal line between *(x1, y)* and *(x2, y)* with tick marks
+    at each end, arrowhead polygons, a white-background label rect, and the
+    label text centred above/below the line.
+    """
+    mx = (x1 + x2) // 2
+    return (
+        f'<line x1="{x1}" y1="{y}" x2="{x2}" y2="{y}" stroke="{color}" stroke-width="0.8"/>'
+        f'<line x1="{x1}" y1="{y - 5}" x2="{x1}" y2="{y + 5}" stroke="{color}" stroke-width="0.8"/>'
+        f'<line x1="{x2}" y1="{y - 5}" x2="{x2}" y2="{y + 5}" stroke="{color}" stroke-width="0.8"/>'
+        f'<polygon points="{x1},{y} {x1 + 9},{y - 3} {x1 + 9},{y + 3}" fill="{color}"/>'
+        f'<polygon points="{x2},{y} {x2 - 9},{y - 3} {x2 - 9},{y + 3}" fill="{color}"/>'
+        f'<rect x="{mx - 24}" y="{y + gap - 7}" width="48" height="10" fill="#fff"/>'
+        f'<text x="{mx}" y="{y + gap}" text-anchor="middle" '
+        f'font-size="9" font-family="Arial" fill="{color}">{lbl}</text>'
+    )
+
+
+def dim_v(x: float, y1: float, y2: float, lbl: str,
+           gap: int = -14, color: str = "#222") -> str:
+    """Return SVG for a vertical dimension line with label (rotated text)."""
+    my = (y1 + y2) // 2
+    return (
+        f'<line x1="{x}" y1="{y1}" x2="{x}" y2="{y2}" stroke="{color}" stroke-width="0.8"/>'
+        f'<line x1="{x - 5}" y1="{y1}" x2="{x + 5}" y2="{y1}" stroke="{color}" stroke-width="0.8"/>'
+        f'<line x1="{x - 5}" y1="{y2}" x2="{x + 5}" y2="{y2}" stroke="{color}" stroke-width="0.8"/>'
+        f'<polygon points="{x},{y1} {x - 3},{y1 + 9} {x + 3},{y1 + 9}" fill="{color}"/>'
+        f'<polygon points="{x},{y2} {x - 3},{y2 - 9} {x + 3},{y2 - 9}" fill="{color}"/>'
+        f'<rect x="{x + gap - 24}" y="{my - 7}" width="48" height="12" fill="#fff"/>'
+        f'<text x="{x + gap}" y="{my + 3}" text-anchor="middle" dominant-baseline="middle" '
+        f'font-size="9" font-family="Arial" fill="{color}" '
+        f'transform="rotate(-90,{x + gap},{my})">{lbl}</text>'
+    )
+
+
+def ft_in(ft_val: float) -> str:
+    """Convert decimal feet to a feet-inches string like ``5'-6\"``."""
+    feet = int(ft_val)
+    inches = round((ft_val - feet) * 12)
+    if inches == 12:
+        feet += 1
+        inches = 0
+    return f"{feet}'-{inches}\""
+
+
 def azimuth_label(az: float) -> str:
     """Convert azimuth degrees to a compass direction string."""
     dirs = [

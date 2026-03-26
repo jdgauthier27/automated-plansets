@@ -155,6 +155,9 @@ class CECQuebecEngine(JurisdictionEngine):
 
     # ── Identity ──────────────────────────────────────────────────────
 
+    def get_building_code(self) -> str:
+        return "CCQ"
+
     def get_code_name(self) -> str:
         return "CEC"
 

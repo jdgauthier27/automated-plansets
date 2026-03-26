@@ -194,6 +194,8 @@ def validate_output(html: str) -> dict:
 
     Returns a dict with pass/fail for each check and an overall score.
     """
+    import re
+
     results = {}
 
     # --- Address & Client ---
@@ -210,13 +212,15 @@ def validate_output(html: str) -> dict:
     results["no_hydro_quebec_in_codes"] = "Hydro-Qu" not in html.split("GOVERNING")[0] if "GOVERNING" in html else True
 
     # --- Quebec contamination (CRITICAL for California plansets) ---
+    # Strip base64 data URIs before checking — encoded PNG data naturally contains "CCQ"
+    html_no_b64 = re.sub(r'data:[a-zA-Z0-9+/;=,\-]+[A-Za-z0-9+/=]+', '', html)
     qc_count = (
-        html.count("Hydro-Qu")
-        + html.count("CMEQ")
-        + html.count("AECQ")
-        + html.count("NBCC")
-        + html.count("CCQ")
-        + html.count("RW90-XLPE")
+        html_no_b64.count("Hydro-Qu")
+        + html_no_b64.count("CMEQ")
+        + html_no_b64.count("AECQ")
+        + html_no_b64.count("NBCC")
+        + html_no_b64.count("CCQ")
+        + html_no_b64.count("RW90-XLPE")
     )
     results["zero_quebec_refs"] = qc_count == 0
 

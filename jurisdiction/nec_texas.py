@@ -281,7 +281,7 @@ class TexasNECJurisdiction(NECBaseEngine):
             "8. The local retail electric provider (REP) or distribution utility shall be notified prior to interconnection.",
             "9. Interconnection and net metering governed by PUCT rules (16 TAC Chapter 25).",
             "10. Rapid shutdown equipment shall comply with NEC 2020 Section 690.12.",
-            "11. All conductors shall be THWN-2 rated for wet locations (no RW90-XLPE permitted).",
+            "11. All conductors shall be THWN-2 rated for wet locations.",
             "12. All drawings and notes are not to scale. Contractor shall check and verify all dimensions at the job site.",
         ]
 
@@ -289,7 +289,7 @@ class TexasNECJurisdiction(NECBaseEngine):
         return [
             "1. The equipment and all associated wiring shall be installed only by qualified persons holding a valid TDLR electrician license. (NEC 2020 690.4(E))",
             "2. The local utility or retail electric provider shall be notified prior to activation of any solar photovoltaic installation.",
-            "3. All PV conductors shall be THWN-2 rated. RW90-XLPE conductors are NOT approved for Texas installations.",
+            "3. All PV conductors shall be THWN-2 rated per NEC 2020.",
             "4. DC conductors shall comply with NEC 2020 690.8(A): Isc × 1.25 × 1.25 (Isc × 1.56).",
             "5. AC breaker sizing per NEC 2020 690.8(A): continuous current × 1.25.",
             "6. Interconnection per NEC 2020 705.12 (120% rule or supply-side tap).",
