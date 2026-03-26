@@ -804,7 +804,11 @@ def calculate_structural_loads(project, roof_pitch_deg: float = 22.5) -> dict:
 
 
 def _conductor_for_amps(amps: float) -> str:
-    """Look up minimum conductor size for given ampacity."""
+    """Look up minimum conductor size for given ampacity (75°C Cu, full range up to 4/0 AWG).
+
+    Note: distinct from renderer.svg_helpers.wire_gauge() which is a simplified
+    version for page-builder SVG labels (no 'Cu' suffix, limited to #2 AWG).
+    """
     for rating, wire in CONDUCTOR_AMPACITY_75C:
         if rating >= amps:
             return wire

@@ -535,10 +535,15 @@ def _build_site_plan_vector(
             )
         return "\n".join(parts)
 
-    # Get primary roof segment data (used here and by roof detail box below)
-    _seg0 = insight.roof_segments[0] if insight.roof_segments else None
-    _az_s = round(_seg0.azimuth_deg) if _seg0 else 180
-    _pit_s = round(_seg0.pitch_deg) if _seg0 else 18
+    # Get primary roof segment — the one with the most panels placed on it
+    from collections import Counter
+    _seg_counts = Counter(getattr(p, "segment_index", 0) for p in panels)
+    _primary_seg_idx = _seg_counts.most_common(1)[0][0] if _seg_counts else 0
+    _seg_primary = (insight.roof_segments[_primary_seg_idx]
+                    if insight.roof_segments and _primary_seg_idx < len(insight.roof_segments)
+                    else None)
+    _az_s = round(_seg_primary.azimuth_deg) if _seg_primary else 180
+    _pit_s = round(_seg_primary.pitch_deg) if _seg_primary else 18
 
     # Equipment center positions (right side = JB/LC; left side = MP/UM)
     # Microinverter system: NO DCD (DC disconnect), NO separate INV box.

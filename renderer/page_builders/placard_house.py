@@ -364,7 +364,7 @@ def build_placard_house_page(renderer, address: str, today: str, num_panels: int
         f'<text x="50" y="{leg_y}" font-size="9" font-weight="700" font-family="Arial" fill="#000">SYSTEM LEGEND</text>'
     )
     legend_items = [
-        ("#cc0000", "——", "AC conduit / trunk cable (Microinverters → Junc. Box → PV Load Center → Panel)"),
+        ("#cc0000", "——", f"AC conduit / trunk cable ({_inv_short} → Junc. Box → PV Load Center → Panel)"),
         ("#cc0000", "●", f"{_inv_short} {'microinverter' if _is_micro else 'inverter'} ({'one under each panel, AC output only' if _is_micro else 'central inverter'})"),
         ("#000000", "①", "Callout number — matches equipment location on building"),
     ]

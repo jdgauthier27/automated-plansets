@@ -16,7 +16,7 @@ export default function App() {
   const toggleTheme = () => setTheme(t => t === 'light' ? 'dark' : 'light')
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--bg)', color: 'var(--text)' }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--bg)', color: 'var(--text)' }}>
       {/* Navigation */}
       <nav style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border)' }} className="px-6 py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -47,13 +47,18 @@ export default function App() {
       </nav>
 
       {/* Main content */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-6 py-8 flex-1 w-full">
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/new" element={<ProjectWizard />} />
           <Route path="/project/:id" element={<ProjectDetail />} />
         </Routes>
       </main>
+
+      {/* Footer */}
+      <footer className="text-xs text-gray-400 py-4 text-center" style={{ borderTop: '1px solid var(--border)' }}>
+        Solar Planset Tool &middot; v2.0
+      </footer>
     </div>
   )
 }

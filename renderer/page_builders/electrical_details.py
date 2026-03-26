@@ -200,7 +200,7 @@ def build_electrical_details_page(renderer, project, placements) -> str:
 
     if is_micro:
         src_ocpd = "N/A (Self-protected)"
-        src_type = "Microinverter"
+        src_type = inv_model
         out_ocpd = "15A, 2-Pole"
         out_type = "Branch CB"
     else:
