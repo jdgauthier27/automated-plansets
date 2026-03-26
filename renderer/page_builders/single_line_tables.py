@@ -138,12 +138,19 @@ def build_pv_system_summary(svg_parts, renderer, calc):
         f'text-anchor="middle" font-size="8" font-weight="700" '
         f'font-family="Arial" fill="#000">PHOTOVOLTAIC SYSTEM:</text>'
     )
+    _is_micro = renderer._is_micro
+    if _is_micro:
+        _inv_label = f"WITH INTEGRATED MICROINVERTERS {renderer.INV_MODEL_SHORT}"
+        _mon_label = renderer._project.inverter.monitoring if renderer._project else "ENPHASE ENVOY (AC GATEWAY)"
+    else:
+        _inv_label = f"STRING INVERTER: {renderer.INV_MODEL_SHORT}"
+        _mon_label = renderer._project.inverter.monitoring if renderer._project else "INVERTER MONITORING"
     _pvs_rows = [
         ("DC SYSTEM SIZE:", f"{total_kw:.2f} kW"),
         ("AC SYSTEM SIZE:", f"{inv_kw:.2f} kW"),
         ("MODULE:", f"({total_panels}) {renderer.panel.name} [{renderer.panel.wattage}W]"),
-        ("", f"WITH INTEGRATED MICROINVERTERS {renderer.INV_MODEL_SHORT}"),
-        ("MONITORING:", "ENPHASE ENVOY (AC GATEWAY)"),
+        ("", _inv_label),
+        ("MONITORING:", _mon_label),
     ]
     _pvs_y = pvsys_y + 23
     for _pvl, _pvv in _pvs_rows:
@@ -297,21 +304,37 @@ def build_sld_lower_tables(svg_parts, renderer, calc):
         )
         ix += cw
 
-    inv_rows_data = [
-        ("Inverter Type", "Microinverter (Module-Level Power Electronics)"),
-        ("Microinverter Model", renderer.INV_MODEL_SHORT),
-        (
-            "AC Output Power (per unit)",
-            f"{renderer.INV_AC_WATTS_PER_UNIT} VA  ({renderer.INV_AC_AMPS_PER_UNIT:.1f} A @ 240 V)",
-        ),
-        ("Total System AC Power", f"{inv_kw:.2f} kW  ({total_panels} units × {renderer.INV_AC_WATTS_PER_UNIT} VA)"),
-        ("AC Output Voltage / Freq.", "240 V, 1-Phase, 60 Hz"),
-        ("Total Continuous AC Current", f"{total_ac_current:.1f} A"),
-        ("DC Input Voltage Range", "16 – 60 V DC"),
-        ("CEC Weighted Efficiency", "97.0 %"),
-        ("Max Units per 15 A Branch", f"{MAX_PER_BRANCH}"),
-        ("Operating Temp. Range", "−40°C to +65°C"),
-    ]
+    _is_micro = renderer._is_micro
+    _inv = renderer._project.inverter if renderer._project else None
+    if _is_micro:
+        inv_rows_data = [
+            ("Inverter Type", "Microinverter (Module-Level Power Electronics)"),
+            ("Microinverter Model", renderer.INV_MODEL_SHORT),
+            (
+                "AC Output Power (per unit)",
+                f"{renderer.INV_AC_WATTS_PER_UNIT} VA  ({renderer.INV_AC_AMPS_PER_UNIT:.1f} A @ 240 V)",
+            ),
+            ("Total System AC Power", f"{inv_kw:.2f} kW  ({total_panels} units × {renderer.INV_AC_WATTS_PER_UNIT} VA)"),
+            ("AC Output Voltage / Freq.", "240 V, 1-Phase, 60 Hz"),
+            ("Total Continuous AC Current", f"{total_ac_current:.1f} A"),
+            ("DC Input Voltage Range", f"{_inv.mppt_voltage_min_v}–{_inv.mppt_voltage_max_v} V DC" if _inv else "16 – 60 V DC"),
+            ("CEC Weighted Efficiency", f"{_inv.cec_efficiency_pct} %" if _inv else "97.0 %"),
+            ("Max Units per 15 A Branch", f"{MAX_PER_BRANCH}"),
+            ("Operating Temp. Range", f"{_inv.operating_temp_min_c}°C to +{_inv.operating_temp_max_c}°C" if _inv else "−40°C to +65°C"),
+        ]
+    else:
+        inv_rows_data = [
+            ("Inverter Type", "String Inverter"),
+            ("Model", renderer.INV_MODEL_SHORT),
+            ("Rated AC Output", f"{_inv.rated_ac_output_w} W" if _inv else "N/A"),
+            ("Max Continuous AC Current", f"{total_ac_current:.1f} A"),
+            ("AC Output Voltage / Freq.", f"{_inv.ac_voltage_v} V, 1-Phase, 60 Hz" if _inv else "240 V, 1-Phase, 60 Hz"),
+            ("Max DC Input Voltage", f"{_inv.max_dc_voltage_v} V" if _inv else "600 V"),
+            ("MPPT Voltage Range", f"{_inv.mppt_voltage_min_v}–{_inv.mppt_voltage_max_v} V" if _inv else "N/A"),
+            ("Max DC Input Current", f"{_inv.max_dc_input_current_a} A" if _inv else "N/A"),
+            ("CEC Weighted Efficiency", f"{_inv.cec_efficiency_pct} %" if _inv else "96.0 %"),
+            ("Operating Temp. Range", f"{_inv.operating_temp_min_c}°C to +{_inv.operating_temp_max_c}°C" if _inv else "−25°C to +60°C"),
+        ]
     iry = is_y + 27
     for ii2, (param, val) in enumerate(inv_rows_data):
         bg = "#fff" if ii2 % 2 == 0 else "#f8f8f8"
@@ -337,14 +360,23 @@ def build_sld_lower_tables(svg_parts, renderer, calc):
     # Side-by-side with OCPD/BUSBAR tables on the right half.
     # ═══════════════════════════════════════════════════════════════
     bcd_x, bcd_y, bcd_w = 25, 510, 601
-    _bcd_rows = [
-        ("No. of Circuits:", f"{n_branches}", "Modules/Circuit:", f"max {MAX_PER_BRANCH}"),
-        ("Branch Breaker:", f"{BRANCH_BREAKER_A}A 2P", "Sys. OCPD:", f"{system_ocpd}A 2P"),
-        ("Max Branch Current:", f"{max_branch_current:.1f} A", "Total AC:", f"{total_ac_current:.1f} A"),
-        ("Branch Wire:", branch_ac_wire, "System Wire:", sys_ac_wire),
-        ("Branch Conduit:", branch_ac_conduit + " EMT", "Sys. Conduit:", sys_ac_conduit + " EMT"),
-        ("Inverter (per panel):", renderer.INV_MODEL_SHORT, "CEC Eff.:", "97.0 %"),
-    ]
+    _cec_eff = f"{renderer._project.inverter.cec_efficiency_pct} %" if renderer._project else "97.0 %"
+    if _is_micro:
+        _bcd_rows = [
+            ("No. of Circuits:", f"{n_branches}", "Modules/Circuit:", f"max {MAX_PER_BRANCH}"),
+            ("Branch Breaker:", f"{BRANCH_BREAKER_A}A 2P", "Sys. OCPD:", f"{system_ocpd}A 2P"),
+            ("Max Branch Current:", f"{max_branch_current:.1f} A", "Total AC:", f"{total_ac_current:.1f} A"),
+            ("Branch Wire:", branch_ac_wire, "System Wire:", sys_ac_wire),
+            ("Branch Conduit:", branch_ac_conduit + " EMT", "Sys. Conduit:", sys_ac_conduit + " EMT"),
+            ("Inverter (per panel):", renderer.INV_MODEL_SHORT, "CEC Eff.:", _cec_eff),
+        ]
+    else:
+        _bcd_rows = [
+            ("String Inverter:", renderer.INV_MODEL_SHORT, "AC OCPD:", f"{system_ocpd}A 2P"),
+            ("AC Cont. Current:", f"{total_ac_current:.1f} A", "AC Wire:", sys_ac_wire),
+            ("AC Conduit:", sys_ac_conduit + " EMT", "EGC:", sys_egc_wire),
+            ("Rated Output:", f"{renderer._project.inverter.rated_ac_output_w} W" if renderer._project else "N/A", "CEC Eff.:", _cec_eff),
+        ]
     bcd_h = 16 + len(_bcd_rows) * 17 + 4
     svg_parts.append(
         f'<rect x="{bcd_x}" y="{bcd_y}" width="{bcd_w}" height="{bcd_h}" fill="#ffffff" stroke="#000" stroke-width="1.2"/>'
@@ -407,12 +439,20 @@ def build_sld_lower_tables(svg_parts, renderer, calc):
 
     # Single data row  — inverter description | count / current | formula + result
     oc_data_y = oc_y + oc_title_h + oc_hdr_h
-    inv_type_str = f"{renderer.panel.name}  WITH  {renderer.INV_MODEL_SHORT} MICROINVERTERS [240V]"
-    inv_curr_str = f"{total_panels} / {renderer.INV_AC_AMPS_PER_UNIT:.1f} A"
-    ocpd_calc_str = (
-        f"({total_panels} \u00d7 {renderer.INV_AC_AMPS_PER_UNIT:.1f}A \u00d7 1.25)"
-        f" = {total_ac_current * 1.25:.2f}A  \u2264  {system_ocpd}A  OK"
-    )
+    if _is_micro:
+        inv_type_str = f"{renderer.panel.name}  WITH  {renderer.INV_MODEL_SHORT} MICROINVERTERS [240V]"
+        inv_curr_str = f"{total_panels} / {renderer.INV_AC_AMPS_PER_UNIT:.1f} A"
+        ocpd_calc_str = (
+            f"({total_panels} \u00d7 {renderer.INV_AC_AMPS_PER_UNIT:.1f}A \u00d7 1.25)"
+            f" = {total_ac_current * 1.25:.2f}A  \u2264  {system_ocpd}A  OK"
+        )
+    else:
+        inv_type_str = f"{renderer.panel.name}  WITH  {renderer.INV_MODEL_SHORT} STRING INVERTER"
+        inv_curr_str = f"1 / {total_ac_current:.1f} A"
+        ocpd_calc_str = (
+            f"({total_ac_current:.1f}A \u00d7 1.25)"
+            f" = {total_ac_current * 1.25:.2f}A  \u2264  {system_ocpd}A  OK"
+        )
     oc_row_data = [(inv_type_str, oc_cw[0]), (inv_curr_str, oc_cw[1]), (ocpd_calc_str, oc_cw[2])]
     ox2 = oc_x
     for val, cw in oc_row_data:

@@ -34,6 +34,7 @@ def build_electrical_calcs_page(renderer, total_panels: int, total_kw: float,
     temp_coeff_isc = renderer._panel_temp_coeff_isc
 
     # ── Inverter specs — from ProjectSpec/catalog ───────────────────────
+    is_micro = renderer._is_micro
     inv_ac_amps_per_unit = renderer.INV_AC_AMPS_PER_UNIT
     inv_ac_voltage = renderer._project.inverter.ac_voltage_v if renderer._project else 240
     max_per_branch = renderer._max_per_branch
@@ -55,26 +56,43 @@ def build_electrical_calcs_page(renderer, total_panels: int, total_kw: float,
     dc_wire = _wire_gauge(dc_min_amps)
     dc_ocpd = math.ceil(isc_stc * 1.56 / 5) * 5
 
-    # ── AC branch circuit calculations ────────────────────────────────────
+    # ── AC circuit calculations ────────────────────────────────────────
     n = max(total_panels, 1)
-    if n <= max_per_branch:
-        branch_sizes = [n]
+
+    if is_micro:
+        # Microinverter: branch circuits with multiple units per branch
+        if n <= max_per_branch:
+            branch_sizes = [n]
+        else:
+            nb = math.ceil(n / max_per_branch)
+            base_sz = n // nb
+            rem = n % nb
+            branch_sizes = [base_sz + (1 if i < rem else 0) for i in range(nb)]
+        n_branches = len(branch_sizes)
+
+        branch_ac_amps = [sz * inv_ac_amps_per_unit for sz in branch_sizes]
+        branch_wire_amps = [a * 1.25 for a in branch_ac_amps]
+        branch_wire = [_wire_gauge(a) for a in branch_wire_amps]
+        branch_ocpd = [math.ceil(a / 5) * 5 for a in branch_wire_amps]
+
+        total_ac_amps = n * inv_ac_amps_per_unit
+        total_ac_wire_amps = total_ac_amps * 1.25
+        total_ac_wire = _wire_gauge(total_ac_wire_amps)
+        total_ac_ocpd = math.ceil(total_ac_wire_amps / 5) * 5
     else:
-        nb = math.ceil(n / max_per_branch)
-        base_sz = n // nb
-        rem = n % nb
-        branch_sizes = [base_sz + (1 if i < rem else 0) for i in range(nb)]
-    n_branches = len(branch_sizes)
+        # String inverter: single inverter output
+        inv = renderer._project.inverter
+        total_ac_amps = inv.rated_ac_output_w / inv.ac_voltage_v
+        total_ac_wire_amps = total_ac_amps * 1.25
+        total_ac_wire = _wire_gauge(total_ac_wire_amps)
+        total_ac_ocpd = math.ceil(total_ac_wire_amps / 5) * 5
 
-    branch_ac_amps = [sz * inv_ac_amps_per_unit for sz in branch_sizes]
-    branch_wire_amps = [a * 1.25 for a in branch_ac_amps]
-    branch_wire = [_wire_gauge(a) for a in branch_wire_amps]
-    branch_ocpd = [math.ceil(a / 5) * 5 for a in branch_wire_amps]
-
-    total_ac_amps = n * inv_ac_amps_per_unit
-    total_ac_wire_amps = total_ac_amps * 1.25
-    total_ac_wire = _wire_gauge(total_ac_wire_amps)
-    total_ac_ocpd = math.ceil(total_ac_wire_amps / 5) * 5
+        n_branches = 1
+        branch_sizes = [n]
+        branch_ac_amps = [total_ac_amps]
+        branch_wire_amps = [total_ac_wire_amps]
+        branch_wire = [total_ac_wire]
+        branch_ocpd = [total_ac_ocpd]
 
     # 120 % rule
     main_breaker = renderer._main_breaker_a
@@ -149,13 +167,13 @@ def build_electrical_calcs_page(renderer, total_panels: int, total_kw: float,
     lx, ly = 30, 54
 
     # ── 1. System Overview ────────────────────────────────────────────────
+    _sys_type = "Microinverter (no DC series strings)" if is_micro else "String Inverter (DC series strings)"
+    _inv_label = "Microinverter" if is_micro else "Inverter"
     overview_rows = [
-        ("System Type", "Microinverter (no DC series strings)"),
+        ("System Type", _sys_type),
         ("Module", f"{renderer._panel_model_full}   {pmax_stc} W"),
         (
-            "Microinverter"
-            if (renderer._project and renderer._project.inverter.is_micro) or not renderer._project
-            else "Inverter",
+            _inv_label,
             f"{renderer.INV_MODEL_SHORT}  [{renderer._project.inverter.ac_voltage_v if renderer._project else 240} V / 1φ]",
         ),
         ("# Modules", f"{total_panels}"),
@@ -336,17 +354,32 @@ def build_electrical_calcs_page(renderer, total_panels: int, total_kw: float,
     svg.append(tbl_svg)
     ry += 8
 
-    # ── 7. Microinverter AC Specs ─────────────────────────────────────────
-    inv_rows = [
-        ("Model", renderer.INV_MODEL_SHORT),
-        ("Output voltage", f"{inv_ac_voltage} V  1φ"),
-        ("Max continuous output current", f"{inv_ac_amps_per_unit:.1f} A"),
-        ("Max output apparent power", f"{inv_output_va} VA"),
-        ("Max modules per branch circuit", f"{max_per_branch}  (for 15 A 2P OCPD)"),
-        ("DC input voltage range", "16–60 V  (per panel)"),
-    ]
+    # ── 7. Inverter AC Specs ──────────────────────────────────────────────
+    if is_micro:
+        inv_rows = [
+            ("Model", renderer.INV_MODEL_SHORT),
+            ("Output voltage", f"{inv_ac_voltage} V  1φ"),
+            ("Max continuous output current", f"{inv_ac_amps_per_unit:.1f} A"),
+            ("Max output apparent power", f"{inv_output_va} VA"),
+            ("Max modules per branch circuit", f"{max_per_branch}  (for 15 A 2P OCPD)"),
+            ("DC input voltage range", f"{renderer._project.inverter.mppt_voltage_min_v}–{renderer._project.inverter.mppt_voltage_max_v} V  (per panel)" if renderer._project else "16–60 V  (per panel)"),
+        ]
+        _inv_title = "MICROINVERTER AC ELECTRICAL SPECIFICATIONS"
+    else:
+        _inv = renderer._project.inverter
+        inv_rows = [
+            ("Model", renderer.INV_MODEL_SHORT),
+            ("Output voltage", f"{inv_ac_voltage} V  1φ"),
+            ("Rated AC output", f"{_inv.rated_ac_output_w} W"),
+            ("Max continuous AC current", f"{total_ac_amps:.1f} A"),
+            ("Max DC input voltage", f"{_inv.max_dc_voltage_v} V"),
+            ("MPPT voltage range", f"{_inv.mppt_voltage_min_v}–{_inv.mppt_voltage_max_v} V"),
+            ("Max DC input current", f"{_inv.max_dc_input_current_a} A"),
+            ("CEC efficiency", f"{_inv.cec_efficiency_pct}%"),
+        ]
+        _inv_title = "STRING INVERTER ELECTRICAL SPECIFICATIONS"
     tbl_svg, ry = _table(
-        rx, ry, "MICROINVERTER AC ELECTRICAL SPECIFICATIONS", ["Parameter", "Value"], inv_rows, [295, 250], row_h=22
+        rx, ry, _inv_title, ["Parameter", "Value"], inv_rows, [295, 250], row_h=22
     )
     svg.append(tbl_svg)
     ry += 8

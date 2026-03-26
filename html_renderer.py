@@ -114,6 +114,28 @@ class HtmlRenderer:
     # fall back to legacy hardcoded defaults for backward compatibility.
 
     @property
+    def _is_micro(self) -> bool:
+        """Is the system using microinverters?"""
+        if self._project:
+            return self._project.inverter.is_micro
+        return True  # legacy default
+
+    @property
+    def _inverter_continuous_amps(self) -> float:
+        """Total inverter continuous AC current.
+
+        Microinverters: per-unit current (multiply by panel count externally).
+        String inverters: total rated AC current from inverter nameplate.
+        """
+        if self._project:
+            inv = self._project.inverter
+            if inv.is_micro:
+                return inv.max_ac_amps  # per-unit, caller multiplies by n
+            else:
+                return inv.rated_ac_output_w / inv.ac_voltage_v
+        return 1.6
+
+    @property
     def INV_AC_WATTS_PER_UNIT(self) -> int:
         """Inverter AC output per unit (VA). From catalog or legacy default."""
         if self._project:

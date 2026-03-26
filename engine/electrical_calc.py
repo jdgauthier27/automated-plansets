@@ -203,6 +203,8 @@ def _get_design_temp_cold(project) -> float:
     """Return jurisdiction-specific cold design temperature in °C.
 
     Queries the jurisdiction engine based on project address/jurisdiction_id.
+    Routes to state-specific engines (TX, FL, IL, NY, CA) before falling back
+    to the base NEC engine.
     Falls back to -25°C (Quebec CEC) only when jurisdiction cannot be determined.
     """
     jid = getattr(project, "jurisdiction_id", "") or ""
@@ -215,26 +217,31 @@ def _get_design_temp_cold(project) -> float:
             city = parts[1].strip()
 
     addr_lower = address.lower()
-    is_california = jid == "nec_california" or any(s in addr_lower for s in ["california", ", ca ", ", ca,", " ca 9"])
 
     try:
-        if is_california:
-            from jurisdiction.nec_california import NECCaliforniaEngine
-
-            engine = NECCaliforniaEngine(city=city)
-            return float(engine.get_design_temperatures(city).get("cold_c", 1))
-        elif jid == "nec_base" or country == "US":
-            from jurisdiction.nec_base import NECBaseEngine
-
-            engine = NECBaseEngine()
-            return float(engine.get_design_temperatures(city).get("cold_c", -10))
-        else:
-            from jurisdiction.cec_quebec import CECQuebecEngine
-
-            engine = CECQuebecEngine()
-            return float(engine.get_design_temperatures(city).get("cold_c", -25))
+        # Use jurisdiction engine from get_jurisdiction_engine for proper routing
+        from jurisdiction import get_jurisdiction_engine
+        engine = get_jurisdiction_engine(address, country=country)
+        temps = engine.get_design_temperatures(city)
+        return float(temps.get("cold_c", -10 if country == "US" else -25))
     except Exception:
-        return -25.0  # safe fallback
+        # Fallback: manual routing
+        is_california = jid == "nec_california" or any(s in addr_lower for s in ["california", ", ca ", ", ca,", " ca 9"])
+        try:
+            if is_california:
+                from jurisdiction.nec_california import NECCaliforniaEngine
+                engine = NECCaliforniaEngine(city=city)
+                return float(engine.get_design_temperatures(city).get("cold_c", 1))
+            elif country == "US":
+                from jurisdiction.nec_base import NECBaseEngine
+                engine = NECBaseEngine()
+                return float(engine.get_design_temperatures(city).get("cold_c", -10))
+            else:
+                from jurisdiction.cec_quebec import CECQuebecEngine
+                engine = CECQuebecEngine()
+                return float(engine.get_design_temperatures(city).get("cold_c", -25))
+        except Exception:
+            return -25.0  # safe fallback
 
 
 def next_standard_breaker(amps: float) -> int:

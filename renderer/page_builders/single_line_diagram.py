@@ -44,25 +44,34 @@ def build_single_line_diagram(
     temp_coeff_voc = renderer._panel_temp_coeff_voc
     panel_efficiency = renderer._project.panel.efficiency_pct if renderer._project else 22.5
 
-    # ── Microinverter branch circuit calculations (Enphase IQ8A) ──────────
-    # Each panel has its own microinverter; circuits are AC branch groups.
-    # IQ8A: 1.6 A per unit @ 240 V.  15 A 2P breakers → max 7 per branch
-    #   (7 × 1.6 A × 1.25 = 14.0 A ≤ 15 A ✓)  matching Cubillas reference.
-    MAX_PER_BRANCH = renderer._max_per_branch
-    BRANCH_BREAKER_A = 15  # 2P-15A branch breaker
+    is_micro = renderer._is_micro
 
-    n_branches = max(1, math.ceil(total_panels / MAX_PER_BRANCH))
-    # Split panels across branches (front-heavy ceiling split)
-    branch_sizes: list = []
-    _remaining = total_panels
-    for _bi in range(n_branches):
-        _sz = math.ceil(_remaining / (n_branches - _bi))
-        branch_sizes.append(_sz)
-        _remaining -= _sz
+    if is_micro:
+        # ── Microinverter branch circuit calculations ──────────────────
+        MAX_PER_BRANCH = renderer._max_per_branch
+        BRANCH_BREAKER_A = 15  # 2P-15A branch breaker
 
-    # AC current per branch and system total
-    max_branch_current = max(branch_sizes) * renderer.INV_AC_AMPS_PER_UNIT  # A
-    total_ac_current = total_panels * renderer.INV_AC_AMPS_PER_UNIT  # A (13×1.6=20.8)
+        n_branches = max(1, math.ceil(total_panels / MAX_PER_BRANCH))
+        branch_sizes: list = []
+        _remaining = total_panels
+        for _bi in range(n_branches):
+            _sz = math.ceil(_remaining / (n_branches - _bi))
+            branch_sizes.append(_sz)
+            _remaining -= _sz
+
+        max_branch_current = max(branch_sizes) * renderer.INV_AC_AMPS_PER_UNIT
+        total_ac_current = total_panels * renderer.INV_AC_AMPS_PER_UNIT
+    else:
+        # ── String inverter: single inverter handles all panels ────────
+        MAX_PER_BRANCH = total_panels
+        BRANCH_BREAKER_A = 0  # no branch breakers
+
+        n_branches = 1
+        branch_sizes = [total_panels]
+
+        inv = renderer._project.inverter
+        total_ac_current = inv.rated_ac_output_w / inv.ac_voltage_v
+        max_branch_current = total_ac_current
 
     # Wire sizing helpers
 
@@ -162,18 +171,32 @@ def build_single_line_diagram(
     )
     _cp = renderer._code_prefix
     _is_nec = _cp == "NEC"
-    _sld_notes = [
-        f"All microinverters: same manufacturer and model — do not mix brands. [{_cp} {'690.4' if _is_nec else '64-102'}]",
-        "DC circuit fully isolated in each module — no field-accessible DC wiring.",
-        f"Array grounding electrode system required. [{_cp} {'250.94' if _is_nec else 'Rule 10'}]",
-        f"AC conductors: 125% of max continuous output current. [{_cp} {'690.8' if _is_nec else 'Rule 4-004'}]",
-        f"Backfed PV breaker at opposite end of bus bar from main breaker. [{_cp} {'705.12' if _is_nec else '64-056'}]",
-        f"Exterior conduit/boxes: rain-tight and wet-location approved. [{_cp} {'314.15' if _is_nec else '12-1412'}]",
-        f"All metallic raceways bonded and grounded. [{_cp} {'250.96' if _is_nec else 'Rule 10-900'}]",
-        f"Rapid shutdown: array \u226430 V within 30 s of initiating signal. [{_cp} {'690.12' if _is_nec else '64-218'}]",
-        "Conductor/conduit specs are minimums; field may require upsizing.",
-        f"Supplemental ground rod at array required. [{_cp} {'690.47' if _is_nec else '64-104'}]",
-    ]
+    if is_micro:
+        _sld_notes = [
+            f"All microinverters: same manufacturer and model — do not mix brands. [{_cp} {'690.4' if _is_nec else '64-102'}]",
+            "DC circuit fully isolated in each module — no field-accessible DC wiring.",
+            f"Array grounding electrode system required. [{_cp} {'250.94' if _is_nec else 'Rule 10'}]",
+            f"AC conductors: 125% of max continuous output current. [{_cp} {'690.8' if _is_nec else 'Rule 4-004'}]",
+            f"Backfed PV breaker at opposite end of bus bar from main breaker. [{_cp} {'705.12' if _is_nec else '64-056'}]",
+            f"Exterior conduit/boxes: rain-tight and wet-location approved. [{_cp} {'314.15' if _is_nec else '12-1412'}]",
+            f"All metallic raceways bonded and grounded. [{_cp} {'250.96' if _is_nec else 'Rule 10-900'}]",
+            f"Rapid shutdown: array \u226430 V within 30 s of initiating signal. [{_cp} {'690.12' if _is_nec else '64-218'}]",
+            "Conductor/conduit specs are minimums; field may require upsizing.",
+            f"Supplemental ground rod at array required. [{_cp} {'690.47' if _is_nec else '64-104'}]",
+        ]
+    else:
+        _sld_notes = [
+            f"String inverter: verify string Voc (cold) ≤ inverter max DC input voltage. [{_cp} {'690.7' if _is_nec else '64-056'}]",
+            f"DC conductors: Isc × 1.56 minimum ampacity. [{_cp} {'690.8' if _is_nec else 'Rule 14-100'}]",
+            f"Array grounding electrode system required. [{_cp} {'250.94' if _is_nec else 'Rule 10'}]",
+            f"AC conductors: 125% of max continuous output current. [{_cp} {'690.8' if _is_nec else 'Rule 4-004'}]",
+            f"Backfed PV breaker at opposite end of bus bar from main breaker. [{_cp} {'705.12' if _is_nec else '64-056'}]",
+            f"Exterior conduit/boxes: rain-tight and wet-location approved. [{_cp} {'314.15' if _is_nec else '12-1412'}]",
+            f"All metallic raceways bonded and grounded. [{_cp} {'250.96' if _is_nec else 'Rule 10-900'}]",
+            f"Rapid shutdown: comply with {_cp} {'690.12' if _is_nec else '64-218'} (or supply-side tap).",
+            "Conductor/conduit specs are minimums; field may require upsizing.",
+            f"Supplemental ground rod at array required. [{_cp} {'690.47' if _is_nec else '64-104'}]",
+        ]
     _col2_start = nb_x + nb_w // 2 + 4
     _half = (len(_sld_notes) + 1) // 2  # 5 notes left, 4 right
     for _ni, _note in enumerate(_sld_notes):
