@@ -45,33 +45,39 @@ def get_building_insights(lat: float = Query(...), lng: float = Query(...)):
     segments = []
     for seg in solar.get("roofSegmentStats", []):
         stats = seg.get("stats", {})
-        segments.append({
-            "pitch_deg": seg.get("pitchDegrees", 0),
-            "azimuth_deg": seg.get("azimuthDegrees", 0),
-            "area_m2": stats.get("areaMeters2", 0),
-            "sunshine_hours": stats.get("sunshineQuantiles", []),
-            "center": seg.get("center", {}),
-            "bounding_box": seg.get("boundingBox", {}),
-            "height_m": seg.get("planeHeightAtCenterMeters", 0),
-        })
+        segments.append(
+            {
+                "pitch_deg": seg.get("pitchDegrees", 0),
+                "azimuth_deg": seg.get("azimuthDegrees", 0),
+                "area_m2": stats.get("areaMeters2", 0),
+                "sunshine_hours": stats.get("sunshineQuantiles", []),
+                "center": seg.get("center", {}),
+                "bounding_box": seg.get("boundingBox", {}),
+                "height_m": seg.get("planeHeightAtCenterMeters", 0),
+            }
+        )
 
     panels = []
     for p in solar.get("solarPanels", []):
         center = p.get("center", {})
-        panels.append({
-            "lat": center.get("latitude", 0),
-            "lng": center.get("longitude", 0),
-            "orientation": p.get("orientation", "PORTRAIT"),
-            "segment_index": p.get("segmentIndex", 0),
-            "yearly_energy_kwh": p.get("yearlyEnergyDcKwh", 0),
-        })
+        panels.append(
+            {
+                "lat": center.get("latitude", 0),
+                "lng": center.get("longitude", 0),
+                "orientation": p.get("orientation", "PORTRAIT"),
+                "segment_index": p.get("segmentIndex", 0),
+                "yearly_energy_kwh": p.get("yearlyEnergyDcKwh", 0),
+            }
+        )
 
     configs = []
     for c in solar.get("solarPanelConfigs", []):
-        configs.append({
-            "panels_count": c.get("panelsCount", 0),
-            "yearly_energy_kwh": c.get("yearlyEnergyDcKwh", 0),
-        })
+        configs.append(
+            {
+                "panels_count": c.get("panelsCount", 0),
+                "yearly_energy_kwh": c.get("yearlyEnergyDcKwh", 0),
+            }
+        )
 
     return {
         "center": data.get("center", {}),
@@ -282,9 +288,7 @@ def get_dsm_heights(
             }
             for f in analysis.roof_features
         ],
-        "panel_heights": {
-            str(k): round(v, 2) for k, v in analysis.panel_heights.items()
-        },
+        "panel_heights": {str(k): round(v, 2) for k, v in analysis.panel_heights.items()},
     }
 
 
@@ -367,16 +371,18 @@ def get_roof_from_geotiff(
         panel_data = []
         for result in placements:
             for p in result.panels:
-                panel_data.append({
-                    "id": p.id,
-                    "center_x": round(p.center_x, 2),
-                    "center_y": round(p.center_y, 2),
-                    "width_pts": round(p.width_pts, 2),
-                    "height_pts": round(p.height_pts, 2),
-                    "rotation_deg": round(p.rotation_deg, 1),
-                    "roof_id": p.roof_id,
-                    "orientation": p.orientation,
-                })
+                panel_data.append(
+                    {
+                        "id": p.id,
+                        "center_x": round(p.center_x, 2),
+                        "center_y": round(p.center_y, 2),
+                        "width_pts": round(p.width_pts, 2),
+                        "height_pts": round(p.height_pts, 2),
+                        "rotation_deg": round(p.rotation_deg, 1),
+                        "roof_id": p.roof_id,
+                        "orientation": p.orientation,
+                    }
+                )
 
         total_panels = sum(r.total_panels for r in placements)
 
@@ -406,6 +412,7 @@ def get_roof_from_geotiff(
 
     except Exception as e:
         import traceback
+
         traceback.print_exc()
         raise HTTPException(
             status_code=502,
@@ -459,15 +466,19 @@ def get_satellite_image(
     try:
         # Fix macOS Python SSL cert issue
         import ssl as _ssl
+
         _ctx = _ssl.create_default_context()
         _ctx.check_hostname = False
         _ctx.verify_mode = _ssl.CERT_NONE
         import satellite_fetch as _sf
+
         # Monkey-patch ssl context if satellite_fetch uses urllib
         _orig_urlopen = urllib.request.urlopen
+
         def _patched_urlopen(req, **kwargs):
-            kwargs.setdefault('context', _ctx)
+            kwargs.setdefault("context", _ctx)
             return _orig_urlopen(req, **kwargs)
+
         urllib.request.urlopen = _patched_urlopen
         try:
             img_array = _sf.fetch_satellite_mosaic(lat=lat, lng=lng, api_key=api_key, zoom=zoom, out_w=w, out_h=h)
@@ -482,6 +493,7 @@ def get_satellite_image(
     # Convert numpy RGB array to JPEG bytes
     from PIL import Image
     import io
+
     img = Image.fromarray(img_array)
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=85)

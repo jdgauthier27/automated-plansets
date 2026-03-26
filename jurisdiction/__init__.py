@@ -30,57 +30,68 @@ def get_jurisdiction_engine(address: str, country: str = "US"):
         # Florida
         if _state_match(address_upper, "FL", "FLORIDA"):
             from jurisdiction.nec_florida import FloridaNECJurisdiction
+
             return FloridaNECJurisdiction(city=city)
 
         # California
         if _state_match(address_upper, "CA", "CALIFORNIA"):
             from jurisdiction.nec_california import NECCaliforniaEngine
+
             return NECCaliforniaEngine(city=city)
 
         # Texas
         if _state_match(address_upper, "TX", "TEXAS"):
             from jurisdiction.nec_texas import TexasNECJurisdiction
+
             return TexasNECJurisdiction(city=city)
 
         # New York
         if _state_match(address_upper, "NY", "NEW YORK"):
             from jurisdiction.nec_newyork import NYJurisdiction
+
             return NYJurisdiction(city=city, state="NY")
 
         # Illinois
         if _state_match(address_upper, "IL", "ILLINOIS"):
             from jurisdiction.nec_illinois import IllinoisJurisdiction
+
             return IllinoisJurisdiction(city=city, state="IL")
 
         # Default US: NEC base
         from jurisdiction.nec_base import NECBaseEngine
+
         return NECBaseEngine()
 
     # ── Canada ─────────────────────────────────────────────────────────────
     if country == "CA":
         if _state_match(address_upper, "ON", "ONTARIO"):
             from jurisdiction.cec_ontario import OntarioJurisdiction
+
             return OntarioJurisdiction(city=city)
 
         if _state_match(address_upper, "BC", "BRITISH COLUMBIA"):
             from jurisdiction.cec_bc import BCJurisdiction
+
             return BCJurisdiction(city=city)
 
         # Default Canada: Quebec CEC
         from jurisdiction.cec_quebec import CECQuebecEngine
+
         return CECQuebecEngine()
 
     # ── Fallback ───────────────────────────────────────────────────────────
     from jurisdiction.nec_base import NECBaseEngine
+
     return NECBaseEngine()
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────
 
+
 def _state_match(address_upper: str, abbr: str, full_name: str) -> bool:
     """Return True if state abbreviation or full name is found in address."""
     # Match ", FL " or ", FL," or ", FL 12345" at word boundary
-    if re.search(r',\s*' + abbr + r'(\s|,|$)', address_upper):
+    if re.search(r",\s*" + abbr + r"(\s|,|$)", address_upper):
         return True
     if full_name in address_upper:
         return True

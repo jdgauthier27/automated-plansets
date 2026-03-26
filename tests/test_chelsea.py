@@ -15,7 +15,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from google_solar import (
-    GoogleSolarClient, BuildingInsight, SolarRoofSegment, SolarPanel,
+    GoogleSolarClient,
+    BuildingInsight,
+    SolarRoofSegment,
+    SolarPanel,
     solar_insight_to_roof_faces,
 )
 from panel_placer import PanelPlacer, PanelSpec, PlacementConfig
@@ -61,8 +64,12 @@ if not best_config:
     best_config = configs[-1] if configs else {"panelsCount": 22}
 
 num_panels = best_config.get("panelsCount", 22)
-logger.info("Auto-sized to %d panels for target %.0f kWh/yr (API config: %.0f kWh/yr)",
-            num_panels, target_kwh, best_config.get("yearlyEnergyDcKwh", 0))
+logger.info(
+    "Auto-sized to %d panels for target %.0f kWh/yr (API config: %.0f kWh/yr)",
+    num_panels,
+    target_kwh,
+    best_config.get("yearlyEnergyDcKwh", 0),
+)
 
 # ── Panel spec & placement ────────────────────────────────────────────
 roofs, scale = solar_insight_to_roof_faces(insight)
@@ -70,7 +77,7 @@ roofs, scale = solar_insight_to_roof_faces(insight)
 panel_spec = PanelSpec(
     name="LONGi Hi-MO 7 LR7-54HGBB-455M",
     wattage=455,
-    width_ft=3.72,   # 1134mm
+    width_ft=3.72,  # 1134mm
     height_ft=5.91,  # 1800mm
 )
 config = PlacementConfig(
@@ -93,9 +100,12 @@ logger.info("Placement: %d panels, %.1f kW, %.0f kWh/yr", total_panels, total_kw
 sat_image = None
 try:
     sat_image = fetch_satellite_mosaic(
-        lat=insight.lat, lng=insight.lng,
+        lat=insight.lat,
+        lng=insight.lng,
         api_key=GOOGLE_API_KEY,
-        zoom=20, out_w=1280, out_h=960,
+        zoom=20,
+        out_w=1280,
+        out_h=960,
     )
 except Exception as e:
     logger.warning("Satellite fetch failed (%s) — using vector fallback", e)
@@ -125,7 +135,9 @@ html_renderer = HtmlRenderer(
 
 output_path = str(Path(__file__).parent.parent / "generated_plansets" / "42_Charlotte_Chelsea_planset.html")
 html_renderer.render(
-    planset, placements, output_path,
+    planset,
+    placements,
+    output_path,
     building_insight=insight,
     num_api_panels=num_panels,
 )

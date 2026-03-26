@@ -28,15 +28,15 @@ def calculate_panels_needed(
     Returns:
         Number of panels needed (rounded up).
     """
-    kwh_per_panel_per_year = (
-        panel_wattage_w * sun_hours_peak * 365 * system_loss_factor / 1000.0
-    )
+    kwh_per_panel_per_year = panel_wattage_w * sun_hours_peak * 365 * system_loss_factor / 1000.0
     if kwh_per_panel_per_year <= 0:
         return 1
     panels = math.ceil(target_kwh / kwh_per_panel_per_year)
     logger.info(
         "Auto-sizing: %.0f kWh target / %.0f kWh per panel = %d panels",
-        target_kwh, kwh_per_panel_per_year, panels,
+        target_kwh,
+        kwh_per_panel_per_year,
+        panels,
     )
     return max(1, panels)
 

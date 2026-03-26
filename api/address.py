@@ -74,6 +74,7 @@ def validate_address(req: AddressValidateRequest):
     """Geocode an address and return Street View + satellite images for confirmation."""
     try:
         from address.geocoder import GoogleGeocoder
+
         api_key = os.environ.get("GOOGLE_SOLAR_API_KEY", "")
         geocoder = GoogleGeocoder(api_key=api_key)
 
@@ -99,7 +100,8 @@ def validate_address(req: AddressValidateRequest):
                 sat_b64 = base64.b64encode(map_bytes).decode("utf-8")
 
         return AddressValidateResponse(
-            lat=lat, lng=lng,
+            lat=lat,
+            lng=lng,
             formatted_address=result.get("formatted_address", req.address),
             street_view_b64=sv_b64,
             satellite_b64=sat_b64,
@@ -113,6 +115,7 @@ def validate_address(req: AddressValidateRequest):
 def get_satellite_image(lat: float, lng: float, zoom: int = 20):
     """Return a satellite image for the interactive map picker."""
     from fastapi.responses import Response
+
     api_key = os.environ.get("GOOGLE_SOLAR_API_KEY", "")
     if not api_key:
         raise HTTPException(status_code=400, detail="No API key configured")
@@ -127,14 +130,14 @@ def confirm_building(req: AddressConfirmRequest):
     """Fetch Google Solar API data for confirmed coordinates."""
     try:
         from address.google_solar import GoogleSolarClient
+
         api_key = os.environ.get("GOOGLE_SOLAR_API_KEY", "")
         client = GoogleSolarClient(api_key=api_key)
-        insight = client.get_building_insight(
-            address=req.address, lat=req.lat, lng=req.lng
-        )
+        insight = client.get_building_insight(address=req.address, lat=req.lat, lng=req.lng)
         return {
             "address": insight.address,
-            "lat": insight.lat, "lng": insight.lng,
+            "lat": insight.lat,
+            "lng": insight.lng,
             "imagery_quality": insight.imagery_quality,
             "roof_segments": len(insight.roof_segments),
             "max_panels": insight.max_panels,

@@ -98,9 +98,20 @@ TX_UTILITIES = {
 
 # Gulf Coast counties with elevated wind (ASCE 7-16, 130 mph)
 GULF_COAST_COUNTIES = {
-    "galveston", "nueces", "cameron", "willacy", "kenedy",
-    "kleberg", "san patricio", "aransas", "refugio", "calhoun",
-    "matagorda", "brazoria", "jefferson", "orange",
+    "galveston",
+    "nueces",
+    "cameron",
+    "willacy",
+    "kenedy",
+    "kleberg",
+    "san patricio",
+    "aransas",
+    "refugio",
+    "calhoun",
+    "matagorda",
+    "brazoria",
+    "jefferson",
+    "orange",
 }
 
 
@@ -111,8 +122,7 @@ class TexasNECJurisdiction(NECBaseEngine):
     utility auto-selection, and TDLR permit authority.
     """
 
-    def __init__(self, city: str = "", county: str = "",
-                 municipality: str = "", state: str = ""):
+    def __init__(self, city: str = "", county: str = "", municipality: str = "", state: str = ""):
         # Accept municipality/state as aliases for city/county (test harness compatibility)
         if not city and municipality:
             city = municipality

@@ -20,46 +20,57 @@ from jurisdiction.nec_base import NECBaseEngine
 
 # Florida cities with utility, wind speed (ASCE 7-22), and county
 FLORIDA_CITIES = {
-    'miami':              {'utility': 'FPL',            'wind_mph': 175, 'county': 'Miami-Dade'},
-    'orlando':            {'utility': 'OUC',             'wind_mph': 130, 'county': 'Orange'},
-    'tampa':              {'utility': 'Tampa Electric',  'wind_mph': 130, 'county': 'Hillsborough'},
-    'jacksonville':       {'utility': 'JEA',             'wind_mph': 130, 'county': 'Duval'},
-    'fort lauderdale':    {'utility': 'FPL',             'wind_mph': 170, 'county': 'Broward'},
-    'west palm beach':    {'utility': 'FPL',             'wind_mph': 170, 'county': 'Palm Beach'},
-    'st. petersburg':     {'utility': 'Tampa Electric',  'wind_mph': 140, 'county': 'Pinellas'},
-    'hialeah':            {'utility': 'FPL',             'wind_mph': 175, 'county': 'Miami-Dade'},
-    'tallahassee':        {'utility': 'Talquin Electric','wind_mph': 120, 'county': 'Leon'},
-    'cape coral':         {'utility': 'FPL',             'wind_mph': 150, 'county': 'Lee'},
+    "miami": {"utility": "FPL", "wind_mph": 175, "county": "Miami-Dade"},
+    "orlando": {"utility": "OUC", "wind_mph": 130, "county": "Orange"},
+    "tampa": {"utility": "Tampa Electric", "wind_mph": 130, "county": "Hillsborough"},
+    "jacksonville": {"utility": "JEA", "wind_mph": 130, "county": "Duval"},
+    "fort lauderdale": {"utility": "FPL", "wind_mph": 170, "county": "Broward"},
+    "west palm beach": {"utility": "FPL", "wind_mph": 170, "county": "Palm Beach"},
+    "st. petersburg": {"utility": "Tampa Electric", "wind_mph": 140, "county": "Pinellas"},
+    "hialeah": {"utility": "FPL", "wind_mph": 175, "county": "Miami-Dade"},
+    "tallahassee": {"utility": "Talquin Electric", "wind_mph": 120, "county": "Leon"},
+    "cape coral": {"utility": "FPL", "wind_mph": 150, "county": "Lee"},
     # Additional major cities
-    'gainesville':        {'utility': 'Gainesville Regional Utilities', 'wind_mph': 120, 'county': 'Alachua'},
-    'pensacola':          {'utility': 'Gulf Power (FPL)', 'wind_mph': 130, 'county': 'Escambia'},
-    'fort myers':         {'utility': 'FPL',             'wind_mph': 150, 'county': 'Lee'},
-    'sarasota':           {'utility': 'FPL',             'wind_mph': 140, 'county': 'Sarasota'},
-    'clearwater':         {'utility': 'Duke Energy',     'wind_mph': 140, 'county': 'Pinellas'},
-    'boca raton':         {'utility': 'FPL',             'wind_mph': 170, 'county': 'Palm Beach'},
-    'pompano beach':      {'utility': 'FPL',             'wind_mph': 170, 'county': 'Broward'},
-    'hollywood':          {'utility': 'FPL',             'wind_mph': 170, 'county': 'Broward'},
-    'daytona beach':      {'utility': 'Duke Energy',     'wind_mph': 130, 'county': 'Volusia'},
-    'kissimmee':          {'utility': 'KUA',             'wind_mph': 130, 'county': 'Osceola'},
-    '_default':           {'utility': 'FPL',             'wind_mph': 130, 'county': ''},
+    "gainesville": {"utility": "Gainesville Regional Utilities", "wind_mph": 120, "county": "Alachua"},
+    "pensacola": {"utility": "Gulf Power (FPL)", "wind_mph": 130, "county": "Escambia"},
+    "fort myers": {"utility": "FPL", "wind_mph": 150, "county": "Lee"},
+    "sarasota": {"utility": "FPL", "wind_mph": 140, "county": "Sarasota"},
+    "clearwater": {"utility": "Duke Energy", "wind_mph": 140, "county": "Pinellas"},
+    "boca raton": {"utility": "FPL", "wind_mph": 170, "county": "Palm Beach"},
+    "pompano beach": {"utility": "FPL", "wind_mph": 170, "county": "Broward"},
+    "hollywood": {"utility": "FPL", "wind_mph": 170, "county": "Broward"},
+    "daytona beach": {"utility": "Duke Energy", "wind_mph": 130, "county": "Volusia"},
+    "kissimmee": {"utility": "KUA", "wind_mph": 130, "county": "Osceola"},
+    "_default": {"utility": "FPL", "wind_mph": 130, "county": ""},
 }
 
 # Coastal counties with elevated wind per ASCE 7-22 (160+ mph)
 COASTAL_HIGH_WIND_COUNTIES = {
-    'miami-dade', 'broward', 'palm beach', 'monroe',
-    'collier', 'lee', 'charlotte', 'sarasota', 'manatee',
-    'pinellas', 'hillsborough', 'bay', 'okaloosa', 'santa rosa',
+    "miami-dade",
+    "broward",
+    "palm beach",
+    "monroe",
+    "collier",
+    "lee",
+    "charlotte",
+    "sarasota",
+    "manatee",
+    "pinellas",
+    "hillsborough",
+    "bay",
+    "okaloosa",
+    "santa rosa",
 }
 
 # Utility interconnection standards by utility name
 UTILITY_INTERCONNECTION = {
-    'FPL':           'FPL Rule 25-6.065 (Florida PSC)',
-    'OUC':           'OUC Net Metering / IEEE 1547',
-    'Tampa Electric': 'TECO Rule 25-17.0832 (Florida PSC)',
-    'JEA':           'JEA Net Metering / IEEE 1547',
-    'Duke Energy':   'Duke Rule 25-17.0832 (Florida PSC)',
-    'Gulf Power (FPL)': 'Gulf Power / FPL Rule 25-6.065',
-    '_default':      'Florida PSC Rule 25-17.0832 / IEEE 1547',
+    "FPL": "FPL Rule 25-6.065 (Florida PSC)",
+    "OUC": "OUC Net Metering / IEEE 1547",
+    "Tampa Electric": "TECO Rule 25-17.0832 (Florida PSC)",
+    "JEA": "JEA Net Metering / IEEE 1547",
+    "Duke Energy": "Duke Rule 25-17.0832 (Florida PSC)",
+    "Gulf Power (FPL)": "Gulf Power / FPL Rule 25-6.065",
+    "_default": "Florida PSC Rule 25-17.0832 / IEEE 1547",
 }
 
 
@@ -70,8 +81,7 @@ class FloridaNECJurisdiction(NECBaseEngine):
     utility auto-selection, coastal wind zones, and local AHJ permit authority.
     """
 
-    def __init__(self, city: str = "", county: str = "",
-                 municipality: str = "", state: str = ""):
+    def __init__(self, city: str = "", county: str = "", municipality: str = "", state: str = ""):
         # Accept municipality/state as aliases for city/county (test harness compatibility)
         if not city and municipality:
             city = municipality
@@ -79,19 +89,19 @@ class FloridaNECJurisdiction(NECBaseEngine):
         self.county = county.lower().strip()
         # Resolve city data
         city_data = self._resolve_city_data()
-        self.wind_speed_mph = city_data['wind_mph']
-        self.utility_name = city_data['utility']
-        self._county_resolved = city_data['county']
+        self.wind_speed_mph = city_data["wind_mph"]
+        self.utility_name = city_data["utility"]
+        self._county_resolved = city_data["county"]
         # Interconnection standard
-        intercon_key = self.utility_name if self.utility_name in UTILITY_INTERCONNECTION else '_default'
+        intercon_key = self.utility_name if self.utility_name in UTILITY_INTERCONNECTION else "_default"
         self._interconnection_std = UTILITY_INTERCONNECTION[intercon_key]
         self.utility_full_name = self.utility_name
         self._utility_info = {
-            'name': self.utility_name,
-            'full_name': self.utility_full_name,
-            'interconnection_standard': self._interconnection_std,
-            'net_metering_max_kw': 2000,   # Florida allows large systems
-            'rate_per_kwh': 0.12,
+            "name": self.utility_name,
+            "full_name": self.utility_full_name,
+            "interconnection_standard": self._interconnection_std,
+            "net_metering_max_kw": 2000,  # Florida allows large systems
+            "rate_per_kwh": 0.12,
         }
 
     # ------------------------------------------------------------------
@@ -102,7 +112,7 @@ class FloridaNECJurisdiction(NECBaseEngine):
         """Return city data dict matching on city name substring."""
         city_key = self.city
         for name, data in FLORIDA_CITIES.items():
-            if name == '_default':
+            if name == "_default":
                 continue
             if name in city_key or city_key in name:
                 return data
@@ -110,10 +120,10 @@ class FloridaNECJurisdiction(NECBaseEngine):
         county_key = self.county.lower()
         for coastal in COASTAL_HIGH_WIND_COUNTIES:
             if coastal in county_key:
-                default = dict(FLORIDA_CITIES['_default'])
-                default['wind_mph'] = 160
+                default = dict(FLORIDA_CITIES["_default"])
+                default["wind_mph"] = 160
                 return default
-        return dict(FLORIDA_CITIES['_default'])
+        return dict(FLORIDA_CITIES["_default"])
 
     # ------------------------------------------------------------------
     # JurisdictionEngine interface
@@ -132,37 +142,37 @@ class FloridaNECJurisdiction(NECBaseEngine):
 
     def get_governing_codes(self) -> List[Dict]:
         return [
-            {"code": "NEC 2020",    "title": "National Electrical Code (Florida Adoption)", "edition": "2020"},
-            {"code": "FBC 7th Ed.", "title": "Florida Building Code",                       "edition": "2020"},
-            {"code": "FBC-R 7th",   "title": "Florida Building Code — Residential",          "edition": "2020"},
-            {"code": "ASCE 7-22",   "title": "Minimum Design Loads for Buildings",           "edition": "2022"},
-            {"code": "IFC 2021",    "title": "International Fire Code",                       "edition": "2021"},
-            {"code": "UL 1741",     "title": "Inverters, Converters, Controllers",            "edition": "SA"},
-            {"code": "UL 2703",     "title": "Mounting Systems, Bonding",                    "edition": "2023"},
-            {"code": "IEEE 1547",   "title": "Interconnection Standard",                      "edition": "2018"},
+            {"code": "NEC 2020", "title": "National Electrical Code (Florida Adoption)", "edition": "2020"},
+            {"code": "FBC 7th Ed.", "title": "Florida Building Code", "edition": "2020"},
+            {"code": "FBC-R 7th", "title": "Florida Building Code — Residential", "edition": "2020"},
+            {"code": "ASCE 7-22", "title": "Minimum Design Loads for Buildings", "edition": "2022"},
+            {"code": "IFC 2021", "title": "International Fire Code", "edition": "2021"},
+            {"code": "UL 1741", "title": "Inverters, Converters, Controllers", "edition": "SA"},
+            {"code": "UL 2703", "title": "Mounting Systems, Bonding", "edition": "2023"},
+            {"code": "IEEE 1547", "title": "Interconnection Standard", "edition": "2018"},
         ]
 
     def get_design_temperatures(self, city: str = "") -> Dict:
         """Florida design temperatures by city (ASHRAE 99.6% / 2% values)."""
         city_key = (city or self.city).lower()
         temps = {
-            "miami":           {"cold_c": 10,  "hot_module_c": 72, "stc_c": 25},
-            "hialeah":         {"cold_c": 10,  "hot_module_c": 72, "stc_c": 25},
-            "fort lauderdale": {"cold_c": 10,  "hot_module_c": 70, "stc_c": 25},
-            "west palm beach": {"cold_c": 8,   "hot_module_c": 70, "stc_c": 25},
-            "orlando":         {"cold_c": 3,   "hot_module_c": 70, "stc_c": 25},
-            "kissimmee":       {"cold_c": 3,   "hot_module_c": 70, "stc_c": 25},
-            "tampa":           {"cold_c": 4,   "hot_module_c": 70, "stc_c": 25},
-            "st. petersburg":  {"cold_c": 5,   "hot_module_c": 68, "stc_c": 25},
-            "clearwater":      {"cold_c": 5,   "hot_module_c": 68, "stc_c": 25},
-            "jacksonville":    {"cold_c": 0,   "hot_module_c": 68, "stc_c": 25},
-            "daytona beach":   {"cold_c": 2,   "hot_module_c": 68, "stc_c": 25},
-            "sarasota":        {"cold_c": 5,   "hot_module_c": 70, "stc_c": 25},
-            "fort myers":      {"cold_c": 7,   "hot_module_c": 72, "stc_c": 25},
-            "cape coral":      {"cold_c": 7,   "hot_module_c": 72, "stc_c": 25},
-            "tallahassee":     {"cold_c": -3,  "hot_module_c": 68, "stc_c": 25},
-            "pensacola":       {"cold_c": -1,  "hot_module_c": 68, "stc_c": 25},
-            "gainesville":     {"cold_c": 0,   "hot_module_c": 68, "stc_c": 25},
+            "miami": {"cold_c": 10, "hot_module_c": 72, "stc_c": 25},
+            "hialeah": {"cold_c": 10, "hot_module_c": 72, "stc_c": 25},
+            "fort lauderdale": {"cold_c": 10, "hot_module_c": 70, "stc_c": 25},
+            "west palm beach": {"cold_c": 8, "hot_module_c": 70, "stc_c": 25},
+            "orlando": {"cold_c": 3, "hot_module_c": 70, "stc_c": 25},
+            "kissimmee": {"cold_c": 3, "hot_module_c": 70, "stc_c": 25},
+            "tampa": {"cold_c": 4, "hot_module_c": 70, "stc_c": 25},
+            "st. petersburg": {"cold_c": 5, "hot_module_c": 68, "stc_c": 25},
+            "clearwater": {"cold_c": 5, "hot_module_c": 68, "stc_c": 25},
+            "jacksonville": {"cold_c": 0, "hot_module_c": 68, "stc_c": 25},
+            "daytona beach": {"cold_c": 2, "hot_module_c": 68, "stc_c": 25},
+            "sarasota": {"cold_c": 5, "hot_module_c": 70, "stc_c": 25},
+            "fort myers": {"cold_c": 7, "hot_module_c": 72, "stc_c": 25},
+            "cape coral": {"cold_c": 7, "hot_module_c": 72, "stc_c": 25},
+            "tallahassee": {"cold_c": -3, "hot_module_c": 68, "stc_c": 25},
+            "pensacola": {"cold_c": -1, "hot_module_c": 68, "stc_c": 25},
+            "gainesville": {"cold_c": 0, "hot_module_c": 68, "stc_c": 25},
         }
         for key, t in temps.items():
             if key in city_key:
@@ -255,14 +265,14 @@ class FloridaNECJurisdiction(NECBaseEngine):
     def get_jurisdiction_data(self) -> dict:
         """Return a flat summary dict for quick validation and rendering."""
         return {
-            "utility":         self.utility_name,
-            "wire_type":       self.wire_type,
+            "utility": self.utility_name,
+            "wire_type": self.wire_type,
             "electrical_code": self.get_code_edition(),
-            "utility_full":    self.utility_full_name,
-            "wind_mph":        self.wind_speed_mph,
-            "snow_psf":        0,
-            "licensing_body":  self.get_licensing_body(),
-            "code_name":       self.get_code_name(),
+            "utility_full": self.utility_full_name,
+            "wind_mph": self.wind_speed_mph,
+            "snow_psf": 0,
+            "licensing_body": self.get_licensing_body(),
+            "code_name": self.get_code_name(),
         }
 
 

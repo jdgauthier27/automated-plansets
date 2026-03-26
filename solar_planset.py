@@ -72,52 +72,63 @@ def parse_args():
 
     # Input mode (mutually exclusive: PDF or address)
     input_group = p.add_mutually_exclusive_group(required=True)
-    input_group.add_argument("input_pdf", nargs="?", default=None,
-                             help="Path to the input PDF planset (PDF mode)")
-    input_group.add_argument("--address", type=str, default=None,
-                             help="Street address for Google Solar API lookup (address mode)")
+    input_group.add_argument("input_pdf", nargs="?", default=None, help="Path to the input PDF planset (PDF mode)")
+    input_group.add_argument(
+        "--address", type=str, default=None, help="Street address for Google Solar API lookup (address mode)"
+    )
 
     # Google Solar API
     g_api = p.add_argument_group("Google Solar API (address mode)")
-    g_api.add_argument("--google-api-key", type=str, default=None,
-                       help="Google API key (or set GOOGLE_SOLAR_API_KEY env var)")
+    g_api.add_argument(
+        "--google-api-key", type=str, default=None, help="Google API key (or set GOOGLE_SOLAR_API_KEY env var)"
+    )
     g_api.add_argument("--lat", type=float, default=None, help="Latitude (alternative to address)")
     g_api.add_argument("--lng", type=float, default=None, help="Longitude (alternative to address)")
-    g_api.add_argument("--satellite-bg", action="store_true", default=True,
-                       help="Fetch satellite imagery as background (default: True)")
-    g_api.add_argument("--no-satellite-bg", action="store_true",
-                       help="Disable satellite imagery background")
+    g_api.add_argument(
+        "--satellite-bg",
+        action="store_true",
+        default=True,
+        help="Fetch satellite imagery as background (default: True)",
+    )
+    g_api.add_argument("--no-satellite-bg", action="store_true", help="Disable satellite imagery background")
 
     # Quebec electrical
     g_qc = p.add_argument_group("Quebec Electrical (CEC Section 64)")
-    g_qc.add_argument("--quebec-electrical", action="store_true",
-                      help="Include Quebec CEC Section 64 electrical design pages")
+    g_qc.add_argument(
+        "--quebec-electrical", action="store_true", help="Include Quebec CEC Section 64 electrical design pages"
+    )
     g_qc.add_argument("--panel-voc", type=float, default=49.5, help="Panel Voc (V)")
     g_qc.add_argument("--panel-isc", type=float, default=10.2, help="Panel Isc (A)")
-    g_qc.add_argument("--micro-inverter", type=str, default="Enphase IQ8+",
-                      help="Micro-inverter model name")
-    g_qc.add_argument("--micro-inverter-watts", type=float, default=300,
-                      help="Micro-inverter continuous watts")
-    g_qc.add_argument("--residential", action="store_true", default=True,
-                      help="Residential installation (default)")
-    g_qc.add_argument("--commercial", action="store_true",
-                      help="Commercial installation (3-phase)")
+    g_qc.add_argument("--micro-inverter", type=str, default="Enphase IQ8+", help="Micro-inverter model name")
+    g_qc.add_argument("--micro-inverter-watts", type=float, default=300, help="Micro-inverter continuous watts")
+    g_qc.add_argument("--residential", action="store_true", default=True, help="Residential installation (default)")
+    g_qc.add_argument("--commercial", action="store_true", help="Commercial installation (3-phase)")
 
     # Sizing
     g_size = p.add_argument_group("System Sizing")
-    g_size.add_argument("--target-kwh", type=float, default=None,
-                        help="Target annual kWh production (auto-calculates panel count)")
-    g_size.add_argument("--target-offset", type=float, default=None,
-                        help="Target offset %% of consumption (use with --annual-consumption)")
-    g_size.add_argument("--annual-consumption", type=float, default=None,
-                        help="Annual electricity consumption in kWh (from utility bill)")
+    g_size.add_argument(
+        "--target-kwh", type=float, default=None, help="Target annual kWh production (auto-calculates panel count)"
+    )
+    g_size.add_argument(
+        "--target-offset",
+        type=float,
+        default=None,
+        help="Target offset %% of consumption (use with --annual-consumption)",
+    )
+    g_size.add_argument(
+        "--annual-consumption",
+        type=float,
+        default=None,
+        help="Annual electricity consumption in kWh (from utility bill)",
+    )
 
     p.add_argument("-o", "--output-dir", default=".", help="Output directory (default: current dir)")
     p.add_argument("--output-name", default=None, help="Base name for output files")
 
     # Page selection (PDF mode only)
-    p.add_argument("--pages", type=str, default=None,
-                   help="Comma-separated page numbers to process (1-indexed, PDF mode only)")
+    p.add_argument(
+        "--pages", type=str, default=None, help="Comma-separated page numbers to process (1-indexed, PDF mode only)"
+    )
 
     # Panel specs
     g = p.add_argument_group("Panel Specifications")
@@ -128,8 +139,9 @@ def parse_args():
 
     # Layout config
     g2 = p.add_argument_group("Layout Configuration")
-    g2.add_argument("--orientation", choices=["auto", "portrait", "landscape"], default="auto",
-                    help="Panel orientation strategy")
+    g2.add_argument(
+        "--orientation", choices=["auto", "portrait", "landscape"], default="auto", help="Panel orientation strategy"
+    )
     g2.add_argument("--row-spacing", type=float, default=0.5, help="Row spacing in feet")
     g2.add_argument("--col-spacing", type=float, default=0.25, help="Column spacing in feet")
     g2.add_argument("--tilt", type=float, default=0.0, help="Additional tilt angle for flat/ground mount")
@@ -139,10 +151,10 @@ def parse_args():
     g3 = p.add_argument_group("Roof Detection (PDF mode)")
     g3.add_argument("--roof-pitch", type=float, default=0.0, help="Default roof pitch in degrees")
     g3.add_argument("--fire-setback", type=float, default=3.0, help="Fire setback in feet")
-    g3.add_argument("--min-roof-area", type=float, default=5000,
-                    help="Minimum roof polygon area in PDF points squared")
-    g3.add_argument("--manual-polygons", type=str, default=None,
-                    help='JSON file with manual roof polygons: [[[x,y], ...], ...]')
+    g3.add_argument("--min-roof-area", type=float, default=5000, help="Minimum roof polygon area in PDF points squared")
+    g3.add_argument(
+        "--manual-polygons", type=str, default=None, help="JSON file with manual roof polygons: [[[x,y], ...], ...]"
+    )
 
     # Rendering
     g4 = p.add_argument_group("Rendering")
@@ -159,22 +171,38 @@ def parse_args():
 
     # Equipment catalog
     g_cat = p.add_argument_group("Equipment Catalog")
-    g_cat.add_argument("--panel-id", type=str, default=None,
-                       help="Panel ID from catalog (e.g., longi-himo7-455, canadian-solar-hiku7-440)")
-    g_cat.add_argument("--inverter-id", type=str, default=None,
-                       help="Inverter ID from catalog (e.g., solis-s6-eh1p5k, hoymiles-hms-800)")
-    g_cat.add_argument("--racking-id", type=str, default=None,
-                       help="Racking ID from catalog (e.g., ironridge-xr10, k2-crossrail-48x)")
-    g_cat.add_argument("--roof-material", type=str, default="asphalt_shingle",
-                       choices=["asphalt_shingle", "composite_shingle", "metal_standing_seam",
-                                "clay_tile", "concrete_tile", "flat_membrane"],
-                       help="Roof material (affects attachment selection)")
-    g_cat.add_argument("--main-breaker", type=int, default=200,
-                       help="Main panel breaker size in amps (default: 200)")
-    g_cat.add_argument("--bus-rating", type=int, default=225,
-                       help="Main panel bus rating in amps (default: 225)")
-    g_cat.add_argument("--list-equipment", action="store_true",
-                       help="List available equipment in catalog and exit")
+    g_cat.add_argument(
+        "--panel-id",
+        type=str,
+        default=None,
+        help="Panel ID from catalog (e.g., longi-himo7-455, canadian-solar-hiku7-440)",
+    )
+    g_cat.add_argument(
+        "--inverter-id",
+        type=str,
+        default=None,
+        help="Inverter ID from catalog (e.g., solis-s6-eh1p5k, hoymiles-hms-800)",
+    )
+    g_cat.add_argument(
+        "--racking-id", type=str, default=None, help="Racking ID from catalog (e.g., ironridge-xr10, k2-crossrail-48x)"
+    )
+    g_cat.add_argument(
+        "--roof-material",
+        type=str,
+        default="asphalt_shingle",
+        choices=[
+            "asphalt_shingle",
+            "composite_shingle",
+            "metal_standing_seam",
+            "clay_tile",
+            "concrete_tile",
+            "flat_membrane",
+        ],
+        help="Roof material (affects attachment selection)",
+    )
+    g_cat.add_argument("--main-breaker", type=int, default=200, help="Main panel breaker size in amps (default: 200)")
+    g_cat.add_argument("--bus-rating", type=int, default=225, help="Main panel bus rating in amps (default: 225)")
+    g_cat.add_argument("--list-equipment", action="store_true", help="List available equipment in catalog and exit")
 
     # Misc
     p.add_argument("-v", "--verbose", action="store_true", help="Enable debug logging")
@@ -186,12 +214,11 @@ def parse_args():
 # ADDRESS MODE — Google Solar API
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 def _detect_country(address: str) -> str:
     """Detect country from address string. Returns 'US' or 'CA' (Canada)."""
     # Canadian provinces/territories pattern: ', XX ' or ', XX,' or end-of-string
-    _CA_PROVINCES = {
-        "QC", "ON", "BC", "AB", "MB", "SK", "NS", "NB", "NL", "PE", "YT", "NT", "NU"
-    }
+    _CA_PROVINCES = {"QC", "ON", "BC", "AB", "MB", "SK", "NS", "NB", "NL", "PE", "YT", "NT", "NU"}
     addr_upper = address.upper()
     # Check for explicit country suffix
     if addr_upper.endswith(", USA") or ", USA," in addr_upper or addr_upper.endswith(" USA"):
@@ -200,15 +227,15 @@ def _detect_country(address: str) -> str:
         return "CA"
     # Check for Canadian postal code pattern (letter-digit-letter digit-letter-digit)
     import re
-    if re.search(r'\b[A-Z]\d[A-Z]\s*\d[A-Z]\d\b', addr_upper):
+
+    if re.search(r"\b[A-Z]\d[A-Z]\s*\d[A-Z]\d\b", addr_upper):
         return "CA"
     # Check for Canadian province abbreviation preceded by comma+space
     for prov in _CA_PROVINCES:
-        if (f", {prov} " in addr_upper or f", {prov}," in addr_upper
-                or addr_upper.endswith(f", {prov}")):
+        if f", {prov} " in addr_upper or f", {prov}," in addr_upper or addr_upper.endswith(f", {prov}"):
             return "CA"
     # Check for 5-digit US ZIP code
-    if re.search(r',\s*[A-Z]{2}\s+\d{5}(-\d{4})?\s*$', addr_upper):
+    if re.search(r",\s*[A-Z]{2}\s+\d{5}(-\d{4})?\s*$", addr_upper):
         return "US"
     # Default to Canada (tool originally built for Quebec)
     return "CA"
@@ -231,20 +258,18 @@ def run_address_mode(args, logger):
     logger.info("Address: %s", address)
 
     # ── 1. Fetch building insight ─────────────────────────────────────
-    insight = client.get_building_insight(
-        address=address, lat=args.lat, lng=args.lng
-    )
+    insight = client.get_building_insight(address=address, lat=args.lat, lng=args.lng)
 
     logger.info("Building: %s", insight.address)
     logger.info("  Location: %.6f, %.6f", insight.lat, insight.lng)
     logger.info("  Imagery quality: %s", insight.imagery_quality)
     logger.info("  Roof segments: %d", len(insight.roof_segments))
     for seg in insight.roof_segments:
-        logger.info("    Seg %d: %.0f m², pitch=%.0f°, azimuth=%.0f°",
-                     seg.index, seg.area_m2, seg.pitch_deg, seg.azimuth_deg)
+        logger.info(
+            "    Seg %d: %.0f m², pitch=%.0f°, azimuth=%.0f°", seg.index, seg.area_m2, seg.pitch_deg, seg.azimuth_deg
+        )
     logger.info("  API max panels: %d", insight.max_panels)
-    logger.info("  API max system: %.1f kW / %.0f kWh/yr",
-                 insight.max_kw, insight.max_annual_kwh)
+    logger.info("  API max system: %.1f kW / %.0f kWh/yr", insight.max_kw, insight.max_annual_kwh)
 
     # ── 2. Convert to RoofFaces ───────────────────────────────────────
     roofs, scale = solar_insight_to_roof_faces(insight)
@@ -259,8 +284,9 @@ def run_address_mode(args, logger):
         kwh_per_panel = args.panel_wattage * args.sun_hours * 365 * 0.80 / 1000.0
         panels_needed = int(target_kwh / kwh_per_panel + 0.99)  # round up
         max_panels = min(max_panels, panels_needed)
-        logger.info("Auto-sizing: target %.0f kWh/yr → %d panels (%.1f kWh/panel/yr)",
-                     target_kwh, panels_needed, kwh_per_panel)
+        logger.info(
+            "Auto-sizing: target %.0f kWh/yr → %d panels (%.1f kWh/panel/yr)", target_kwh, panels_needed, kwh_per_panel
+        )
 
     # ── 3. Place panels ───────────────────────────────────────────────
     panel_spec = PanelSpec(
@@ -300,7 +326,8 @@ def run_address_mode(args, logger):
 
     virtual_page = PageData(
         page_number=1,
-        width=792, height=612,
+        width=792,
+        height=612,
         scale_factor=scale,
         raster_image=sat_image,
     )
@@ -333,9 +360,7 @@ def run_address_mode(args, logger):
         # Auto-select attachment based on roof material + racking
         attachment_entry = None
         if racking_entry:
-            attachment_entry = catalog.auto_select_attachment(
-                args.roof_material, racking_entry.id
-            )
+            attachment_entry = catalog.auto_select_attachment(args.roof_material, racking_entry.id)
 
         # Use defaults for any missing equipment
         if not panel_entry:
@@ -346,6 +371,7 @@ def run_address_mode(args, logger):
             racking_entry = catalog.get_racking(catalog.list_racking_ids()[0])
         if not attachment_entry:
             from models.equipment import AttachmentCatalogEntry
+
             attachment_entry = AttachmentCatalogEntry(model="Generic Attachment")
 
         # Override panel_spec with catalog entry dimensions
@@ -384,6 +410,7 @@ def run_address_mode(args, logger):
                 flux_result = client.get_flux_and_mask(address)
                 if flux_result:
                     from engine.electrical_calc import calculate_shade_factor
+
                     project.shade_factor = calculate_shade_factor(
                         flux_result.get("flux_bytes"),
                         mask_bytes=flux_result.get("mask_bytes"),
@@ -407,7 +434,9 @@ def run_address_mode(args, logger):
     )
     html_out = str(output_dir / f"{base_name}.html")
     html_renderer.render(
-        planset, placements, html_out,
+        planset,
+        placements,
+        html_out,
         building_insight=insight,
         num_api_panels=max_panels if max_panels < 9999 else None,
     )
@@ -415,16 +444,19 @@ def run_address_mode(args, logger):
 
     # ── 5b. Quebec electrical pages ───────────────────────────────────
     if args.quebec_electrical:
-        _append_quebec_electrical(
-            html_out, args, panel_spec, total_panels, total_kw, total_kwh, address, logger
-        )
+        _append_quebec_electrical(html_out, args, panel_spec, total_panels, total_kw, total_kwh, address, logger)
 
     # ── 6. Data exports ───────────────────────────────────────────────
     if not args.no_json:
         json_out = str(output_dir / f"{base_name}.json")
         data_export.export_json(
-            json_out, address, total_panels, total_kw, total_kwh,
-            panel_spec.name, panel_spec.wattage,
+            json_out,
+            address,
+            total_panels,
+            total_kw,
+            total_kwh,
+            panel_spec.name,
+            panel_spec.wattage,
         )
         logger.info("JSON export: %s", json_out)
 
@@ -449,6 +481,7 @@ def run_address_mode(args, logger):
 def _fetch_satellite_image(api_key, lat, lng, logger):
     """Fetch a satellite image from Google Maps Static API for the roof plan background."""
     import urllib.request
+
     try:
         url = (
             f"https://maps.googleapis.com/maps/api/staticmap"
@@ -462,8 +495,10 @@ def _fetch_satellite_image(api_key, lat, lng, logger):
         # Convert to numpy array for the renderer
         from PIL import Image
         import io
+
         img = Image.open(io.BytesIO(img_data)).convert("RGB")
         import numpy as np
+
         arr = np.array(img)
         logger.info("Satellite image fetched: %dx%d", arr.shape[1], arr.shape[0])
         return arr
@@ -475,8 +510,11 @@ def _fetch_satellite_image(api_key, lat, lng, logger):
 def _append_quebec_electrical(html_path, args, spec, total_panels, total_kw, total_kwh, address, logger):
     """Append CEC Section 64 electrical design + Quebec code pages to the HTML planset."""
     from quebec_electrical import (
-        QuebecElectricalCalculator, MicroInverterSpec, InverterSpec,
-        get_quebec_code_notes, HQ_INCENTIVE_PER_KW,
+        QuebecElectricalCalculator,
+        MicroInverterSpec,
+        InverterSpec,
+        get_quebec_code_notes,
+        HQ_INCENTIVE_PER_KW,
     )
 
     is_residential = not args.commercial
@@ -511,14 +549,12 @@ def _append_quebec_electrical(html_path, args, spec, total_panels, total_kw, tot
         </div>"""
 
     disconnects_html = "".join(
-        f'<li style="font-size:13px; margin-bottom:4px;">{d}</li>'
-        for d in elec.disconnect_locations
+        f'<li style="font-size:13px; margin-bottom:4px;">{d}</li>' for d in elec.disconnect_locations
     )
 
     notes = get_quebec_code_notes()
     notes_html = "".join(
-        f'<li style="font-size:12px; color:#444; line-height:1.7; margin-bottom:5px;">{n}</li>'
-        for n in notes
+        f'<li style="font-size:12px; color:#444; line-height:1.7; margin-bottom:5px;">{n}</li>' for n in notes
     )
 
     elec_rate = 0.0738
@@ -527,7 +563,9 @@ def _append_quebec_electrical(html_path, args, spec, total_panels, total_kw, tot
     net_cost = payback_cost - elec.hq_incentive_estimate
     payback_years = net_cost / annual_savings if annual_savings > 0 else 99
 
-    inverter_name = elec.micro_inverter.name if elec.micro_inverter else (elec.inverter.name if elec.inverter else "N/A")
+    inverter_name = (
+        elec.micro_inverter.name if elec.micro_inverter else (elec.inverter.name if elec.inverter else "N/A")
+    )
 
     extra_pages = f"""
 
@@ -617,6 +655,7 @@ def _append_quebec_electrical(html_path, args, spec, total_panels, total_kw, tot
 # PDF MODE — Original planset parsing
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 def run_pdf_mode(args, logger):
     """Run the tool in PDF mode, parsing a PDF planset."""
     input_path = Path(args.input_pdf).resolve()
@@ -651,8 +690,7 @@ def run_pdf_mode(args, logger):
 
     detector = RoofDetector(
         min_area_pts=args.min_roof_area,
-        setback_ft={"ridge": 1.5, "eave": 1.0, "hip": 1.5, "valley": 0.5,
-                     "fire": args.fire_setback},
+        setback_ft={"ridge": 1.5, "eave": 1.0, "hip": 1.5, "valley": 0.5, "fire": args.fire_setback},
         pitch_default=args.roof_pitch,
     )
 
@@ -660,8 +698,12 @@ def run_pdf_mode(args, logger):
     for page in planset.pages:
         result = detector.detect(page, manual_polys)
         all_roofs.extend(result.roofs)
-        logger.info("Page %d: detected %d roof face(s) (confidence: %.0f%%)",
-                     page.page_number, len(result.roofs), result.confidence * 100)
+        logger.info(
+            "Page %d: detected %d roof face(s) (confidence: %.0f%%)",
+            page.page_number,
+            len(result.roofs),
+            result.confidence * 100,
+        )
 
     if not all_roofs:
         logger.warning("No roofs detected! Try --manual-polygons or a different --min-roof-area.")
@@ -724,8 +766,7 @@ def run_pdf_mode(args, logger):
     # ── 4c. Quebec electrical pages (if requested) ───────────────────────
     if args.quebec_electrical:
         _append_quebec_electrical(
-            html_out, args, panel_spec, total_panels, total_kw, total_kwh,
-            "See PDF planset", logger
+            html_out, args, panel_spec, total_panels, total_kw, total_kwh, "See PDF planset", logger
         )
 
     # ── 5. Data exports ──────────────────────────────────────────────────
@@ -754,6 +795,7 @@ def run_pdf_mode(args, logger):
 # ═══════════════════════════════════════════════════════════════════════════════
 # MAIN
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 def main():
     args = parse_args()

@@ -92,7 +92,8 @@ def export_planset_pdf(
         page.goto(file_url, wait_until="networkidle", timeout=60_000)
 
         # Hide the interactive toolbar before printing
-        page.add_style_tag(content="""
+        page.add_style_tag(
+            content="""
             #export-toolbar { display: none !important; }
             .page {
                 margin: 0 !important;
@@ -101,7 +102,8 @@ def export_planset_pdf(
                 page-break-inside: avoid;
                 overflow: hidden;
             }
-        """)
+        """
+        )
 
         page.pdf(**pdf_kwargs)
         browser.close()

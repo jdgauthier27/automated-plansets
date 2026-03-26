@@ -13,8 +13,12 @@ from typing import Optional
 
 from models.project import ProjectSpec
 from models.equipment import (
-    PanelCatalogEntry, PanelDimensions, DatasheetDrawing,
-    InverterCatalogEntry, RackingCatalogEntry, AttachmentCatalogEntry,
+    PanelCatalogEntry,
+    PanelDimensions,
+    DatasheetDrawing,
+    InverterCatalogEntry,
+    RackingCatalogEntry,
+    AttachmentCatalogEntry,
 )
 from catalog.loader import EquipmentCatalog
 
@@ -67,13 +71,10 @@ def import_opensolar_json(filepath: str, catalog: Optional[EquipmentCatalog] = N
         project.inverter = _create_inverter_from_opensolar(inverter_data)
 
     # ── System sizing ───────────────────────────────────────────────────
-    project.num_panels = int(system.get("module_quantity",
-                         system.get("panel_count",
-                         system.get("num_panels", 0))))
+    project.num_panels = int(system.get("module_quantity", system.get("panel_count", system.get("num_panels", 0))))
 
     project.target_kwh = system.get("annual_production_kwh")
-    project.annual_consumption_kwh = system.get("annual_consumption_kwh",
-                                     site.get("annual_kwh"))
+    project.annual_consumption_kwh = system.get("annual_consumption_kwh", site.get("annual_kwh"))
 
     # ── Electrical ──────────────────────────────────────────────────────
     electrical = data.get("electrical", {})
@@ -109,12 +110,15 @@ def import_opensolar_json(filepath: str, catalog: Optional[EquipmentCatalog] = N
     company = data.get("company", data.get("installer", {}))
     project.company_name = company.get("name", "Quebec Solaire")
     project.designer_name = company.get("designer", "AI Solar Design Engine")
-    project.project_name = data.get("name", data.get("project_name",
-                           f"Installation Solaire — {project.address}"))
+    project.project_name = data.get("name", data.get("project_name", f"Installation Solaire — {project.address}"))
 
-    logger.info("Imported OpenSolar project: %s (%d panels, %s + %s)",
-                project.address, project.num_panels,
-                project.panel.model_short, project.inverter.model_short)
+    logger.info(
+        "Imported OpenSolar project: %s (%d panels, %s + %s)",
+        project.address,
+        project.num_panels,
+        project.panel.model_short,
+        project.inverter.model_short,
+    )
 
     return project
 
@@ -126,8 +130,7 @@ def _match_panel(module_data: dict, catalog: EquipmentCatalog) -> Optional[Panel
     wattage = module_data.get("wattage", module_data.get("pstc", 0))
 
     for pid, panel in catalog.panels.items():
-        if (panel.manufacturer.lower() in manufacturer or
-            manufacturer in panel.manufacturer.lower()):
+        if panel.manufacturer.lower() in manufacturer or manufacturer in panel.manufacturer.lower():
             if abs(panel.wattage_w - wattage) < 30:  # within 30W tolerance
                 logger.info("Matched panel: %s -> %s", model, panel.model)
                 return panel
@@ -140,8 +143,7 @@ def _match_inverter(inv_data: dict, catalog: EquipmentCatalog) -> Optional[Inver
     inv_type = inv_data.get("type", inv_data.get("inverter_type", "")).lower()
 
     for iid, inv in catalog.inverters.items():
-        if (inv.manufacturer.lower() in manufacturer or
-            manufacturer in inv.manufacturer.lower()):
+        if inv.manufacturer.lower() in manufacturer or manufacturer in inv.manufacturer.lower():
             if inv_type and inv.type in inv_type:
                 logger.info("Matched inverter: %s -> %s", manufacturer, inv.model)
                 return inv

@@ -31,14 +31,14 @@ from .base import JurisdictionEngine
 # ── Conductor ampacity table (CEC Table 2 / 75 deg C copper / RW90) ──────
 
 CONDUCTOR_AMPACITY_75C = [
-    (15,  "#14 AWG Cu"),
-    (20,  "#12 AWG Cu"),
-    (30,  "#10 AWG Cu"),
-    (40,  "#8 AWG Cu"),
-    (55,  "#6 AWG Cu"),
-    (70,  "#4 AWG Cu"),
-    (85,  "#3 AWG Cu"),
-    (95,  "#2 AWG Cu"),
+    (15, "#14 AWG Cu"),
+    (20, "#12 AWG Cu"),
+    (30, "#10 AWG Cu"),
+    (40, "#8 AWG Cu"),
+    (55, "#6 AWG Cu"),
+    (70, "#4 AWG Cu"),
+    (85, "#3 AWG Cu"),
+    (95, "#2 AWG Cu"),
     (110, "#1 AWG Cu"),
     (125, "#1/0 AWG Cu"),
     (145, "#2/0 AWG Cu"),
@@ -49,9 +49,9 @@ CONDUCTOR_AMPACITY_75C = [
 # ── EGC sizing table (CEC 10-814) ────────────────────────────────────────
 
 EGC_TABLE = [
-    (15,  "#14 AWG Cu"),
-    (20,  "#12 AWG Cu"),
-    (60,  "#10 AWG Cu"),
+    (15, "#14 AWG Cu"),
+    (20, "#12 AWG Cu"),
+    (60, "#10 AWG Cu"),
     (100, "#8 AWG Cu"),
     (200, "#6 AWG Cu"),
     (300, "#4 AWG Cu"),
@@ -68,31 +68,31 @@ STANDARD_BREAKER_SIZES = [15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 100, 125, 150,
 # ── Design temperatures by Ontario city (NBCC 2020 Table C-2) ────────────
 
 CITY_DESIGN_TEMPS = {
-    "toronto":          -18,
-    "north york":       -18,
-    "scarborough":      -18,
-    "etobicoke":        -18,
-    "mississauga":      -19,
-    "brampton":         -19,
-    "hamilton":         -17,
-    "ottawa":           -25,
-    "london":           -19,
-    "windsor":          -14,
-    "kingston":         -22,
-    "thunder bay":      -31,
-    "sudbury":          -29,
+    "toronto": -18,
+    "north york": -18,
+    "scarborough": -18,
+    "etobicoke": -18,
+    "mississauga": -19,
+    "brampton": -19,
+    "hamilton": -17,
+    "ottawa": -25,
+    "london": -19,
+    "windsor": -14,
+    "kingston": -22,
+    "thunder bay": -31,
+    "sudbury": -29,
     "sault ste. marie": -28,
-    "north bay":        -29,
-    "barrie":           -22,
-    "oshawa":           -19,
-    "waterloo":         -20,
-    "kitchener":        -20,
-    "guelph":           -20,
-    "cambridge":        -20,
-    "st. catharines":   -16,
-    "niagara falls":    -16,
-    "brantford":        -18,
-    "peterborough":     -23,
+    "north bay": -29,
+    "barrie": -22,
+    "oshawa": -19,
+    "waterloo": -20,
+    "kitchener": -20,
+    "guelph": -20,
+    "cambridge": -20,
+    "st. catharines": -16,
+    "niagara falls": -16,
+    "brantford": -18,
+    "peterborough": -23,
 }
 
 DEFAULT_COLD_TEMP_C = -23  # Conservative Ontario default
@@ -100,15 +100,15 @@ DEFAULT_COLD_TEMP_C = -23  # Conservative Ontario default
 # ── Utility map (city → utility) ─────────────────────────────────────────
 
 CITY_UTILITY_MAP = {
-    "toronto":     "Toronto Hydro",
-    "north york":  "Toronto Hydro",
+    "toronto": "Toronto Hydro",
+    "north york": "Toronto Hydro",
     "scarborough": "Toronto Hydro",
-    "etobicoke":   "Toronto Hydro",
-    "east york":   "Toronto Hydro",
-    "ottawa":      "Ottawa Hydro",
-    "kanata":      "Ottawa Hydro",
-    "nepean":      "Ottawa Hydro",
-    "gloucester":  "Ottawa Hydro",
+    "etobicoke": "Toronto Hydro",
+    "east york": "Toronto Hydro",
+    "ottawa": "Ottawa Hydro",
+    "kanata": "Ottawa Hydro",
+    "nepean": "Ottawa Hydro",
+    "gloucester": "Ottawa Hydro",
 }
 
 DEFAULT_UTILITY = "Hydro One Networks Inc."
@@ -413,8 +413,8 @@ class OntarioJurisdiction(JurisdictionEngine):
         return {
             "name": utility_name,
             "net_metering_max_kw": net_metering_max_kw,
-            "rate_per_kwh": 0.113,   # Ontario mid-peak TOU rate (OEB 2024)
-            "incentive_per_kw": 0,   # No current provincial incentive (2025)
+            "rate_per_kwh": 0.113,  # Ontario mid-peak TOU rate (OEB 2024)
+            "incentive_per_kw": 0,  # No current provincial incentive (2025)
             "program_name": "Ontario Net Metering (OEB)",
             "voltage": "240V split-phase",
             "frequency_hz": 60,

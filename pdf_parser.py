@@ -14,8 +14,9 @@ import numpy as np
 @dataclass
 class PageData:
     """One page of a planset."""
+
     page_number: int
-    width: float           # points or pixels
+    width: float  # points or pixels
     height: float
     scale_factor: float = 1.0
     raster_image: Optional[np.ndarray] = None  # H×W×3 BGR/RGB
@@ -26,6 +27,7 @@ class PageData:
 @dataclass
 class PlansetData:
     """Complete planset document."""
+
     filepath: str
     total_pages: int
     pages: List[PageData] = field(default_factory=list)

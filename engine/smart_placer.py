@@ -27,15 +27,16 @@ logger = logging.getLogger(__name__)
 @dataclass
 class PlacedPanel:
     """A panel in a grouped array with quality metadata."""
+
     index: int
     lat: float
     lng: float
-    orientation: str          # "LANDSCAPE" or "PORTRAIT"
+    orientation: str  # "LANDSCAPE" or "PORTRAIT"
     segment_index: int
     yearly_energy_kwh: float
-    row: int = 0              # row within the array (1-indexed)
-    col: int = 0              # column within the array (1-indexed)
-    array_id: int = 0         # which array group this belongs to
+    row: int = 0  # row within the array (1-indexed)
+    col: int = 0  # column within the array (1-indexed)
+    array_id: int = 0  # which array group this belongs to
     violations: List[str] = field(default_factory=list)  # e.g. ["near_ridge", "shaded"]
     is_valid: bool = True
 
@@ -43,6 +44,7 @@ class PlacedPanel:
 @dataclass
 class PanelArray:
     """A group of panels forming a contiguous array on one segment."""
+
     array_id: int
     segment_index: int
     azimuth_deg: float
@@ -58,8 +60,9 @@ class PanelArray:
 @dataclass
 class GroupedPlacement:
     """Result of smart panel placement."""
+
     arrays: List[PanelArray]
-    excluded_segments: List[dict]   # segments skipped and why
+    excluded_segments: List[dict]  # segments skipped and why
     total_panels: int = 0
     total_kwh: float = 0.0
     warnings: List[str] = field(default_factory=list)
@@ -67,8 +70,8 @@ class GroupedPlacement:
 
 # ── Segment scoring ────────────────────────────────────────────────────
 
-def _segment_solar_score(pitch_deg: float, azimuth_deg: float, area_m2: float,
-                         latitude: float = 34.0) -> float:
+
+def _segment_solar_score(pitch_deg: float, azimuth_deg: float, area_m2: float, latitude: float = 34.0) -> float:
     """Score a segment 0-100 for solar suitability.
 
     Higher = better for panels. Accounts for:
@@ -118,6 +121,7 @@ def _should_exclude_segment(seg: dict, latitude: float = 34.0) -> Optional[str]:
 
 # ── Spatial sorting within a segment ───────────────────────────────────
 
+
 def _sort_panels_spatially(panels: List[dict], azimuth_deg: float) -> List[dict]:
     """Sort panels within a segment to form rows along the eave.
 
@@ -140,10 +144,10 @@ def _sort_panels_spatially(panels: List[dict], azimuth_deg: float) -> List[dict]
 
     for p in panels:
         dx = (p["lng"] - center_lng) * cos_lat * 111319.5  # meters east
-        dy = (p["lat"] - center_lat) * 111319.5             # meters north
+        dy = (p["lat"] - center_lat) * 111319.5  # meters north
 
         # Rotate into roof-aligned frame
-        p["_u"] = dx * math.cos(az_rad) + dy * math.sin(az_rad)   # along eave
+        p["_u"] = dx * math.cos(az_rad) + dy * math.sin(az_rad)  # along eave
         p["_v"] = -dx * math.sin(az_rad) + dy * math.cos(az_rad)  # eave→ridge
 
     # Sort by row (v) then column (u)
@@ -168,6 +172,7 @@ def _sort_panels_spatially(panels: List[dict], azimuth_deg: float) -> List[dict]
 
 
 # ── Main grouping function ─────────────────────────────────────────────
+
 
 def group_panels(
     building_data: dict,
@@ -215,29 +220,31 @@ def group_panels(
             area = stats.get("areaMeters2", 0)
 
         exclusion = _should_exclude_segment(
-            {"pitchDegrees": pitch, "azimuthDegrees": azimuth,
-             "stats": {"areaMeters2": area}},
-            latitude
+            {"pitchDegrees": pitch, "azimuthDegrees": azimuth, "stats": {"areaMeters2": area}}, latitude
         )
         if exclusion:
-            excluded.append({
-                "segment_index": seg_idx,
-                "reason": exclusion,
-                "azimuth_deg": azimuth,
-                "pitch_deg": pitch,
-                "panel_count": len(seg_panels),
-            })
+            excluded.append(
+                {
+                    "segment_index": seg_idx,
+                    "reason": exclusion,
+                    "azimuth_deg": azimuth,
+                    "pitch_deg": pitch,
+                    "panel_count": len(seg_panels),
+                }
+            )
             continue
 
         score = _segment_solar_score(pitch, azimuth, area, latitude)
-        scored_segments.append({
-            "seg_idx": seg_idx,
-            "score": score,
-            "pitch": pitch,
-            "azimuth": azimuth,
-            "area": area,
-            "panels": seg_panels,
-        })
+        scored_segments.append(
+            {
+                "seg_idx": seg_idx,
+                "score": score,
+                "pitch": pitch,
+                "azimuth": azimuth,
+                "area": area,
+                "panels": seg_panels,
+            }
+        )
 
     # Sort segments by score (best first)
     scored_segments.sort(key=lambda s: s["score"], reverse=True)
@@ -304,10 +311,12 @@ def group_panels(
     )
 
     logger.info(
-        "Smart placement: %d panels in %d arrays across %d segments, %.0f kWh/yr "
-        "(%d segments excluded)",
-        total_placed, len(arrays), len(set(a.segment_index for a in arrays)),
-        total_kwh, len(excluded),
+        "Smart placement: %d panels in %d arrays across %d segments, %.0f kWh/yr (%d segments excluded)",
+        total_placed,
+        len(arrays),
+        len(set(a.segment_index for a in arrays)),
+        total_kwh,
+        len(excluded),
     )
 
     return result

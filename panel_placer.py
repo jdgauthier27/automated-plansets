@@ -27,10 +27,11 @@ logger = logging.getLogger(__name__)
 @dataclass
 class PanelSpec:
     """Physical specifications of a solar panel."""
+
     name: str = "Generic 400W"
     wattage: int = 400
-    width_ft: float = 3.46    # ~1055mm
-    height_ft: float = 6.17   # ~1879mm
+    width_ft: float = 3.46  # ~1055mm
+    height_ft: float = 6.17  # ~1879mm
     efficiency: float = 0.21
 
     @property
@@ -45,25 +46,27 @@ class PanelSpec:
 @dataclass
 class PlacementConfig:
     """Configuration for panel placement."""
-    row_spacing_ft: float = 0.5       # gap between rows
-    col_spacing_ft: float = 0.25      # gap between columns
-    orientation: str = "auto"         # "portrait", "landscape", or "auto"
+
+    row_spacing_ft: float = 0.5  # gap between rows
+    col_spacing_ft: float = 0.25  # gap between columns
+    orientation: str = "auto"  # "portrait", "landscape", or "auto"
     max_panels: int = 999
-    sun_hours_peak: float = 3.80      # Quebec default
-    setback_ft: float = 3.0           # fire setback from edges
-    ridge_setback_ft: float = 1.5     # NEC 690.12(B)(2): 18" from ridge/hip/valley
+    sun_hours_peak: float = 3.80  # Quebec default
+    setback_ft: float = 3.0  # fire setback from edges
+    ridge_setback_ft: float = 1.5  # NEC 690.12(B)(2): 18" from ridge/hip/valley
     obstacles: list = field(default_factory=list)  # list[RoofObstacle]
 
 
 @dataclass
 class PanelPlacement:
     """A single placed panel."""
+
     id: int
-    center_x: float        # page-pts
-    center_y: float        # page-pts
+    center_x: float  # page-pts
+    center_y: float  # page-pts
     width_pts: float
     height_pts: float
-    orientation: str        # "portrait" or "landscape"
+    orientation: str  # "portrait" or "landscape"
     roof_id: int
     rotation_deg: float = 0.0
 
@@ -80,9 +83,10 @@ class PanelPlacement:
 @dataclass
 class PlacementResult:
     """Result of placing panels on one roof face."""
+
     roof_face: RoofFace
     panels: List[PanelPlacement] = field(default_factory=list)
-    orientation: str = ""   # resolved orientation used for this face
+    orientation: str = ""  # resolved orientation used for this face
     ridge_setback_ft: float = 0.0  # NEC 690.12(B)(2) ridge setback applied (ft)
 
     @property
@@ -100,6 +104,7 @@ class PlacementResult:
 
 class PlacementResultWithSpec(PlacementResult):
     """Extends PlacementResult with spec-aware calculations."""
+
     def __init__(self, roof_face, panels, panel_spec, sun_hours, orientation=""):
         super().__init__(roof_face=roof_face, panels=panels, orientation=orientation)
         self._spec = panel_spec
@@ -146,6 +151,7 @@ class PanelPlacer:
         """
         try:
             from geotiff_roof import get_roof_geometry_from_geotiff
+
             geom = get_roof_geometry_from_geotiff(lat, lng, api_key)
         except Exception as exc:
             logger.error("GeoTIFF roof extraction failed: %s", exc)
@@ -179,10 +185,7 @@ class PanelPlacer:
         # Per-face cap: when ≥2 productive faces exist, limit any single face
         # to ceil(max_panels / 2) so panels are spread across both array faces.
         # This mirrors real installer practice (gable roofs get two arrays).
-        productive_count = sum(
-            1 for r in roofs
-            if not (r.azimuth_deg < 45 or r.azimuth_deg > 315)
-        )
+        productive_count = sum(1 for r in roofs if not (r.azimuth_deg < 45 or r.azimuth_deg > 315))
         if productive_count >= 2 and self.config.max_panels > 1:
             per_face_cap = math.ceil(self.config.max_panels / 2)
         else:
@@ -190,24 +193,25 @@ class PanelPlacer:
 
         for rf in sorted_roofs:
             if remaining <= 0:
-                results.append(PlacementResultWithSpec(
-                    rf, [], self.panel, self.config.sun_hours_peak, ""))
+                results.append(PlacementResultWithSpec(rf, [], self.panel, self.config.sun_hours_peak, ""))
                 continue
 
             face_limit = min(remaining, per_face_cap)
-            panels, resolved_orientation = self._place_on_face(
-                rf, pts_per_ft, face_limit, panel_id)
+            panels, resolved_orientation = self._place_on_face(rf, pts_per_ft, face_limit, panel_id)
             panel_id += len(panels)
             remaining -= len(panels)
 
-            result = PlacementResultWithSpec(
-                rf, panels, self.panel, self.config.sun_hours_peak, resolved_orientation)
+            result = PlacementResultWithSpec(rf, panels, self.panel, self.config.sun_hours_peak, resolved_orientation)
             result.ridge_setback_ft = self.config.ridge_setback_ft
             results.append(result)
 
             logger.info(
                 "%s: placed %d panels (azimuth=%.0f°, pitch=%.0f°, orientation=%s)",
-                rf.label, len(panels), rf.azimuth_deg, rf.pitch_deg, resolved_orientation,
+                rf.label,
+                len(panels),
+                rf.azimuth_deg,
+                rf.pitch_deg,
+                resolved_orientation,
             )
 
         return results
@@ -294,32 +298,31 @@ class PanelPlacer:
             cx, cy = usable_poly.centroid.x, usable_poly.centroid.y
 
             # Project each vertex onto eave (x') and slope (y') axes
-            eave_coords = [
-                (vx - cx) * cos_a + (vy - cy) * sin_a for vx, vy in coords
-            ]
-            slope_coords = [
-                -(vx - cx) * sin_a + (vy - cy) * cos_a for vx, vy in coords
-            ]
-            face_width = max(eave_coords) - min(eave_coords)   # eave extent
+            eave_coords = [(vx - cx) * cos_a + (vy - cy) * sin_a for vx, vy in coords]
+            slope_coords = [-(vx - cx) * sin_a + (vy - cy) * cos_a for vx, vy in coords]
+            face_width = max(eave_coords) - min(eave_coords)  # eave extent
             face_height = max(slope_coords) - min(slope_coords)  # slope extent
 
             orientation = "landscape" if face_width > face_height else "portrait"
             logger.debug(
                 "%s: auto orientation → %s (eave=%.1f, slope=%.1f)",
-                rf.label, orientation, face_width, face_height,
+                rf.label,
+                orientation,
+                face_width,
+                face_height,
             )
 
         if orientation == "landscape":
-            pw_ft = self.panel.height_ft   # along eave
-            ph_ft = self.panel.width_ft    # along slope
+            pw_ft = self.panel.height_ft  # along eave
+            ph_ft = self.panel.width_ft  # along slope
         else:
-            pw_ft = self.panel.width_ft    # along eave
-            ph_ft = self.panel.height_ft   # along slope
+            pw_ft = self.panel.width_ft  # along eave
+            ph_ft = self.panel.height_ft  # along slope
 
         pw_pts = pw_ft * pts_per_ft
         ph_pts = ph_ft * pts_per_ft
-        col_gap = self.config.col_spacing_ft * pts_per_ft   # eave dir
-        row_gap = self.config.row_spacing_ft * pts_per_ft   # slope dir
+        col_gap = self.config.col_spacing_ft * pts_per_ft  # eave dir
+        row_gap = self.config.row_spacing_ft * pts_per_ft  # slope dir
 
         # Step between panel centres
         step_eave = pw_pts + col_gap
@@ -341,10 +344,7 @@ class PanelPlacer:
         if ridge_setback_pts > 0 and not usable_poly.is_empty:
             poly_cx2, poly_cy2 = usable_poly.centroid.x, usable_poly.centroid.y
             # Project vertices onto slope axis: slope = -(x-cx)*sin + (y-cy)*cos
-            slope_projs = [
-                -(vx - poly_cx2) * sin_a + (vy - poly_cy2) * cos_a
-                for vx, vy in usable_poly.exterior.coords
-            ]
+            slope_projs = [-(vx - poly_cx2) * sin_a + (vy - poly_cy2) * cos_a for vx, vy in usable_poly.exterior.coords]
             max_slope_proj = max(slope_projs)
             clip_slope = max_slope_proj - ridge_setback_pts
 
@@ -380,50 +380,77 @@ class PanelPlacer:
 
         cx, cy = usable_poly.centroid.x, usable_poly.centroid.y
 
+        # --- 4b. Eave-aligned grid origin ------------------------------------
+        # Anchor the grid to the TRUE eave edge of the original roof polygon
+        # (before buffer/setback rounding), then offset inward by the fire
+        # setback so panels sit flush against the setback line.
+        # Use the original polygon (poly) not the buffered usable_poly,
+        # because buffer() rounds corners and distorts the eave edge.
+        orig_verts = list(poly.exterior.coords)
+        orig_cx, orig_cy = poly.centroid.x, poly.centroid.y
+        orig_slope_projs = [-(vx - orig_cx) * sin_a + (vy - orig_cy) * cos_a for vx, vy in orig_verts]
+        orig_min_slope = min(orig_slope_projs)  # true eave edge
+        orig_max_slope = max(orig_slope_projs)  # true ridge edge
+
+        # Eave-anchored origin: start from the true eave edge, offset inward
+        # by fire setback + half panel height.  Use the original polygon's
+        # centroid as the reference point for consistent coordinate mapping.
+        # Map back to usable_poly's centroid frame:
+        centroid_slope_offset = -(orig_cx - cx) * sin_a + (orig_cy - cy) * cos_a
+        eave_in_usable_frame = orig_min_slope + centroid_slope_offset
+        eave_origin_slope = eave_in_usable_frame + setback_pts + ph_pts / 2
+
+        # Ridge limit (for row count)
+        ridge_in_usable_frame = orig_max_slope + centroid_slope_offset
+
         # --- 5. Place panels --------------------------------------------------
         # Build obstacle exclusion polygons (page coordinates).
         obstacle_polys = self._build_obstacle_polygons(rf, pts_per_ft)
 
-        # Try several grid origin offsets to maximise packing.  A centroid-
-        # centred grid can miss panels at the edges; shifting the origin by
-        # fractional steps often recovers an extra row or column.
+        # Try several grid origin offsets to maximise packing along the eave
+        # axis.  The slope axis is anchored to the eave edge.
         best_panels: List[PanelPlacement] = []
 
-        offsets = [0.0, 0.5]   # fraction of step to shift
+        offsets = [0.0, 0.5]  # fraction of step to shift (eave axis only)
         for off_e in offsets:
-            for off_s in offsets:
-                candidate: List[PanelPlacement] = []
-                origin_shift_eave = off_e * step_eave
-                origin_shift_slope = off_s * step_slope
+            candidate: List[PanelPlacement] = []
+            origin_shift_eave = off_e * step_eave
 
-                for i in range(-max_cols // 2, max_cols // 2 + 1):
-                    for j in range(-max_rows // 2, max_rows // 2 + 1):
-                        if len(candidate) >= max_panels:
-                            break
+            # Number of rows needed from eave to ridge
+            slope_span = ridge_in_usable_frame - eave_in_usable_frame
+            num_rows = int(slope_span / step_slope) + 2
 
-                        # Position in roof-local frame (eave, slope)
-                        local_eave = i * step_eave + origin_shift_eave
-                        local_slope = j * step_slope + origin_shift_slope
+            for i in range(-max_cols // 2, max_cols // 2 + 1):
+                for j in range(num_rows):
+                    if len(candidate) >= max_panels:
+                        break
 
-                        # Rotate into page coordinates
-                        x = cx + local_eave * cos_a - local_slope * sin_a
-                        y = cy + local_eave * sin_a + local_slope * cos_a
+                    # Position in roof-local frame (eave, slope)
+                    local_eave = i * step_eave + origin_shift_eave
+                    local_slope = eave_origin_slope + j * step_slope
 
-                        # Build axis-aligned box then rotate in place
-                        panel_box = box(
-                            x - pw_pts / 2, y - ph_pts / 2,
-                            x + pw_pts / 2, y + ph_pts / 2,
-                        )
-                        panel_rotated = rotate(panel_box, angle, origin=(x, y))
+                    # Rotate into page coordinates
+                    x = cx + local_eave * cos_a - local_slope * sin_a
+                    y = cy + local_eave * sin_a + local_slope * cos_a
 
-                        if not usable_poly.contains(panel_rotated):
-                            continue
+                    # Build axis-aligned box then rotate in place
+                    panel_box = box(
+                        x - pw_pts / 2,
+                        y - ph_pts / 2,
+                        x + pw_pts / 2,
+                        y + ph_pts / 2,
+                    )
+                    panel_rotated = rotate(panel_box, angle, origin=(x, y))
 
-                        # Skip panel if it overlaps any obstacle exclusion zone
-                        if any(panel_rotated.intersects(obs) for obs in obstacle_polys):
-                            continue
+                    if not usable_poly.contains(panel_rotated):
+                        continue
 
-                        candidate.append(PanelPlacement(
+                    # Skip panel if it overlaps any obstacle exclusion zone
+                    if any(panel_rotated.intersects(obs) for obs in obstacle_polys):
+                        continue
+
+                    candidate.append(
+                        PanelPlacement(
                             id=start_id + len(candidate),
                             center_x=x,
                             center_y=y,
@@ -432,7 +459,8 @@ class PanelPlacer:
                             orientation=orientation,
                             roof_id=rf.id,
                             rotation_deg=angle,
-                        ))
+                        )
+                    )
 
                 if len(candidate) > len(best_panels):
                     best_panels = candidate
@@ -443,10 +471,12 @@ class PanelPlacer:
         # Sort so panels in the same rail row are adjacent (by slope index
         # first, then eave index) for downstream wiring / stringing.
         if panels:
-            panels.sort(key=lambda p: (
-                round((p.center_y - cy) * cos_a + (p.center_x - cx) * sin_a, 1),
-                round((p.center_x - cx) * cos_a - (p.center_y - cy) * sin_a, 1),
-            ))
+            panels.sort(
+                key=lambda p: (
+                    round((p.center_y - cy) * cos_a + (p.center_x - cx) * sin_a, 1),
+                    round((p.center_x - cx) * cos_a - (p.center_y - cy) * sin_a, 1),
+                )
+            )
             # Re-number ids sequentially after sort
             for idx, p in enumerate(panels):
                 p.id = start_id + idx

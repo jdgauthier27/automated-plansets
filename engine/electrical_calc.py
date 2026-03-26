@@ -16,6 +16,7 @@ from typing import List, Optional, Tuple
 try:
     import rasterio
     from rasterio.io import MemoryFile
+
     _RASTERIO_AVAILABLE = True
 except ImportError:
     _RASTERIO_AVAILABLE = False
@@ -24,13 +25,36 @@ logger = logging.getLogger(__name__)
 
 
 # ── Standard breaker sizes (NEC 240.6 / CEC equivalent) ────────────────
-STANDARD_BREAKER_SIZES = [15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 90, 100,
-                          110, 125, 150, 175, 200, 225, 250, 300, 350, 400]
+STANDARD_BREAKER_SIZES = [
+    15,
+    20,
+    25,
+    30,
+    35,
+    40,
+    50,
+    60,
+    70,
+    80,
+    90,
+    100,
+    110,
+    125,
+    150,
+    175,
+    200,
+    225,
+    250,
+    300,
+    350,
+    400,
+]
 
 
 @dataclass
 class ElectricalDesign:
     """Complete electrical design result."""
+
     # System
     num_panels: int = 0
     system_dc_kw: float = 0.0
@@ -76,9 +100,7 @@ class ElectricalDesign:
     warnings: List[str] = field(default_factory=list)
 
 
-def calculate_shade_factor(flux_geotiff_bytes: bytes,
-                           panel_positions: list = None,
-                           mask_bytes: bytes = None) -> float:
+def calculate_shade_factor(flux_geotiff_bytes: bytes, panel_positions: list = None, mask_bytes: bytes = None) -> float:
     """Calculate shade factor from annual flux GeoTIFF.
 
     Reads the GeoTIFF pixel values (annual flux in kWh/m²/yr). Returns
@@ -144,14 +166,20 @@ def calculate_shade_factor(flux_geotiff_bytes: bytes,
                 return 1.0
             mean_flux = float(panel_area.mean())
             shade = round(min(1.0, mean_flux / p95), 3)
-            logger.info("Shade factor: %.3f (panel mean=%.1f, p95=%.1f kWh/m²/yr, n=%d px)",
-                        shade, mean_flux, p95, panel_area.size)
+            logger.info(
+                "Shade factor: %.3f (panel mean=%.1f, p95=%.1f kWh/m²/yr, n=%d px)",
+                shade,
+                mean_flux,
+                p95,
+                panel_area.size,
+            )
             return shade
 
         else:
             # PIL fallback — no geospatial awareness, use percentile heuristic
             import io
             from PIL import Image
+
             img = Image.open(io.BytesIO(flux_geotiff_bytes))
             arr = np.array(img, dtype=float)
             valid = arr[arr > 0]
@@ -187,22 +215,22 @@ def _get_design_temp_cold(project) -> float:
             city = parts[1].strip()
 
     addr_lower = address.lower()
-    is_california = (
-        jid == "nec_california"
-        or any(s in addr_lower for s in ["california", ", ca ", ", ca,", " ca 9"])
-    )
+    is_california = jid == "nec_california" or any(s in addr_lower for s in ["california", ", ca ", ", ca,", " ca 9"])
 
     try:
         if is_california:
             from jurisdiction.nec_california import NECCaliforniaEngine
+
             engine = NECCaliforniaEngine(city=city)
             return float(engine.get_design_temperatures(city).get("cold_c", 1))
         elif jid == "nec_base" or country == "US":
             from jurisdiction.nec_base import NECBaseEngine
+
             engine = NECBaseEngine()
             return float(engine.get_design_temperatures(city).get("cold_c", -10))
         else:
             from jurisdiction.cec_quebec import CECQuebecEngine
+
             engine = CECQuebecEngine()
             return float(engine.get_design_temperatures(city).get("cold_c", -25))
     except Exception:
@@ -269,17 +297,19 @@ def calculate_electrical_design(project) -> ElectricalDesign:
     else:
         design.interconnection_method = "supply_side"
         design.warnings.append(
-            f"120% rule FAILS: {design.total_sources_amps}A > {design.rule_120_max}A. "
-            f"Supply-side connection required."
+            f"120% rule FAILS: {design.total_sources_amps}A > {design.rule_120_max}A. Supply-side connection required."
         )
 
     design.system_ac_kw = project.system_ac_kw
 
-    logger.info("Electrical design: %d panels, DC=%.1fkW, AC=%.1fkW, "
-                "breaker=%dA, 120%% rule=%s",
-                n, design.system_dc_kw, design.system_ac_kw,
-                design.ac_breaker_amps,
-                "PASS" if design.rule_120_pass else "FAIL")
+    logger.info(
+        "Electrical design: %d panels, DC=%.1fkW, AC=%.1fkW, breaker=%dA, 120%% rule=%s",
+        n,
+        design.system_dc_kw,
+        design.system_ac_kw,
+        design.ac_breaker_amps,
+        "PASS" if design.rule_120_pass else "FAIL",
+    )
 
     return design
 
@@ -312,8 +342,7 @@ def _calc_micro(design: ElectricalDesign, project, n: int, voc_cold: float):
     design.string_isc = project.panel.isc_a
 
 
-def _calc_string(design: ElectricalDesign, project, n: int, voc_cold: float,
-                 t_cold_c: float, t_stc_c: float):
+def _calc_string(design: ElectricalDesign, project, n: int, voc_cold: float, t_cold_c: float, t_stc_c: float):
     """Calculate string configuration for string inverter systems."""
     panel = project.panel
     inv = project.inverter
@@ -358,25 +387,38 @@ def _calc_string(design: ElectricalDesign, project, n: int, voc_cold: float,
         )
     if design.string_vmp < inv.mppt_voltage_min_v:
         design.warnings.append(
-            f"String Vmp ({design.string_vmp:.1f}V) below inverter MPPT minimum "
-            f"({inv.mppt_voltage_min_v}V)!"
+            f"String Vmp ({design.string_vmp:.1f}V) below inverter MPPT minimum ({inv.mppt_voltage_min_v}V)!"
         )
 
 
 # ── Conductor lookup tables (CEC Table 2 / NEC 310.16 — 75°C Cu) ──────
 
 CONDUCTOR_AMPACITY_75C = [
-    (15, "#14 AWG Cu"), (20, "#12 AWG Cu"), (30, "#10 AWG Cu"),
-    (40, "#8 AWG Cu"), (55, "#6 AWG Cu"), (70, "#4 AWG Cu"),
-    (85, "#3 AWG Cu"), (95, "#2 AWG Cu"), (110, "#1 AWG Cu"),
-    (125, "#1/0 AWG Cu"), (145, "#2/0 AWG Cu"), (165, "#3/0 AWG Cu"),
+    (15, "#14 AWG Cu"),
+    (20, "#12 AWG Cu"),
+    (30, "#10 AWG Cu"),
+    (40, "#8 AWG Cu"),
+    (55, "#6 AWG Cu"),
+    (70, "#4 AWG Cu"),
+    (85, "#3 AWG Cu"),
+    (95, "#2 AWG Cu"),
+    (110, "#1 AWG Cu"),
+    (125, "#1/0 AWG Cu"),
+    (145, "#2/0 AWG Cu"),
+    (165, "#3/0 AWG Cu"),
     (195, "#4/0 AWG Cu"),
 ]
 
 EGC_TABLE = [
-    (15, "#14 AWG Cu"), (20, "#12 AWG Cu"), (60, "#10 AWG Cu"),
-    (100, "#8 AWG Cu"), (200, "#6 AWG Cu"), (300, "#4 AWG Cu"),
-    (400, "#3 AWG Cu"), (500, "#2 AWG Cu"), (600, "#1 AWG Cu"),
+    (15, "#14 AWG Cu"),
+    (20, "#12 AWG Cu"),
+    (60, "#10 AWG Cu"),
+    (100, "#8 AWG Cu"),
+    (200, "#6 AWG Cu"),
+    (300, "#4 AWG Cu"),
+    (400, "#3 AWG Cu"),
+    (500, "#2 AWG Cu"),
+    (600, "#1 AWG Cu"),
     (800, "#1/0 AWG Cu"),
 ]
 
@@ -388,29 +430,29 @@ def calculate_string_config(panel, inverter, num_panels: int) -> dict:
     For string inverters: compute series string length from Voc/MPPT window,
     then parallel strings needed.
     """
-    inv_name = (getattr(inverter, 'model', '') or getattr(inverter, 'name', '') or '').upper()
-    inv_type = (getattr(inverter, 'type', '') or getattr(inverter, 'inverter_type', '') or '').upper()
-    is_micro = getattr(inverter, 'is_micro', False) or any(
-        kw in inv_name + inv_type for kw in ('IQ8', 'IQ7', 'ENPHASE', 'MICRO')
+    inv_name = (getattr(inverter, "model", "") or getattr(inverter, "name", "") or "").upper()
+    inv_type = (getattr(inverter, "type", "") or getattr(inverter, "inverter_type", "") or "").upper()
+    is_micro = getattr(inverter, "is_micro", False) or any(
+        kw in inv_name + inv_type for kw in ("IQ8", "IQ7", "ENPHASE", "MICRO")
     )
 
-    isc = getattr(panel, 'isc_a', 0.0) or 0.0
-    voc = getattr(panel, 'voc_v', 0.0) or 0.0
-    vmp = getattr(panel, 'vmp_v', 0.0) or 0.0
+    isc = getattr(panel, "isc_a", 0.0) or 0.0
+    voc = getattr(panel, "voc_v", 0.0) or 0.0
+    vmp = getattr(panel, "vmp_v", 0.0) or 0.0
 
     if is_micro:
         return {
-            'type': 'microinverter',
-            'modules_per_branch': 1,
-            'num_branches': num_panels,
-            'branch_current_a': round(isc * 1.25, 2),  # NEC 690.8 125% factor
-            'system_voltage_v': voc,
+            "type": "microinverter",
+            "modules_per_branch": 1,
+            "num_branches": num_panels,
+            "branch_current_a": round(isc * 1.25, 2),  # NEC 690.8 125% factor
+            "system_voltage_v": voc,
         }
     else:
-        max_input_v = (getattr(inverter, 'max_dc_voltage_v', None)
-                       or getattr(inverter, 'max_input_voltage_v', 600) or 600)
-        mppt_min_v = (getattr(inverter, 'mppt_voltage_min_v', None)
-                      or getattr(inverter, 'mppt_min_v', 100) or 100)
+        max_input_v = (
+            getattr(inverter, "max_dc_voltage_v", None) or getattr(inverter, "max_input_voltage_v", 600) or 600
+        )
+        mppt_min_v = getattr(inverter, "mppt_voltage_min_v", None) or getattr(inverter, "mppt_min_v", 100) or 100
 
         max_series = math.floor(max_input_v / voc * 0.80) if voc > 0 else 10
         min_series = math.ceil(mppt_min_v / vmp) if vmp > 0 else 1
@@ -420,22 +462,23 @@ def calculate_string_config(panel, inverter, num_panels: int) -> dict:
         num_strings = math.ceil(num_panels / string_length)
 
         return {
-            'type': 'string',
-            'string_length': string_length,
-            'num_strings': num_strings,
-            'max_series': max_series,
-            'min_series': min_series,
-            'string_voc_v': round(string_length * voc, 1),
-            'string_vmp_v': round(string_length * vmp, 1),
+            "type": "string",
+            "string_length": string_length,
+            "num_strings": num_strings,
+            "max_series": max_series,
+            "min_series": min_series,
+            "string_voc_v": round(string_length * voc, 1),
+            "string_vmp_v": round(string_length * vmp, 1),
         }
 
 
 @dataclass
 class MonthlyProduction:
     """Monthly solar energy production estimate."""
-    month: int           # 1-12
-    month_name: str      # "January", etc.
-    kwh: float           # estimated production
+
+    month: int  # 1-12
+    month_name: str  # "January", etc.
+    kwh: float  # estimated production
     peak_sun_hours: float
 
 
@@ -445,26 +488,72 @@ _MONTHLY_FRACTIONS_BY_LAT = {
     # lat_max: [jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec]
     35: [0.065, 0.072, 0.088, 0.095, 0.102, 0.108, 0.105, 0.100, 0.092, 0.080, 0.065, 0.028],  # California (~34°N)
     40: [0.055, 0.065, 0.088, 0.098, 0.108, 0.112, 0.110, 0.103, 0.090, 0.075, 0.055, 0.041],  # Mid-US (~38°N)
-    45: [0.048, 0.060, 0.087, 0.100, 0.112, 0.115, 0.113, 0.105, 0.090, 0.072, 0.050, 0.048],  # Oregon/Quebec border (~43°N)
+    45: [
+        0.048,
+        0.060,
+        0.087,
+        0.100,
+        0.112,
+        0.115,
+        0.113,
+        0.105,
+        0.090,
+        0.072,
+        0.050,
+        0.048,
+    ],  # Oregon/Quebec border (~43°N)
     55: [0.038, 0.055, 0.088, 0.104, 0.117, 0.118, 0.116, 0.105, 0.088, 0.068, 0.042, 0.061],  # Quebec (~46°N)
     90: [0.030, 0.050, 0.090, 0.108, 0.120, 0.122, 0.120, 0.108, 0.088, 0.065, 0.038, 0.061],  # Northern Canada
 }
 
 _MONTH_NAMES = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
 ]
 
 # Approximate latitudes for common cities (fallback lookup)
 _CITY_LATITUDES = {
-    "los angeles": 34.0, "encino": 34.2, "san jose": 37.3, "san francisco": 37.8,
-    "sacramento": 38.6, "fresno": 36.7, "san diego": 32.7, "bakersfield": 35.4,
-    "ontario": 34.1, "riverside": 33.9, "anaheim": 33.8, "irvine": 33.7,
-    "phoenix": 33.4, "tucson": 32.2, "dallas": 32.8, "houston": 29.8,
-    "austin": 30.3, "denver": 39.7, "seattle": 47.6, "portland": 45.5,
-    "new york": 40.7, "chicago": 41.9, "boston": 42.4, "miami": 25.8,
-    "montreal": 45.5, "quebec city": 46.8, "toronto": 43.7, "ottawa": 45.4,
-    "vancouver": 49.3, "calgary": 51.0, "edmonton": 53.5,
+    "los angeles": 34.0,
+    "encino": 34.2,
+    "san jose": 37.3,
+    "san francisco": 37.8,
+    "sacramento": 38.6,
+    "fresno": 36.7,
+    "san diego": 32.7,
+    "bakersfield": 35.4,
+    "ontario": 34.1,
+    "riverside": 33.9,
+    "anaheim": 33.8,
+    "irvine": 33.7,
+    "phoenix": 33.4,
+    "tucson": 32.2,
+    "dallas": 32.8,
+    "houston": 29.8,
+    "austin": 30.3,
+    "denver": 39.7,
+    "seattle": 47.6,
+    "portland": 45.5,
+    "new york": 40.7,
+    "chicago": 41.9,
+    "boston": 42.4,
+    "miami": 25.8,
+    "montreal": 45.5,
+    "quebec city": 46.8,
+    "toronto": 43.7,
+    "ottawa": 45.4,
+    "vancouver": 49.3,
+    "calgary": 51.0,
+    "edmonton": 53.5,
 }
 
 
@@ -485,8 +574,8 @@ def _estimate_latitude(project) -> float:
     # Default by country
     country = (getattr(project, "country", "CA") or "CA").upper()
     if country == "US":
-        return 37.0   # central California default
-    return 46.0       # Quebec default
+        return 37.0  # central California default
+    return 46.0  # Quebec default
 
 
 def calculate_monthly_production(project, annual_kwh: float = None) -> list:
@@ -501,7 +590,7 @@ def calculate_monthly_production(project, annual_kwh: float = None) -> list:
         List of 12 MonthlyProduction objects (January through December).
     """
     if annual_kwh is None:
-        annual_kwh = float(getattr(project, 'target_production_kwh', 0.0) or 0.0)
+        annual_kwh = float(getattr(project, "target_production_kwh", 0.0) or 0.0)
         if annual_kwh <= 0:
             annual_kwh = float(project.estimated_annual_kwh)
     annual_kwh = max(0.0, float(annual_kwh))
@@ -530,12 +619,14 @@ def calculate_monthly_production(project, annual_kwh: float = None) -> list:
         kwh = round(annual_kwh * frac, 1)
         # Approximate monthly peak sun hours proportional to fraction × 12
         monthly_psh = round(psh_default * frac * 12, 2)
-        result.append(MonthlyProduction(
-            month=i + 1,
-            month_name=_MONTH_NAMES[i],
-            kwh=kwh,
-            peak_sun_hours=monthly_psh,
-        ))
+        result.append(
+            MonthlyProduction(
+                month=i + 1,
+                month_name=_MONTH_NAMES[i],
+                kwh=kwh,
+                peak_sun_hours=monthly_psh,
+            )
+        )
 
     return result
 
@@ -554,11 +645,11 @@ def calculate_structural_loads(project, roof_pitch_deg: float = 22.5) -> dict:
           controlling_load_psf, attachment_spacing_ft
     """
     # ── Dead Loads ──────────────────────────────────────────────────────
-    panel = getattr(project, 'panel', None)
+    panel = getattr(project, "panel", None)
     if panel:
-        weight_lbs = getattr(panel, 'weight_lbs', 44.0) or 44.0
-        area_sqft = (getattr(panel, 'width_ft', 3.33) or 3.33) * (getattr(panel, 'height_ft', 5.25) or 5.25)
-        panel_width_ft = getattr(panel, 'width_ft', 3.33) or 3.33
+        weight_lbs = getattr(panel, "weight_lbs", 44.0) or 44.0
+        area_sqft = (getattr(panel, "width_ft", 3.33) or 3.33) * (getattr(panel, "height_ft", 5.25) or 5.25)
+        panel_width_ft = getattr(panel, "width_ft", 3.33) or 3.33
     else:
         weight_lbs, area_sqft, panel_width_ft = 44.0, 17.5, 3.33
     if area_sqft <= 0:
@@ -567,58 +658,106 @@ def calculate_structural_loads(project, roof_pitch_deg: float = 22.5) -> dict:
         panel_width_ft = 3.33
 
     panel_dead_load_psf = round(weight_lbs / area_sqft, 2)
-    racking_dead_load_psf = 3.0   # IronRidge XR10 standard
+    racking_dead_load_psf = 3.0  # IronRidge XR10 standard
     total_dead_load_psf = round(panel_dead_load_psf + racking_dead_load_psf, 2)
 
     # ── Live Load (IBC Table 1607.1 residential) ────────────────────────
     roof_live_load_psf = 20.0
 
     # ── Snow Load — jurisdiction lookup ─────────────────────────────────
-    municipality = (getattr(project, 'municipality', '') or '').lower().strip()
-    address = (getattr(project, 'address', '') or '').lower()
-    country = (getattr(project, 'country', 'CA') or 'CA').upper()
-    addr_lower = address + ' ' + municipality
+    municipality = (getattr(project, "municipality", "") or "").lower().strip()
+    address = (getattr(project, "address", "") or "").lower()
+    country = (getattr(project, "country", "CA") or "CA").upper()
+    addr_lower = address + " " + municipality
 
     _CA_CITIES = {
-        'encino', 'los angeles', 'san jose', 'san francisco', 'sacramento',
-        'fresno', 'san diego', 'bakersfield', 'ontario', 'riverside',
-        'anaheim', 'irvine', 'ventura', 'long beach', 'pasadena',
-        'glendale', 'burbank', 'torrance', 'pomona', 'escondido',
+        "encino",
+        "los angeles",
+        "san jose",
+        "san francisco",
+        "sacramento",
+        "fresno",
+        "san diego",
+        "bakersfield",
+        "ontario",
+        "riverside",
+        "anaheim",
+        "irvine",
+        "ventura",
+        "long beach",
+        "pasadena",
+        "glendale",
+        "burbank",
+        "torrance",
+        "pomona",
+        "escondido",
     }
     _FL_CITIES = {
-        'miami', 'orlando', 'jacksonville', 'tampa', 'fort lauderdale',
-        'tallahassee', 'gainesville', 'pensacola', 'st. petersburg',
+        "miami",
+        "orlando",
+        "jacksonville",
+        "tampa",
+        "fort lauderdale",
+        "tallahassee",
+        "gainesville",
+        "pensacola",
+        "st. petersburg",
     }
     _CANADA_CITIES = {
-        'montreal', 'quebec city', 'laval', 'gatineau', 'longueuil',
-        'sherbrooke', 'levis', 'terrebonne', 'repentigny',
-        'toronto', 'ottawa', 'mississauga', 'hamilton', 'brampton',
-        'london', 'windsor', 'kitchener', 'markham', 'vaughan',
-        'vancouver', 'calgary', 'edmonton',
+        "montreal",
+        "quebec city",
+        "laval",
+        "gatineau",
+        "longueuil",
+        "sherbrooke",
+        "levis",
+        "terrebonne",
+        "repentigny",
+        "toronto",
+        "ottawa",
+        "mississauga",
+        "hamilton",
+        "brampton",
+        "london",
+        "windsor",
+        "kitchener",
+        "markham",
+        "vaughan",
+        "vancouver",
+        "calgary",
+        "edmonton",
     }
 
     is_california = (
         municipality in _CA_CITIES
         or any(c in addr_lower for c in _CA_CITIES)
-        or ', ca ' in addr_lower or ', ca,' in addr_lower
-        or ' ca 9' in addr_lower or 'california' in addr_lower
+        or ", ca " in addr_lower
+        or ", ca," in addr_lower
+        or " ca 9" in addr_lower
+        or "california" in addr_lower
     )
     is_florida = (
         municipality in _FL_CITIES
         or any(c in addr_lower for c in _FL_CITIES)
-        or ', fl ' in addr_lower or 'florida' in addr_lower
+        or ", fl " in addr_lower
+        or "florida" in addr_lower
     )
     is_canada = (
-        country == 'CA'
+        country == "CA"
         or municipality in _CANADA_CITIES
         or any(c in addr_lower for c in _CANADA_CITIES)
-        or 'quebec' in addr_lower or 'ontario' in addr_lower
-        or ' qc ' in addr_lower or ' on ' in addr_lower
+        or "quebec" in addr_lower
+        or "ontario" in addr_lower
+        or " qc " in addr_lower
+        or " on " in addr_lower
     )
     is_northeast = (
-        'new york' in addr_lower or ', ny ' in addr_lower
-        or 'boston' in addr_lower or ', ma ' in addr_lower
-        or ', ct ' in addr_lower or ', nj ' in addr_lower
+        "new york" in addr_lower
+        or ", ny " in addr_lower
+        or "boston" in addr_lower
+        or ", ma " in addr_lower
+        or ", ct " in addr_lower
+        or ", nj " in addr_lower
     )
 
     if is_california or is_florida:
@@ -646,14 +785,14 @@ def calculate_structural_loads(project, roof_pitch_deg: float = 22.5) -> dict:
     attachment_spacing_ft = round(allowable_lb / load_per_ft, 2) if load_per_ft > 0 else 4.0
 
     return {
-        'panel_dead_load_psf': panel_dead_load_psf,
-        'racking_dead_load_psf': racking_dead_load_psf,
-        'total_dead_load_psf': total_dead_load_psf,
-        'roof_live_load_psf': roof_live_load_psf,
-        'snow_load_psf': snow_load_psf,
-        'wind_uplift_psf': wind_uplift_psf,
-        'controlling_load_psf': controlling_load_psf,
-        'attachment_spacing_ft': attachment_spacing_ft,
+        "panel_dead_load_psf": panel_dead_load_psf,
+        "racking_dead_load_psf": racking_dead_load_psf,
+        "total_dead_load_psf": total_dead_load_psf,
+        "roof_live_load_psf": roof_live_load_psf,
+        "snow_load_psf": snow_load_psf,
+        "wind_uplift_psf": wind_uplift_psf,
+        "controlling_load_psf": controlling_load_psf,
+        "attachment_spacing_ft": attachment_spacing_ft,
     }
 
 

@@ -13,14 +13,15 @@ from shapely.geometry import Polygon
 @dataclass
 class RoofFace:
     """A single roof face / segment for panel placement."""
+
     id: int
-    polygon: Polygon                     # full outline in page-pts
+    polygon: Polygon  # full outline in page-pts
     area_sqft: float
     pitch_deg: float = 0.0
-    azimuth_deg: float = 180.0           # 180 = due south
+    azimuth_deg: float = 180.0  # 180 = due south
     usable_area_sqft: float = 0.0
     label: str = ""
-    detection_method: str = "unknown"    # "opencv", "google_solar_api", etc.
+    detection_method: str = "unknown"  # "opencv", "google_solar_api", etc.
     usable_polygon: Optional[Polygon] = None  # after setback insets
 
     def __post_init__(self):
@@ -33,8 +34,15 @@ class RoofFace:
     def azimuth_label(self) -> str:
         """Human-friendly compass direction."""
         dirs = [
-            (0, "N"), (45, "NE"), (90, "E"), (135, "SE"),
-            (180, "S"), (225, "SW"), (270, "W"), (315, "NW"), (360, "N"),
+            (0, "N"),
+            (45, "NE"),
+            (90, "E"),
+            (135, "SE"),
+            (180, "S"),
+            (225, "SW"),
+            (270, "W"),
+            (315, "NW"),
+            (360, "N"),
         ]
         for deg, lbl in dirs:
             if abs(self.azimuth_deg - deg) <= 22.5:

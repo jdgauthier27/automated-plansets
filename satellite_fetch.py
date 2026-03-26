@@ -40,9 +40,10 @@ TILE_PX = 256  # Google tile size in pixels
 
 # ── Coordinate helpers ────────────────────────────────────────────────────────
 
+
 def lat_lng_to_tile(lat: float, lng: float, zoom: int) -> Tuple[int, int]:
     """Return (tile_x, tile_y) for the tile containing (lat, lng) at *zoom*."""
-    n = 2 ** zoom
+    n = 2**zoom
     tx = int((lng + 180.0) / 360.0 * n)
     lat_r = math.radians(lat)
     ty = int((1.0 - math.asinh(math.tan(lat_r)) / math.pi) / 2.0 * n)
@@ -54,7 +55,7 @@ def lat_lng_to_pixel(lat: float, lng: float, zoom: int) -> Tuple[float, float]:
     Return the fractional pixel position (px, py) in the *global* tile-space
     at *zoom*.  The global canvas is (2^zoom × TILE_PX) pixels wide/tall.
     """
-    n = 2 ** zoom
+    n = 2**zoom
     total_px = n * TILE_PX
     px = (lng + 180.0) / 360.0 * total_px
     lat_r = math.radians(lat)
@@ -64,15 +65,12 @@ def lat_lng_to_pixel(lat: float, lng: float, zoom: int) -> Tuple[float, float]:
 
 # ── Session management ────────────────────────────────────────────────────────
 
+
 def _create_session(api_key: str) -> str:
     """Create a Map Tiles API session and return the session token."""
     url = f"https://tile.googleapis.com/v1/createSession?key={api_key}"
-    body = json.dumps(
-        {"mapType": "satellite", "language": "en-US", "region": "CA"}
-    ).encode()
-    req = urllib.request.Request(
-        url, data=body, headers={"Content-Type": "application/json"}
-    )
+    body = json.dumps({"mapType": "satellite", "language": "en-US", "region": "CA"}).encode()
+    req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=10) as resp:
         data = json.loads(resp.read().decode())
     token = data.get("session", "")
@@ -84,12 +82,10 @@ def _create_session(api_key: str) -> str:
 
 # ── Tile fetcher ──────────────────────────────────────────────────────────────
 
+
 def _fetch_tile(tx: int, ty: int, zoom: int, session: str, api_key: str) -> np.ndarray:
     """Fetch a single 256×256 tile and return as H×W×3 uint8 RGB array."""
-    url = (
-        f"https://tile.googleapis.com/v1/2dtiles/{zoom}/{tx}/{ty}"
-        f"?session={session}&key={api_key}"
-    )
+    url = f"https://tile.googleapis.com/v1/2dtiles/{zoom}/{tx}/{ty}?session={session}&key={api_key}"
     req = urllib.request.Request(url, headers={"User-Agent": "Quebec-Solaire/1.0"})
     with urllib.request.urlopen(req, timeout=15) as resp:
         data = resp.read()
@@ -97,6 +93,7 @@ def _fetch_tile(tx: int, ty: int, zoom: int, session: str, api_key: str) -> np.n
 
 
 # ── Main public function ──────────────────────────────────────────────────────
+
 
 def fetch_satellite_mosaic(
     lat: float,
@@ -142,7 +139,11 @@ def fetch_satellite_mosaic(
 
     logger.info(
         "Fetching %d×%d tile grid at zoom %d (%.6f, %.6f)",
-        n_tiles_x, n_tiles_y, zoom, lat, lng,
+        n_tiles_x,
+        n_tiles_y,
+        zoom,
+        lat,
+        lng,
     )
 
     # Build canvas
@@ -154,7 +155,7 @@ def fetch_satellite_mosaic(
             tile = _fetch_tile(tx, ty, zoom, session, api_key)
             y0 = row * TILE_PX
             x0 = col * TILE_PX
-            canvas[y0:y0 + TILE_PX, x0:x0 + TILE_PX] = tile
+            canvas[y0 : y0 + TILE_PX, x0 : x0 + TILE_PX] = tile
             fetched += 1
 
     logger.info("Stitched %d/%d tiles → canvas %dx%d", fetched, total, canvas_w, canvas_h)

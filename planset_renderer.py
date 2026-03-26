@@ -32,13 +32,13 @@ def render_pdf(html_path: str, output_path: Optional[str] = None) -> str:
 
     try:
         from weasyprint import HTML
+
         HTML(filename=html_path).write_pdf(output_path)
         logger.info("Generated PDF: %s", output_path)
         return output_path
     except ImportError:
         logger.warning(
-            "weasyprint not installed. Install with: pip install weasyprint\n"
-            "HTML planset saved at: %s", html_path
+            "weasyprint not installed. Install with: pip install weasyprint\nHTML planset saved at: %s", html_path
         )
         return html_path
     except Exception as e:

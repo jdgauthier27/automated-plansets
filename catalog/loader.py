@@ -37,6 +37,7 @@ def _load_json(filename: str) -> list:
 # Panel loader
 # ---------------------------------------------------------------------------
 
+
 def _dict_to_panel(d: dict) -> PanelCatalogEntry:
     dims = d.pop("dimensions", {})
     drawing = d.pop("datasheet_drawing", {})
@@ -61,6 +62,7 @@ def load_panels() -> Dict[str, PanelCatalogEntry]:
 # Inverter loader
 # ---------------------------------------------------------------------------
 
+
 def load_inverters() -> Dict[str, InverterCatalogEntry]:
     """Load all inverters from catalog/inverters.json, keyed by ID."""
     raw = _load_json("inverters.json")
@@ -75,6 +77,7 @@ def load_inverters() -> Dict[str, InverterCatalogEntry]:
 # ---------------------------------------------------------------------------
 # Racking loader
 # ---------------------------------------------------------------------------
+
 
 def _dict_to_racking(d: dict) -> RackingCatalogEntry:
     profile = d.pop("profile", {})
@@ -100,6 +103,7 @@ def load_racking() -> Dict[str, RackingCatalogEntry]:
 # Attachment loader
 # ---------------------------------------------------------------------------
 
+
 def load_attachments() -> Dict[str, AttachmentCatalogEntry]:
     """Load all attachments from catalog/attachments.json, keyed by ID."""
     raw = _load_json("attachments.json")
@@ -115,6 +119,7 @@ def load_attachments() -> Dict[str, AttachmentCatalogEntry]:
 # Auto-selection
 # ---------------------------------------------------------------------------
 
+
 def select_attachment(
     roof_material: str,
     racking_id: str,
@@ -129,13 +134,12 @@ def select_attachment(
         attachments = load_attachments()
 
     for att in attachments.values():
-        if (
-            roof_material in att.compatible_roof_materials
-            and racking_id in att.compatible_racking_ids
-        ):
+        if roof_material in att.compatible_roof_materials and racking_id in att.compatible_racking_ids:
             logger.info(
                 "Auto-selected attachment: %s for roof=%s, racking=%s",
-                att.id, roof_material, racking_id,
+                att.id,
+                roof_material,
+                racking_id,
             )
             return att
 
@@ -144,12 +148,15 @@ def select_attachment(
         if roof_material in att.compatible_roof_materials:
             logger.warning(
                 "No exact racking match — falling back to attachment %s for roof=%s",
-                att.id, roof_material,
+                att.id,
+                roof_material,
             )
             return att
 
     logger.warning(
-        "No attachment found for roof=%s, racking=%s", roof_material, racking_id,
+        "No attachment found for roof=%s, racking=%s",
+        roof_material,
+        racking_id,
     )
     return None
 
@@ -157,6 +164,7 @@ def select_attachment(
 # ---------------------------------------------------------------------------
 # Full catalog loader
 # ---------------------------------------------------------------------------
+
 
 class EquipmentCatalog:
     """Unified access to all equipment catalogs."""
@@ -191,9 +199,7 @@ class EquipmentCatalog:
             raise ValueError(f"Attachment '{attachment_id}' not found. Available: {available}")
         return self.attachments[attachment_id]
 
-    def auto_select_attachment(
-        self, roof_material: str, racking_id: str
-    ) -> Optional[AttachmentCatalogEntry]:
+    def auto_select_attachment(self, roof_material: str, racking_id: str) -> Optional[AttachmentCatalogEntry]:
         return select_attachment(roof_material, racking_id, self.attachments)
 
     def list_panel_ids(self) -> List[str]:

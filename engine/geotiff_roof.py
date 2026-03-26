@@ -38,7 +38,7 @@ _M_PER_FT = 0.3048
 _FT_PER_M = 3.28084
 _SQFT_PER_M2 = 10.7639
 
-_PAGE_WIDTH = 792   # letter landscape pts
+_PAGE_WIDTH = 792  # letter landscape pts
 _PAGE_HEIGHT = 612
 
 _SSL_CTX = ssl.create_default_context()
@@ -91,10 +91,11 @@ def _download_geotiff(url: str, api_key: str) -> bytes:
 @dataclass
 class _GeoTiff:
     """Parsed GeoTIFF raster + affine transform."""
-    data: np.ndarray           # 2D float32
+
+    data: np.ndarray  # 2D float32
     transform: "rasterio.Affine"
     crs: str
-    resolution: float          # meters/pixel (from transform)
+    resolution: float  # meters/pixel (from transform)
 
     def pixel_to_xy(self, row: int, col: int) -> Tuple[float, float]:
         """Convert (row, col) to CRS coordinates (x, y)."""
@@ -112,6 +113,7 @@ class _GeoTiff:
 def _parse_geotiff(raw: bytes) -> _GeoTiff:
     """Parse raw GeoTIFF bytes into a _GeoTiff."""
     import rasterio
+
     with rasterio.open(io.BytesIO(raw)) as ds:
         data = ds.read(1).astype(np.float32)
         transform = ds.transform
@@ -123,14 +125,14 @@ def _parse_geotiff(raw: bytes) -> _GeoTiff:
 # ---------------------------------------------------------------------------
 # Coordinate helpers
 # ---------------------------------------------------------------------------
-def _latlng_to_utm(lat: float, lng: float, transform: "rasterio.Affine",
-                   crs: str) -> Tuple[float, float]:
+def _latlng_to_utm(lat: float, lng: float, transform: "rasterio.Affine", crs: str) -> Tuple[float, float]:
     """Convert lat/lng to the same UTM CRS as the GeoTIFF.
 
     Uses pyproj if available, otherwise a simplified formula.
     """
     try:
         from pyproj import Transformer
+
         transformer = Transformer.from_crs("EPSG:4326", crs, always_xy=True)
         x, y = transformer.transform(lng, lat)
         return x, y
@@ -167,13 +169,15 @@ def _forward_utm(lat: float, lng: float, zone: int) -> Tuple[float, float]:
         - (35 * e**6 / 3072) * math.sin(6 * lat_r)
     )
 
-    easting = k0 * N * (
-        A + (1 - T + C) * A**3 / 6
-        + (5 - 18 * T + T**2 + 72 * C - 58 * e_prime_sq) * A**5 / 120
-    ) + 500000.0
+    easting = (
+        k0 * N * (A + (1 - T + C) * A**3 / 6 + (5 - 18 * T + T**2 + 72 * C - 58 * e_prime_sq) * A**5 / 120) + 500000.0
+    )
 
     northing = k0 * (
-        M + N * math.tan(lat_r) * (
+        M
+        + N
+        * math.tan(lat_r)
+        * (
             A**2 / 2
             + (5 - T + 9 * C + 4 * C**2) * A**4 / 24
             + (61 - 58 * T + T**2 + 600 * C - 330 * e_prime_sq) * A**6 / 720
@@ -234,8 +238,9 @@ def _isolate_building(mask: _GeoTiff, lat: float, lng: float) -> np.ndarray:
         return np.zeros_like(binary, dtype=bool)
 
     building_mask = labels == best_label
-    logger.info("Selected component %d (dist=%.0f px, area=%d px)",
-                best_label, math.sqrt(best_dist), int(building_mask.sum()))
+    logger.info(
+        "Selected component %d (dist=%.0f px, area=%d px)", best_label, math.sqrt(best_dist), int(building_mask.sum())
+    )
     return building_mask
 
 
@@ -250,6 +255,7 @@ def _mask_to_contour_coords(mask: np.ndarray) -> List[Tuple[int, int]]:
     """
     try:
         from skimage.measure import find_contours
+
         contours = find_contours(mask.astype(np.float64), 0.5)
         if not contours:
             return []
@@ -262,6 +268,7 @@ def _mask_to_contour_coords(mask: np.ndarray) -> List[Tuple[int, int]]:
 
     # Fallback: use shapely rasterio.features-style approach
     from scipy.ndimage import binary_fill_holes, binary_erosion
+
     filled = binary_fill_holes(mask)
     boundary = filled & ~binary_erosion(filled)
     rows, cols = np.where(boundary)
@@ -269,6 +276,7 @@ def _mask_to_contour_coords(mask: np.ndarray) -> List[Tuple[int, int]]:
         return []
     # Order the boundary pixels (approximate convex hull via shapely)
     from shapely.geometry import MultiPoint
+
     pts = MultiPoint(list(zip(cols.tolist(), rows.tolist())))
     hull = pts.convex_hull
     if hull.is_empty:
@@ -277,20 +285,18 @@ def _mask_to_contour_coords(mask: np.ndarray) -> List[Tuple[int, int]]:
     return [(int(round(c)), int(round(r))) for c, r in coords]
 
 
-def _simplify_pixel_contour(coords: List[Tuple[int, int]],
-                            tolerance: float = 2.0
-                            ) -> List[Tuple[int, int]]:
+def _simplify_pixel_contour(coords: List[Tuple[int, int]], tolerance: float = 2.0) -> List[Tuple[int, int]]:
     """Simplify a pixel contour using Douglas-Peucker via shapely."""
     if len(coords) < 4:
         return coords
     from shapely.geometry import LineString
+
     ls = LineString(coords)
     simplified = ls.simplify(tolerance)
     return [(int(round(c[0])), int(round(c[1]))) for c in simplified.coords]
 
 
-def _extract_outline(building_mask: np.ndarray, geotiff: _GeoTiff
-                     ) -> List[Tuple[float, float]]:
+def _extract_outline(building_mask: np.ndarray, geotiff: _GeoTiff) -> List[Tuple[float, float]]:
     """Extract the outline polygon in CRS meters from a binary mask.
 
     Returns list of (x_m, y_m) in the GeoTIFF CRS.
@@ -320,13 +326,14 @@ def _extract_outline(building_mask: np.ndarray, geotiff: _GeoTiff
 @dataclass
 class _RawFace:
     """Intermediate roof face before conversion to RoofFace."""
-    pixels: np.ndarray          # boolean mask
+
+    pixels: np.ndarray  # boolean mask
     area_m2: float
     area_sqft: float
     avg_pitch_deg: float
     avg_azimuth_deg: float
     label: str
-    polygon_m: List[Tuple[float, float]]   # outline in CRS meters
+    polygon_m: List[Tuple[float, float]]  # outline in CRS meters
 
 
 def _segment_roof_faces(
@@ -353,6 +360,7 @@ def _segment_roof_faces(
     if bm.shape != dsm_data.shape:
         # Resize mask to match DSM using scipy zoom
         from scipy.ndimage import zoom as ndimage_zoom
+
         zoom_y = dsm_data.shape[0] / bm.shape[0]
         zoom_x = dsm_data.shape[1] / bm.shape[1]
         bm = ndimage_zoom(bm.astype(np.float32), (zoom_y, zoom_x), order=0) > 0.5
@@ -365,6 +373,7 @@ def _segment_roof_faces(
 
     # Ground level: look at pixels just outside the building mask
     from scipy.ndimage import binary_dilation
+
     ring = binary_dilation(bm, iterations=5) & ~bm
     ground_pixels = dsm_data[ring]
     if len(ground_pixels) > 0:
@@ -373,7 +382,7 @@ def _segment_roof_faces(
         ground_level = float(np.percentile(roof_heights, 5))
 
     height_above_ground = dsm_data - ground_level
-    elevated = (height_above_ground > 2.0) & bm   # >2 m above ground
+    elevated = (height_above_ground > 2.0) & bm  # >2 m above ground
 
     if elevated.sum() < 20:
         logger.warning("Too few elevated roof pixels (%d)", elevated.sum())
@@ -448,15 +457,17 @@ def _segment_roof_faces(
             if len(poly_m) < 3:
                 continue
 
-            faces.append(_RawFace(
-                pixels=px_mask,
-                area_m2=area_m2,
-                area_sqft=area_sqft,
-                avg_pitch_deg=avg_pitch,
-                avg_azimuth_deg=avg_azimuth,
-                label=f"Roof-{face_id + 1} ({direction_label})",
-                polygon_m=poly_m,
-            ))
+            faces.append(
+                _RawFace(
+                    pixels=px_mask,
+                    area_m2=area_m2,
+                    area_sqft=area_sqft,
+                    avg_pitch_deg=avg_pitch,
+                    avg_azimuth_deg=avg_azimuth,
+                    label=f"Roof-{face_id + 1} ({direction_label})",
+                    polygon_m=poly_m,
+                )
+            )
             face_id += 1
 
     # --- Merge small fragments into nearby larger faces ---
@@ -467,15 +478,20 @@ def _segment_roof_faces(
 
     logger.info("Segmented %d roof faces from DSM gradient (after merge)", len(faces))
     for f in faces[:6]:
-        logger.info("  %s: %.0f sqft, pitch=%.1f deg, azimuth=%.1f deg",
-                    f.label, f.area_sqft, f.avg_pitch_deg, f.avg_azimuth_deg)
+        logger.info(
+            "  %s: %.0f sqft, pitch=%.1f deg, azimuth=%.1f deg",
+            f.label,
+            f.area_sqft,
+            f.avg_pitch_deg,
+            f.avg_azimuth_deg,
+        )
 
     return faces
 
 
 def _merge_similar_faces(
     faces: list,
-    dsm: '_GeoTiff',
+    dsm: "_GeoTiff",
     elevated: np.ndarray,
     slope_deg: np.ndarray,
     aspect_deg: np.ndarray,
@@ -498,8 +514,7 @@ def _merge_similar_faces(
     for f in faces:
         d = _azimuth_to_label(f.avg_azimuth_deg)
         # Simplify to 4 cardinal directions
-        simple = {"N": "N", "NE": "E", "E": "E", "SE": "S",
-                  "S": "S", "SW": "W", "W": "W", "NW": "N"}.get(d, "S")
+        simple = {"N": "N", "NE": "E", "E": "E", "SE": "S", "S": "S", "SW": "W", "W": "W", "NW": "N"}.get(d, "S")
         direction_groups.setdefault(simple, []).append(f)
 
     # Step 2: Within each direction, merge faces with similar azimuth and pitch
@@ -565,15 +580,17 @@ def _merge_similar_faces(
             if len(poly_m) < 3:
                 continue
 
-            merged.append(_RawFace(
-                pixels=combined_pixels,
-                area_m2=total_area_m2,
-                area_sqft=total_area_sqft,
-                avg_pitch_deg=avg_pitch,
-                avg_azimuth_deg=avg_azimuth,
-                label=f"Roof ({direction_label})",
-                polygon_m=poly_m,
-            ))
+            merged.append(
+                _RawFace(
+                    pixels=combined_pixels,
+                    area_m2=total_area_m2,
+                    area_sqft=total_area_sqft,
+                    avg_pitch_deg=avg_pitch,
+                    avg_azimuth_deg=avg_azimuth,
+                    label=f"Roof ({direction_label})",
+                    polygon_m=poly_m,
+                )
+            )
 
     # Step 4: Filter out tiny faces (<50 sqft) and steep faces (>45° pitch = walls/edges)
     # Also filter very flat (<5° pitch) which are flat roof sections unlikely to have tilted panels
@@ -581,7 +598,7 @@ def _merge_similar_faces(
 
     # Relabel
     for i, f in enumerate(merged):
-        f.label = f"Roof-{i+1} ({_azimuth_to_label(f.avg_azimuth_deg)})"
+        f.label = f"Roof-{i + 1} ({_azimuth_to_label(f.avg_azimuth_deg)})"
 
     logger.info("Merged %d fragments → %d clean faces", len(faces), len(merged))
     return merged
@@ -598,8 +615,15 @@ def _circular_mean(angles_deg: np.ndarray) -> float:
 def _azimuth_to_label(az: float) -> str:
     """Convert azimuth to a compass label."""
     dirs = [
-        (0, "N"), (45, "NE"), (90, "E"), (135, "SE"),
-        (180, "S"), (225, "SW"), (270, "W"), (315, "NW"), (360, "N"),
+        (0, "N"),
+        (45, "NE"),
+        (90, "E"),
+        (135, "SE"),
+        (180, "S"),
+        (225, "SW"),
+        (270, "W"),
+        (315, "NW"),
+        (360, "N"),
     ]
     for deg, lbl in dirs:
         if abs(az - deg) <= 22.5:
@@ -742,16 +766,12 @@ def _build_roof_scene(
     mask_url = layers.get("maskUrl", "")
     dsm_url = layers.get("dsmUrl", "")
     if not mask_url or not dsm_url:
-        raise RuntimeError(
-            f"dataLayers response missing maskUrl or dsmUrl: keys={list(layers.keys())}"
-        )
+        raise RuntimeError(f"dataLayers response missing maskUrl or dsmUrl: keys={list(layers.keys())}")
 
     mask_tiff = _parse_geotiff(_download_geotiff(mask_url, api_key))
     dsm_tiff = _parse_geotiff(_download_geotiff(dsm_url, api_key))
-    logger.info("Mask: %s, shape=%s, res=%.3f m/px",
-                mask_tiff.crs, mask_tiff.data.shape, mask_tiff.resolution)
-    logger.info("DSM:  %s, shape=%s, res=%.3f m/px",
-                dsm_tiff.crs, dsm_tiff.data.shape, dsm_tiff.resolution)
+    logger.info("Mask: %s, shape=%s, res=%.3f m/px", mask_tiff.crs, mask_tiff.data.shape, mask_tiff.resolution)
+    logger.info("DSM:  %s, shape=%s, res=%.3f m/px", dsm_tiff.crs, dsm_tiff.data.shape, dsm_tiff.resolution)
 
     building_mask = _isolate_building(mask_tiff, lat, lng)
     if building_mask.sum() < 20:
@@ -823,38 +843,42 @@ def _build_roof_scene(
         if isinstance(usable, MultiPolygon):
             usable = max(usable.geoms, key=lambda g: g.area)
 
-        usable_sqft = usable.area / (pts_per_ft ** 2)
+        usable_sqft = usable.area / (pts_per_ft**2)
         usable_m = _page_polygon_to_meters(usable, cx_page, cy_page, cx_m, cy_m, pts_per_ft)
 
         full_polygon_latlng = _points_m_to_latlng(face.polygon_m, mask_tiff.crs)
         usable_polygon_latlng = _points_m_to_latlng(usable_m, mask_tiff.crs)
         centroid_latlng = _polygon_centroid_latlng(face.polygon_m, mask_tiff.crs)
 
-        roof_faces.append(RoofFace(
-            id=idx,
-            polygon=poly,
-            area_sqft=round(face.area_sqft, 1),
-            pitch_deg=round(face.avg_pitch_deg, 1),
-            azimuth_deg=round(face.avg_azimuth_deg, 1),
-            usable_area_sqft=round(usable_sqft, 1),
-            label=face.label,
-            detection_method="geotiff_dsm",
-            usable_polygon=usable,
-        ))
+        roof_faces.append(
+            RoofFace(
+                id=idx,
+                polygon=poly,
+                area_sqft=round(face.area_sqft, 1),
+                pitch_deg=round(face.avg_pitch_deg, 1),
+                azimuth_deg=round(face.avg_azimuth_deg, 1),
+                usable_area_sqft=round(usable_sqft, 1),
+                label=face.label,
+                detection_method="geotiff_dsm",
+                usable_polygon=usable,
+            )
+        )
 
-        geo_roof_faces.append({
-            "id": idx,
-            "label": face.label,
-            "pitch_deg": round(face.avg_pitch_deg, 1),
-            "azimuth_deg": round(face.avg_azimuth_deg, 1),
-            "area_sqft": round(face.area_sqft, 1),
-            "usable_area_sqft": round(usable_sqft, 1),
-            "center_lat": centroid_latlng["lat"] if centroid_latlng else None,
-            "center_lng": centroid_latlng["lng"] if centroid_latlng else None,
-            "polygon_latlng": full_polygon_latlng,
-            "usable_polygon_latlng": usable_polygon_latlng,
-            "is_usable": bool(usable_polygon_latlng),
-        })
+        geo_roof_faces.append(
+            {
+                "id": idx,
+                "label": face.label,
+                "pitch_deg": round(face.avg_pitch_deg, 1),
+                "azimuth_deg": round(face.avg_azimuth_deg, 1),
+                "area_sqft": round(face.area_sqft, 1),
+                "usable_area_sqft": round(usable_sqft, 1),
+                "center_lat": centroid_latlng["lat"] if centroid_latlng else None,
+                "center_lng": centroid_latlng["lng"] if centroid_latlng else None,
+                "polygon_latlng": full_polygon_latlng,
+                "usable_polygon_latlng": usable_polygon_latlng,
+                "is_usable": bool(usable_polygon_latlng),
+            }
+        )
         geo_points_all.extend(full_polygon_latlng)
         geo_points_all.extend(usable_polygon_latlng)
 
@@ -869,10 +893,7 @@ def _build_roof_scene(
             outline_latlng.append({"lat": round(lat_p, 8), "lng": round(lng_p, 8)})
     geo_points_all.extend(outline_latlng)
 
-    outline_ft = [
-        ((x_m - cx_m) * _FT_PER_M, (y_m - cy_m) * _FT_PER_M)
-        for x_m, y_m in outline_m
-    ]
+    outline_ft = [((x_m - cx_m) * _FT_PER_M, (y_m - cy_m) * _FT_PER_M) for x_m, y_m in outline_m]
     bounds_latlng = _latlng_bounds(geo_points_all)
     if bounds_latlng is None and outline_latlng:
         bounds_latlng = _latlng_bounds(outline_latlng)
@@ -886,7 +907,13 @@ def _build_roof_scene(
             "lng": round((bounds_latlng["east"] + bounds_latlng["west"]) / 2, 8),
         }
 
-    width_m = (bounds_latlng["east"] - bounds_latlng["west"]) * 111319.49079327357 * math.cos(math.radians(centroid_latlng["lat"])) if bounds_latlng and centroid_latlng else 0.0
+    width_m = (
+        (bounds_latlng["east"] - bounds_latlng["west"])
+        * 111319.49079327357
+        * math.cos(math.radians(centroid_latlng["lat"]))
+        if bounds_latlng and centroid_latlng
+        else 0.0
+    )
     height_m = (bounds_latlng["north"] - bounds_latlng["south"]) * 111319.49079327357 if bounds_latlng else 0.0
     camera_radius_m = math.sqrt((width_m / 2) ** 2 + (height_m / 2) ** 2) if bounds_latlng else 0.0
 
@@ -986,8 +1013,7 @@ def get_building_outline_latlng(
 # CLI quick test
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO,
-                        format="%(levelname)s %(name)s: %(message)s")
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
     test_lat = 34.1578
     test_lng = -118.4956
@@ -1004,10 +1030,12 @@ if __name__ == "__main__":
         print(f"Scale: {scale:.3f} pts/ft")
         print(f"Found {len(faces)} roof faces:")
         for f in faces:
-            print(f"  {f.label}: {f.area_sqft:.0f} sqft, "
-                  f"pitch={f.pitch_deg:.1f} deg, "
-                  f"azimuth={f.azimuth_deg:.1f} deg "
-                  f"({f.azimuth_label}-facing)")
+            print(
+                f"  {f.label}: {f.area_sqft:.0f} sqft, "
+                f"pitch={f.pitch_deg:.1f} deg, "
+                f"azimuth={f.azimuth_deg:.1f} deg "
+                f"({f.azimuth_label}-facing)"
+            )
 
         print()
         outline = get_building_outline(test_lat, test_lng, key)

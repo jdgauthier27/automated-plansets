@@ -33,12 +33,10 @@ COLORS = {
     "text_primary": "#000000",
     "text_secondary": "#333333",
     "text_light": "#666666",
-
     # Panels on satellite (realistic)
-    "panel_fill": "#0c1a2e",           # dark navy
-    "panel_cell_grid": "rgba(30,58,138,0.3)",    # dark blue grid
-    "panel_frame": "rgba(160,175,195,0.55)",      # silver aluminum
-
+    "panel_fill": "#0c1a2e",  # dark navy
+    "panel_cell_grid": "rgba(30,58,138,0.3)",  # dark blue grid
+    "panel_frame": "rgba(160,175,195,0.55)",  # silver aluminum
     # Vector drawing
     "roof_outline": "#000000",
     "setback_line": "#cc0000",
@@ -46,14 +44,12 @@ COLORS = {
     "dimension_text": "#222222",
     "grid_light": "#f0f0f0",
     "grid_medium": "#d8d8d8",
-
     # Electrical
     "wire_dc": "#0066cc",
     "wire_ac": "#cc0000",
     "wire_ground": "#00aa00",
     "inverter": "#e8e8e8",
     "breaker": "#f0f0f0",
-
     # Wiring (string plan)
     "string_1": "#0066cc",
     "string_2": "#ff6600",
@@ -64,6 +60,7 @@ COLORS = {
 
 
 # ── SVG page wrapper ───────────────────────────────────────────────────────
+
 
 def svg_page_wrapper(
     svg_content: str,
@@ -79,12 +76,13 @@ def svg_page_wrapper(
         f'<div class="page">'
         f'<svg width="100%" height="100%" viewBox="0 0 {vw} {vh}" '
         f'xmlns="http://www.w3.org/2000/svg" style="background:{bg};">'
-        f'{svg_content}'
-        f'</svg></div>'
+        f"{svg_content}"
+        f"</svg></div>"
     )
 
 
 # ── Address / AHJ helpers ──────────────────────────────────────────────────
+
 
 def extract_municipality(address: str) -> str:
     """Extract the municipality name from a comma-separated address string.
@@ -116,6 +114,7 @@ def make_ahj_label(address: str) -> str:
 
 # ── Image / geometry utilities ──────────────────────────────────────────────
 
+
 def image_to_b64(img_array: np.ndarray) -> str:
     """Convert a numpy image array to a base64-encoded PNG string."""
     img = Image.fromarray(img_array)
@@ -127,8 +126,15 @@ def image_to_b64(img_array: np.ndarray) -> str:
 def azimuth_label(az: float) -> str:
     """Convert azimuth degrees to a compass direction string."""
     dirs = [
-        (0, "N"), (45, "NE"), (90, "E"), (135, "SE"),
-        (180, "S"), (225, "SW"), (270, "W"), (315, "NW"), (360, "N"),
+        (0, "N"),
+        (45, "NE"),
+        (90, "E"),
+        (135, "SE"),
+        (180, "S"),
+        (225, "SW"),
+        (270, "W"),
+        (315, "NW"),
+        (360, "N"),
     ]
     for deg, lbl in dirs:
         if abs(az - deg) <= 22.5:

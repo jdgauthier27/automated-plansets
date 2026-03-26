@@ -17,9 +17,11 @@ from typing import Dict, List, Optional
 # Panel
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class PanelDimensions:
     """Panel physical dimensions in mm."""
+
     length_mm: float = 1800.0
     width_mm: float = 1134.0
     depth_mm: float = 30.0
@@ -44,6 +46,7 @@ class PanelDimensions:
 @dataclass
 class DatasheetDrawing:
     """Hints for rendering a generic datasheet page."""
+
     cell_grid: List[int] = field(default_factory=lambda: [12, 11])
     junction_box_position: str = "center_bottom"
     busbar_count: int = 9
@@ -59,16 +62,16 @@ class PanelCatalogEntry:
     model: str = ""
     model_short: str = ""
     series: str = ""
-    technology: str = ""                    # "HPBC Bifacial", "Mono PERC", etc.
+    technology: str = ""  # "HPBC Bifacial", "Mono PERC", etc.
     cell_count: int = 132
-    cell_type: str = ""                     # "n-type TOPCon", "p-type PERC"
+    cell_type: str = ""  # "n-type TOPCon", "p-type PERC"
 
     # Electrical — STC
     wattage_w: int = 400
-    voc_v: float = 37.5                     # Open-circuit voltage
-    vmp_v: float = 31.7                     # Voltage at max power
-    isc_a: float = 14.19                    # Short-circuit current
-    imp_a: float = 13.56                    # Current at max power
+    voc_v: float = 37.5  # Open-circuit voltage
+    vmp_v: float = 31.7  # Voltage at max power
+    isc_a: float = 14.19  # Short-circuit current
+    imp_a: float = 13.56  # Current at max power
     efficiency_pct: float = 22.0
     max_system_voltage_v: int = 1500
     max_series_fuse_a: int = 25
@@ -140,6 +143,7 @@ class PanelCatalogEntry:
 # Inverter
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class InverterCatalogEntry:
     """Complete inverter specification from the equipment catalog.
@@ -152,18 +156,18 @@ class InverterCatalogEntry:
     manufacturer: str = ""
     model: str = ""
     model_short: str = ""
-    type: str = "micro"                     # "micro" or "string"
+    type: str = "micro"  # "micro" or "string"
 
     # AC output
-    max_ac_output_va: int = 384             # For micro: per unit. For string: total.
-    rated_ac_output_w: int = 384            # Rated continuous AC watts
-    max_ac_amps: float = 1.6               # Per unit (micro) or total (string)
+    max_ac_output_va: int = 384  # For micro: per unit. For string: total.
+    rated_ac_output_w: int = 384  # Rated continuous AC watts
+    max_ac_amps: float = 1.6  # Per unit (micro) or total (string)
     ac_voltage_v: int = 240
     ac_phases: int = 1
 
     # DC input
-    max_dc_input_w: int = 460              # Max DC input watts
-    max_dc_voltage_v: int = 60             # For micro: ~60V. For string: 600V.
+    max_dc_input_w: int = 460  # Max DC input watts
+    max_dc_voltage_v: int = 60  # For micro: ~60V. For string: 600V.
     mppt_voltage_min_v: int = 27
     mppt_voltage_max_v: int = 48
     max_dc_input_current_a: float = 14.0
@@ -178,11 +182,11 @@ class InverterCatalogEntry:
 
     # Safety
     rapid_shutdown_builtin: bool = True
-    rapid_shutdown_method: str = ""         # "Integrated", "Tigo TS4", etc.
-    monitoring: str = ""                    # "Enphase Envoy", "Hoymiles DTU", "SolisCloud"
+    rapid_shutdown_method: str = ""  # "Integrated", "Tigo TS4", etc.
+    monitoring: str = ""  # "Enphase Envoy", "Hoymiles DTU", "SolisCloud"
 
     # Branch circuit limits (for microinverters)
-    max_units_per_branch_15a: int = 0       # 0 = not applicable (string inverter)
+    max_units_per_branch_15a: int = 0  # 0 = not applicable (string inverter)
     max_units_per_branch_20a: int = 0
 
     # Certifications
@@ -214,9 +218,11 @@ class InverterCatalogEntry:
 # Racking
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class RackingProfile:
     """Cross-section dimensions of a rail."""
+
     width_in: float = 2.22
     height_in: float = 1.72
     wall_thickness_in: float = 0.099
@@ -225,6 +231,7 @@ class RackingProfile:
 @dataclass
 class RackingClamps:
     """Compatible clamp models."""
+
     mid_clamp: str = ""
     end_clamp: str = ""
 
@@ -237,9 +244,9 @@ class RackingCatalogEntry:
     id: str = ""
     manufacturer: str = ""
     model: str = ""
-    type: str = "flush_mount_rail"          # "flush_mount_rail", "tilt_up", "ground_mount"
-    material: str = ""                      # "6005-T5 Extruded Aluminum"
-    finish: str = ""                        # "Clear Anodized", "Mill"
+    type: str = "flush_mount_rail"  # "flush_mount_rail", "tilt_up", "ground_mount"
+    material: str = ""  # "6005-T5 Extruded Aluminum"
+    finish: str = ""  # "Clear Anodized", "Mill"
 
     # Profile
     profile: RackingProfile = field(default_factory=RackingProfile)
@@ -254,7 +261,7 @@ class RackingCatalogEntry:
     # Compatibility
     compatible_attachment_ids: List[str] = field(default_factory=list)
     clamps: RackingClamps = field(default_factory=RackingClamps)
-    bonding_method: str = ""                # "Bonded Splice", "Integrated Grounding Clip"
+    bonding_method: str = ""  # "Bonded Splice", "Integrated Grounding Clip"
 
     # Certifications
     certifications: List[str] = field(default_factory=list)
@@ -270,6 +277,7 @@ class RackingCatalogEntry:
 # Attachment (roof mount)
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class AttachmentCatalogEntry:
     """Complete roof attachment specification from the equipment catalog.
@@ -281,7 +289,7 @@ class AttachmentCatalogEntry:
     id: str = ""
     manufacturer: str = ""
     model: str = ""
-    type: str = "deck_mount"                # "deck_mount", "clamp_mount", "ballasted"
+    type: str = "deck_mount"  # "deck_mount", "clamp_mount", "ballasted"
 
     # Compatibility
     compatible_roof_materials: List[str] = field(default_factory=list)
@@ -290,7 +298,7 @@ class AttachmentCatalogEntry:
     # Specs
     flashing_material: str = ""
     flashing_dimensions_in: Dict[str, float] = field(default_factory=dict)
-    fastener_spec: str = ""                 # '5/16" × 4" SS Lag'
+    fastener_spec: str = ""  # '5/16" × 4" SS Lag'
     min_penetration_in: float = 0.0
     max_load_lbs: int = 0
     sealant: str = ""

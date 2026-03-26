@@ -69,6 +69,7 @@ def create_project(req: ProjectCreateRequest):
     attachment = catalog.auto_select_attachment(req.roof_material, req.racking_id)
     if not attachment:
         from models.equipment import AttachmentCatalogEntry
+
         attachment = AttachmentCatalogEntry(model="Generic")
 
     project_id = str(uuid.uuid4())[:8]
@@ -135,15 +136,17 @@ def list_projects():
     for f in PROJECTS_DIR.glob("*.json"):
         with open(f) as fp:
             data = json.load(fp)
-        projects.append({
-            "project_id": data["project_id"],
-            "address": data["address"],
-            "panel_id": data["panel_id"],
-            "inverter_id": data["inverter_id"],
-            "num_panels": data["num_panels"],
-            "created_at": data["created_at"],
-            "planset_ready": (PROJECTS_DIR / f"{data['project_id']}_planset.html").exists(),
-        })
+        projects.append(
+            {
+                "project_id": data["project_id"],
+                "address": data["address"],
+                "panel_id": data["panel_id"],
+                "inverter_id": data["inverter_id"],
+                "num_panels": data["num_panels"],
+                "created_at": data["created_at"],
+                "planset_ready": (PROJECTS_DIR / f"{data['project_id']}_planset.html").exists(),
+            }
+        )
     return sorted(projects, key=lambda x: x["created_at"], reverse=True)
 
 
@@ -174,6 +177,7 @@ def generate_planset(project_id: str):
     attachment = catalog.auto_select_attachment(data["roof_material"], data["racking_id"])
 
     from models.equipment import AttachmentCatalogEntry
+
     project = ProjectSpec(
         address=data["address"],
         latitude=data.get("latitude", 0),
@@ -191,6 +195,27 @@ def generate_planset(project_id: str):
         project_name=data["project_name"],
     )
 
+    # Detect country and jurisdiction from the address
+    from jurisdiction import get_jurisdiction_engine
+    _addr = data["address"].upper()
+    # US state detection (same patterns as jurisdiction/__init__.py)
+    _us_states = [
+        "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN",
+        "IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV",
+        "NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN",
+        "TX","UT","VT","VA","WA","WV","WI","WY","DC",
+    ]
+    import re as _re
+    _detected_us = any(
+        _re.search(r",\s*" + st + r"(\s|,|$)", _addr) for st in _us_states
+    )
+    if _detected_us:
+        project.country = "US"
+    else:
+        project.country = "CA"  # default to Canada
+    _engine = get_jurisdiction_engine(data["address"], country=project.country)
+    project.jurisdiction_id = type(_engine).__module__.rsplit(".", 1)[-1]  # e.g. "nec_california"
+
     # Generate planset using the existing pipeline
     from panel_placer import PanelSpec, PanelPlacer, PlacementConfig
     from google_solar import GoogleSolarClient, solar_insight_to_roof_faces
@@ -205,7 +230,8 @@ def generate_planset(project_id: str):
         client = GoogleSolarClient(api_key=api_key)
         insight = client.get_building_insight(
             address=project.address,
-            lat=project.latitude, lng=project.longitude,
+            lat=project.latitude,
+            lng=project.longitude,
         )
     else:
         # Use mock data
@@ -218,21 +244,48 @@ def generate_planset(project_id: str):
             flux_result = client.get_flux_and_mask(project.address)
             if flux_result:
                 from engine.electrical_calc import calculate_shade_factor
+
                 project.shade_factor = calculate_shade_factor(
                     flux_result.get("flux_bytes"),
                     mask_bytes=flux_result.get("mask_bytes"),
                 )
                 import logging as _log
+
                 _log.getLogger(__name__).info("Shade factor: %.3f", project.shade_factor)
         except Exception as _e:
             import logging as _log
+
             _log.getLogger(__name__).warning("Shade factor skipped: %s", _e)
 
-    # Place panels
-    roofs, scale = solar_insight_to_roof_faces(insight)
+    # Fetch real building outline + roof faces from GeoTIFF (more accurate than Solar API)
+    geotiff_roofs = None
+    geotiff_scale = 1.0
+    if api_key and project.latitude and project.longitude:
+        try:
+            from engine.geotiff_roof import get_roof_geometry_from_geotiff
+            scene = get_roof_geometry_from_geotiff(project.latitude, project.longitude, api_key)
+            outline = scene.get("building_outline_ft", [])
+            if outline and len(outline) >= 3:
+                project.building_outline_ft = outline
+            _faces = scene.get("roof_faces", [])
+            if _faces:
+                geotiff_roofs = _faces
+                geotiff_scale = float(scene.get("scale_pts_per_ft", 1.0))
+        except Exception as _e:
+            import logging
+            logging.getLogger(__name__).warning("GeoTIFF pipeline skipped: %s", _e)
+
+    # Use GeoTIFF roof faces if available, otherwise fall back to Solar API
+    if geotiff_roofs:
+        roofs, scale = geotiff_roofs, geotiff_scale
+    else:
+        roofs, scale = solar_insight_to_roof_faces(insight)
+
     panel_spec = PanelSpec(
-        name=panel.model, wattage=panel.wattage_w,
-        width_ft=panel.width_ft, height_ft=panel.height_ft,
+        name=panel.model,
+        wattage=panel.wattage_w,
+        width_ft=panel.width_ft,
+        height_ft=panel.height_ft,
     )
     placer = PanelPlacer(panel=panel_spec, config=PlacementConfig(max_panels=project.num_panels))
     placements = placer.place_on_roofs(roofs, scale)
@@ -241,7 +294,8 @@ def generate_planset(project_id: str):
     virtual_page = PageData(page_number=1, width=792, height=612, scale_factor=scale)
     planset_data = PlansetData(
         filepath=f"(API: {project.address})",
-        total_pages=1, pages=[virtual_page],
+        total_pages=1,
+        pages=[virtual_page],
         metadata={"address": project.address},
     )
 
@@ -261,6 +315,7 @@ def download_planset(project_id: str, format: str = "html"):
       format=pdf   — converts to PDF and streams it as application/pdf
     """
     from fastapi.responses import Response
+
     planset_file = PROJECTS_DIR / f"{project_id}_planset.html"
     if not planset_file.exists():
         raise HTTPException(status_code=404, detail="Planset not yet generated. Call /generate first.")
@@ -338,9 +393,12 @@ async def import_opensolar(file: UploadFile = File(...)):
         with open(PROJECTS_DIR / f"{project_id}.json", "w") as f:
             json.dump(project_data, f, indent=2)
 
-        return {"project_id": project_id, "imported": True,
-                "panel": project.panel.model_short,
-                "inverter": project.inverter.model_short,
-                "num_panels": project.num_panels}
+        return {
+            "project_id": project_id,
+            "imported": True,
+            "panel": project.panel.model_short,
+            "inverter": project.inverter.model_short,
+            "num_panels": project.num_panels,
+        }
     finally:
         os.unlink(tmp_path)

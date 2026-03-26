@@ -20,25 +20,68 @@ except ImportError:
 
 
 # NEC 240.6(A) standard breaker sizes
-NEC_BREAKER_SIZES = [15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100,
-                     110, 125, 150, 175, 200, 225, 250, 300, 350, 400]
+NEC_BREAKER_SIZES = [
+    15,
+    20,
+    25,
+    30,
+    35,
+    40,
+    45,
+    50,
+    60,
+    70,
+    80,
+    90,
+    100,
+    110,
+    125,
+    150,
+    175,
+    200,
+    225,
+    250,
+    300,
+    350,
+    400,
+]
 
 # NEC Table 310.16 — Ampacity at 75°C copper THWN-2
 NEC_CONDUCTOR_75C = [
-    (15, "#14 AWG Cu"), (20, "#12 AWG Cu"), (30, "#10 AWG Cu"),
-    (40, "#8 AWG Cu"), (55, "#6 AWG Cu"), (65, "#4 AWG Cu"),
-    (85, "#3 AWG Cu"), (95, "#2 AWG Cu"), (110, "#1 AWG Cu"),
-    (125, "#1/0 AWG Cu"), (145, "#2/0 AWG Cu"), (165, "#3/0 AWG Cu"),
-    (195, "#4/0 AWG Cu"), (230, "250 kcmil Cu"), (255, "300 kcmil Cu"),
-    (285, "350 kcmil Cu"), (310, "400 kcmil Cu"), (335, "500 kcmil Cu"),
+    (15, "#14 AWG Cu"),
+    (20, "#12 AWG Cu"),
+    (30, "#10 AWG Cu"),
+    (40, "#8 AWG Cu"),
+    (55, "#6 AWG Cu"),
+    (65, "#4 AWG Cu"),
+    (85, "#3 AWG Cu"),
+    (95, "#2 AWG Cu"),
+    (110, "#1 AWG Cu"),
+    (125, "#1/0 AWG Cu"),
+    (145, "#2/0 AWG Cu"),
+    (165, "#3/0 AWG Cu"),
+    (195, "#4/0 AWG Cu"),
+    (230, "250 kcmil Cu"),
+    (255, "300 kcmil Cu"),
+    (285, "350 kcmil Cu"),
+    (310, "400 kcmil Cu"),
+    (335, "500 kcmil Cu"),
 ]
 
 # NEC Table 250.122 — EGC sizing by OCPD
 NEC_EGC_TABLE = [
-    (15, "#14 AWG Cu"), (20, "#12 AWG Cu"), (60, "#10 AWG Cu"),
-    (100, "#8 AWG Cu"), (200, "#6 AWG Cu"), (300, "#4 AWG Cu"),
-    (400, "#3 AWG Cu"), (500, "#2 AWG Cu"), (600, "#1 AWG Cu"),
-    (800, "#1/0 AWG Cu"), (1000, "#2/0 AWG Cu"), (1200, "#3/0 AWG Cu"),
+    (15, "#14 AWG Cu"),
+    (20, "#12 AWG Cu"),
+    (60, "#10 AWG Cu"),
+    (100, "#8 AWG Cu"),
+    (200, "#6 AWG Cu"),
+    (300, "#4 AWG Cu"),
+    (400, "#3 AWG Cu"),
+    (500, "#2 AWG Cu"),
+    (600, "#1 AWG Cu"),
+    (800, "#1/0 AWG Cu"),
+    (1000, "#2/0 AWG Cu"),
+    (1200, "#3/0 AWG Cu"),
 ]
 
 
@@ -94,8 +137,7 @@ class NECBaseEngine(JurisdictionEngine):
                 return wire
         return NEC_EGC_TABLE[-1][1]
 
-    def check_interconnection_rule(self, pv_breaker_a: int, main_breaker_a: int,
-                                   bus_rating_a: int) -> Dict:
+    def check_interconnection_rule(self, pv_breaker_a: int, main_breaker_a: int, bus_rating_a: int) -> Dict:
         """NEC 705.12(B)(2): 120% rule."""
         max_allowed = int(bus_rating_a * 1.2)
         total = pv_breaker_a + main_breaker_a
@@ -105,12 +147,37 @@ class NECBaseEngine(JurisdictionEngine):
 
     def get_required_labels(self) -> List[Dict]:
         return [
-            {"level": "DANGER", "text": "SOLAR ELECTRIC SYSTEM — DO NOT TOUCH", "location": "DC combiner", "color": "#cc0000"},
-            {"level": "DANGER", "text": "DUAL POWER SOURCE — DISCONNECT BOTH BEFORE SERVICING", "location": "Main panel", "color": "#cc0000"},
-            {"level": "WARNING", "text": "SOLAR ELECTRIC SYSTEM IS INTERCONNECTED WITH THIS PANEL", "location": "Utility meter", "color": "#ff8800"},
+            {
+                "level": "DANGER",
+                "text": "SOLAR ELECTRIC SYSTEM — DO NOT TOUCH",
+                "location": "DC combiner",
+                "color": "#cc0000",
+            },
+            {
+                "level": "DANGER",
+                "text": "DUAL POWER SOURCE — DISCONNECT BOTH BEFORE SERVICING",
+                "location": "Main panel",
+                "color": "#cc0000",
+            },
+            {
+                "level": "WARNING",
+                "text": "SOLAR ELECTRIC SYSTEM IS INTERCONNECTED WITH THIS PANEL",
+                "location": "Utility meter",
+                "color": "#ff8800",
+            },
             {"level": "WARNING", "text": "PHOTOVOLTAIC POWER SOURCE", "location": "Inverter", "color": "#ff8800"},
-            {"level": "CAUTION", "text": "SOLAR ARRAY — PRODUCES VOLTAGE IN SUNLIGHT", "location": "Array", "color": "#ffcc00"},
-            {"level": "NOTICE", "text": "RAPID SHUTDOWN SWITCH", "location": "RSD initiation point", "color": "#0066cc"},
+            {
+                "level": "CAUTION",
+                "text": "SOLAR ARRAY — PRODUCES VOLTAGE IN SUNLIGHT",
+                "location": "Array",
+                "color": "#ffcc00",
+            },
+            {
+                "level": "NOTICE",
+                "text": "RAPID SHUTDOWN SWITCH",
+                "location": "RSD initiation point",
+                "color": "#0066cc",
+            },
         ]
 
     def get_fire_setbacks(self, building_type: str = "residential") -> Dict:

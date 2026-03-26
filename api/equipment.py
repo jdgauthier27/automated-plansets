@@ -11,6 +11,7 @@ router = APIRouter(prefix="/api/catalog", tags=["Equipment Catalog"])
 
 _catalog = None
 
+
 def get_catalog() -> EquipmentCatalog:
     global _catalog
     if _catalog is None:
@@ -53,14 +54,26 @@ def get_panel(panel_id: str):
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return {
-        "id": p.id, "manufacturer": p.manufacturer, "model": p.model,
-        "model_short": p.model_short, "wattage_w": p.wattage_w,
-        "voc_v": p.voc_v, "vmp_v": p.vmp_v, "isc_a": p.isc_a, "imp_a": p.imp_a,
+        "id": p.id,
+        "manufacturer": p.manufacturer,
+        "model": p.model,
+        "model_short": p.model_short,
+        "wattage_w": p.wattage_w,
+        "voc_v": p.voc_v,
+        "vmp_v": p.vmp_v,
+        "isc_a": p.isc_a,
+        "imp_a": p.imp_a,
         "efficiency_pct": p.efficiency_pct,
         "temp_coeff_voc_pct_per_c": p.temp_coeff_voc_pct_per_c,
         "temp_coeff_isc_pct_per_c": p.temp_coeff_isc_pct_per_c,
-        "dimensions_mm": {"length": p.dimensions.length_mm, "width": p.dimensions.width_mm, "depth": p.dimensions.depth_mm},
-        "weight_kg": p.weight_kg, "technology": p.technology, "bifacial": p.bifacial,
+        "dimensions_mm": {
+            "length": p.dimensions.length_mm,
+            "width": p.dimensions.width_mm,
+            "depth": p.dimensions.depth_mm,
+        },
+        "weight_kg": p.weight_kg,
+        "technology": p.technology,
+        "bifacial": p.bifacial,
         "certifications": p.certifications,
         "warranty_product_years": p.warranty_product_years,
         "warranty_performance_years": p.warranty_performance_years,
@@ -95,24 +108,39 @@ def get_inverter(inverter_id: str):
         inv = cat.get_inverter(inverter_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    return {"id": inv.id, "manufacturer": inv.manufacturer, "model": inv.model,
-            "model_short": inv.model_short, "type": inv.type,
-            "rated_ac_output_w": inv.rated_ac_output_w, "max_ac_amps": inv.max_ac_amps,
-            "ac_voltage_v": inv.ac_voltage_v, "max_dc_voltage_v": inv.max_dc_voltage_v,
-            "mppt_voltage_min_v": inv.mppt_voltage_min_v, "mppt_voltage_max_v": inv.mppt_voltage_max_v,
-            "mppt_count": inv.mppt_count, "cec_efficiency_pct": inv.cec_efficiency_pct,
-            "rapid_shutdown_builtin": inv.rapid_shutdown_builtin,
-            "certifications": inv.certifications}
+    return {
+        "id": inv.id,
+        "manufacturer": inv.manufacturer,
+        "model": inv.model,
+        "model_short": inv.model_short,
+        "type": inv.type,
+        "rated_ac_output_w": inv.rated_ac_output_w,
+        "max_ac_amps": inv.max_ac_amps,
+        "ac_voltage_v": inv.ac_voltage_v,
+        "max_dc_voltage_v": inv.max_dc_voltage_v,
+        "mppt_voltage_min_v": inv.mppt_voltage_min_v,
+        "mppt_voltage_max_v": inv.mppt_voltage_max_v,
+        "mppt_count": inv.mppt_count,
+        "cec_efficiency_pct": inv.cec_efficiency_pct,
+        "rapid_shutdown_builtin": inv.rapid_shutdown_builtin,
+        "certifications": inv.certifications,
+    }
 
 
 @router.get("/racking")
 def list_racking():
     cat = get_catalog()
     return [
-        {"id": r.id, "manufacturer": r.manufacturer, "model": r.model,
-         "type": r.type, "material": r.material,
-         "wind_load_psf": r.wind_load_psf, "snow_load_psf": r.snow_load_psf,
-         "certifications": r.certifications}
+        {
+            "id": r.id,
+            "manufacturer": r.manufacturer,
+            "model": r.model,
+            "type": r.type,
+            "material": r.material,
+            "wind_load_psf": r.wind_load_psf,
+            "snow_load_psf": r.snow_load_psf,
+            "certifications": r.certifications,
+        }
         for r in cat.racking.values()
     ]
 
@@ -125,9 +153,15 @@ def list_attachments(roof_material: str = None):
     if roof_material:
         attachments = [a for a in attachments if roof_material in a.compatible_roof_materials]
     return [
-        {"id": a.id, "manufacturer": a.manufacturer, "model": a.model,
-         "type": a.type, "compatible_roof_materials": a.compatible_roof_materials,
-         "compatible_racking_ids": a.compatible_racking_ids,
-         "max_load_lbs": a.max_load_lbs, "certifications": a.certifications}
+        {
+            "id": a.id,
+            "manufacturer": a.manufacturer,
+            "model": a.model,
+            "type": a.type,
+            "compatible_roof_materials": a.compatible_roof_materials,
+            "compatible_racking_ids": a.compatible_racking_ids,
+            "max_load_lbs": a.max_load_lbs,
+            "certifications": a.certifications,
+        }
         for a in attachments
     ]
