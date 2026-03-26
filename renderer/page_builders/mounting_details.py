@@ -238,8 +238,8 @@ def build_mounting_details_page(renderer, total_panels: int, total_kw: float,
     _el_leader_x = _el_rx + 5
     _el_lbl_items = [
         (_el_mod_y0 + _el_mod_h // 2, "PV MODULE FRAME"),
-        (_el_rail_y0 + _el_rail_h // 2, "{self._racking_full} RAIL"),
-        (_el_ff2_y0 + _el_ff2_h // 2, "{self._attachment_full}"),
+        (_el_rail_y0 + _el_rail_h // 2, f"{renderer._racking_full} RAIL"),
+        (_el_ff2_y0 + _el_ff2_h // 2, f"{renderer._attachment_full}"),
         (_el_shingle_y + _el_shingle_h // 2, "ASPHALT SHINGLES"),
         (_el_rafter_y + _el_rafter_h // 2, 'RAFTER @ 24" O.C.'),
     ]
@@ -583,8 +583,8 @@ def build_mounting_details_page(renderer, total_panels: int, total_kw: float,
         "1. ALL HARDWARE SHALL BE STAINLESS STEEL OR HOT-DIPPED GALVANIZED UNLESS OTHERWISE NOTED.",
         f'2. LAG SCREWS SHALL PENETRATE MIN. 63mm (2.5") INTO SOLID WOOD FRAMING MEMBERS ({renderer._code_prefix} {"690.43" if renderer._code_prefix == "NEC" else "RULE 64-104"}).',
         f"3. RACKING SYSTEM SHALL BE RATED FOR DESIGN WIND (53 m/s / 190 km/h) AND SNOW LOADS PER {renderer._building_code}.",
-        "4. {self._racking_full} RAILS ARE FIELD-SPLICED WITH BONDED SPLICE CONNECTORS; MAX. SPAN PER MFGR.",
-        "5. ATTACHMENT SPACING SHALL COMPLY WITH {self._racking_manufacturer.upper()} SPAN TABLES FOR LOCAL WIND/SNOW CONDITIONS.",
+        f"4. {renderer._racking_full} RAILS ARE FIELD-SPLICED WITH BONDED SPLICE CONNECTORS; MAX. SPAN PER MFGR.",
+        f"5. ATTACHMENT SPACING SHALL COMPLY WITH {renderer._racking_manufacturer.upper()} SPAN TABLES FOR LOCAL WIND/SNOW CONDITIONS.",
     ]
     if notes_y < 800:
         svg.append(
