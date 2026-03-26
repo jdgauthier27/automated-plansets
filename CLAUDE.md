@@ -24,7 +24,7 @@ npm run build  # Builds to ui/dist/, served by FastAPI
 
 ### Validation
 ```bash
-python3 tests/reference_escalon_dr.py /tmp/output.html  # Target: 11/11
+python3 tests/reference_escalon_dr.py /tmp/output.html  # Target: 13/13
 ```
 
 ## Environment
@@ -33,7 +33,11 @@ python3 tests/reference_escalon_dr.py /tmp/output.html  # Target: 11/11
 ## Architecture
 - `app.py` — FastAPI entry point, mounts API routes + serves React SPA
 - `api/` — REST endpoints: projects, equipment, address, solar
-- `html_renderer.py` — Main planset generator (multi-page HTML → PDF, 8200+ lines)
+- `html_renderer.py` — Planset orchestrator (delegates to page builders, ~1,195 lines)
+- `renderer/page_builders/` — 16 individual page builder modules (extracted from html_renderer.py)
+- `renderer/svg_helpers.py` — Shared SVG utilities (wire_gauge, dimension helpers, svg_page_frame)
+- `renderer/shared/geo_utils.py` — Mercator projection utilities (meters_per_pixel, latlng_to_pixel)
+- `renderer/shared/electrical.py` — Branch circuit calculations (compute_branch_circuits)
 - `panel_placer.py` — Rotated grid placement with azimuth alignment
 - `engine/geotiff_roof.py` — Downloads mask+DSM GeoTIFF, extracts roof polygons
 - `engine/electrical_calc.py` — Conductor sizing, breaker calcs, shade factor
@@ -56,17 +60,19 @@ python3 tests/reference_escalon_dr.py /tmp/output.html  # Target: 11/11
 - `ProjectSpec` is the single source of truth — every renderer page reads from it
 - Panel placement must be portrait orientation, grouped in arrays, rotated to roof azimuth
 - Fire setbacks: 36" all edges (California), configurable per jurisdiction
+- Page builders follow delegation pattern: standalone function receiving `HtmlRenderer` instance as first arg
 
 ## Testing
 - Reference planset: `~/Downloads/YifeiSun_RevB-correct panel layout.pdf`
 - Test address: 17001 Escalon Dr, Encino, CA 91436 (30 panels, Mission Solar 395W)
-- Validation: `python tests/reference_escalon_dr.py <output.html>` — must score 11/11
+- Validation: `python tests/reference_escalon_dr.py <output.html>` — must score 13/13
+- Cross-jurisdiction: `python3 tests/test_cross_jurisdiction.py` — must score 12/12
 - Use `/validate` skill after any code change
 - Use `/fix-jurisdiction` skill to audit/fix jurisdiction code references
 
 ## Skills & Agents
 - `/generate` — Full pipeline: address → GeoTIFF → panels → planset HTML
-- `/validate` — Run reference validation (11/11 checks)
+- `/validate` — Run reference validation (13/13 checks)
 - `/fix-jurisdiction` — Audit planset for jurisdiction mismatches (Quebec codes on US address etc.)
 - `jurisdiction-auditor` agent — Parallel audit of generated HTML for code reference errors
 - `planset-reviewer` agent — Full quality review against reference baseline
