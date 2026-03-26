@@ -237,8 +237,8 @@ def _detect_country(address: str) -> str:
     # Check for 5-digit US ZIP code
     if re.search(r",\s*[A-Z]{2}\s+\d{5}(-\d{4})?\s*$", addr_upper):
         return "US"
-    # Default to Canada (tool originally built for Quebec)
-    return "CA"
+    # Default to US (most users are US-based)
+    return "US"
 
 
 def run_address_mode(args, logger):

@@ -19,6 +19,32 @@ from models.project import ProjectSpec
 
 router = APIRouter(prefix="/api/projects", tags=["Projects"])
 
+
+def _detect_country(address: str) -> str:
+    """Detect country from address string. Returns 'US' or 'CA'."""
+    import re
+
+    addr = address.upper()
+    _CA_PROVINCES = {"QC", "ON", "BC", "AB", "MB", "SK", "NS", "NB", "NL", "PE", "YT", "NT", "NU"}
+
+    # Explicit country suffix
+    if addr.endswith(", CANADA") or ", CANADA," in addr:
+        return "CA"
+    if addr.endswith(", USA") or ", USA," in addr or addr.endswith(" USA"):
+        return "US"
+
+    # Canadian postal code pattern (e.g. H3G 1H9)
+    if re.search(r"\b[A-Z]\d[A-Z]\s*\d[A-Z]\d\b", addr):
+        return "CA"
+
+    # Canadian province abbreviation after comma
+    for prov in _CA_PROVINCES:
+        if f", {prov} " in addr or f", {prov}," in addr or addr.endswith(f", {prov}"):
+            return "CA"
+
+    # Default to US
+    return "US"
+
 # Simple file-based storage for v1
 PROJECTS_DIR = Path(__file__).parent.parent / "data" / "projects"
 PROJECTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -73,12 +99,16 @@ def create_project(req: ProjectCreateRequest):
         attachment = AttachmentCatalogEntry(model="Generic")
 
     project_id = str(uuid.uuid4())[:8]
-    project_name = req.project_name or f"Installation Solaire — {req.address}"
+    project_name = req.project_name or f"Solar Installation — {req.address}"
+
+    # Detect country from address
+    country = _detect_country(req.address)
 
     project = ProjectSpec(
         address=req.address,
         latitude=req.latitude,
         longitude=req.longitude,
+        country=country,
         panel=panel,
         inverter=inverter,
         racking=racking,
@@ -197,22 +227,7 @@ def generate_planset(project_id: str):
 
     # Detect country and jurisdiction from the address
     from jurisdiction import get_jurisdiction_engine
-    _addr = data["address"].upper()
-    # US state detection (same patterns as jurisdiction/__init__.py)
-    _us_states = [
-        "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN",
-        "IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV",
-        "NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN",
-        "TX","UT","VT","VA","WA","WV","WI","WY","DC",
-    ]
-    import re as _re
-    _detected_us = any(
-        _re.search(r",\s*" + st + r"(\s|,|$)", _addr) for st in _us_states
-    )
-    if _detected_us:
-        project.country = "US"
-    else:
-        project.country = "CA"  # default to Canada
+    project.country = _detect_country(data["address"])
     _engine = get_jurisdiction_engine(data["address"], country=project.country)
     project.jurisdiction_id = type(_engine).__module__.rsplit(".", 1)[-1]  # e.g. "nec_california"
 

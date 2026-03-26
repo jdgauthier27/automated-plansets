@@ -57,7 +57,7 @@ class ProjectSpec:
     longitude: float = 0.0
     municipality: str = ""
     province_or_state: str = ""
-    country: str = "CA"  # "CA" or "US"
+    country: str = "US"  # "US" or "CA"
 
     # ── Equipment (from catalog) ──────────────────────────────────────────
     panel: PanelCatalogEntry = field(default_factory=PanelCatalogEntry)
