@@ -210,7 +210,7 @@ export default function ProjectDetail() {
     ? (project.num_panels * panelInfo.wattage_w / 1000).toFixed(2)
     : null
   const inverterTypeLabel = inverterInfo
-    ? inverterInfo.type === 'microinverter' ? 'Microinverter' : 'String Inverter'
+    ? (inverterInfo.type === 'microinverter' || inverterInfo.type === 'micro') ? 'Microinverter' : 'String Inverter'
     : null
 
   if (loadError) return (

@@ -164,19 +164,25 @@ def list_projects():
     """List all saved projects."""
     projects = []
     for f in PROJECTS_DIR.glob("*.json"):
-        with open(f) as fp:
-            data = json.load(fp)
-        projects.append(
-            {
-                "project_id": data["project_id"],
-                "address": data["address"],
-                "panel_id": data["panel_id"],
-                "inverter_id": data["inverter_id"],
-                "num_panels": data["num_panels"],
-                "created_at": data["created_at"],
-                "planset_ready": (PROJECTS_DIR / f"{data['project_id']}_planset.html").exists(),
-            }
-        )
+        if "_planset" in f.name:
+            continue
+        try:
+            with open(f) as fp:
+                data = json.load(fp)
+            pid = data["project_id"]
+            projects.append(
+                {
+                    "project_id": pid,
+                    "address": data["address"],
+                    "panel_id": data["panel_id"],
+                    "inverter_id": data["inverter_id"],
+                    "num_panels": data["num_panels"],
+                    "created_at": data["created_at"],
+                    "planset_ready": (PROJECTS_DIR / f"{pid}_planset.html").exists(),
+                }
+            )
+        except (KeyError, json.JSONDecodeError):
+            continue
     return sorted(projects, key=lambda x: x["created_at"], reverse=True)
 
 

@@ -368,6 +368,8 @@ export default function CesiumMap3D({
         timeline: false,
         fullscreenButton: false,
         vrButton: false,
+        infoBox: false, // we use custom tooltips, not Cesium's built-in InfoBox
+        selectionIndicator: false, // suppress green selection ring on entity click
         creditContainer: creditDiv, // hide credit display (we show Google attribution separately)
       })
 
@@ -758,7 +760,7 @@ export default function CesiumMap3D({
       }
 
       console.log(`[CesiumMap3D] Geoid undulation: ${geoidUndulation.toFixed(2)}m, DSM ground: ${dsmGround.toFixed(1)}m`)
-      console.log(`[CesiumMap3D] Sampled ${sampledHeights.length - 1} panel centers for ${panelGeometries.length} panels`)
+      console.log(`[CesiumMap3D] Sampled ${Math.max(0, sampledHeights.length - 1)} panel centers for ${panelGeometries.length} panels`)
 
       panelGeometries.forEach((pg, idx) => {
         // Panel center height from 3D tile mesh
