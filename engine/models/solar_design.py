@@ -167,6 +167,45 @@ class EquipmentSpec:
 
 
 # ---------------------------------------------------------------------------
+# Conductor Runs (per-run wire sizing data for E-602)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class ConductorRun:
+    """A single conductor run in the system — one row in the E-602 conductor schedule.
+
+    Stores every value needed to populate the conductor schedule table on the
+    electrical calculations page: wire size, conduit, OCPD, EGC, temperature
+    corrections, ampacity derating, and voltage drop.
+    """
+
+    id: int = 0
+    typical_count: int = 1  # how many of this run type (e.g., 3 trunk cable runs)
+    initial_location: str = ""
+    final_location: str = ""
+    conductor_size: str = ""
+    conductor_type: str = ""
+    conduit_size: str = ""
+    conduit_type: str = ""
+    parallel_circuits: int = 1
+    current_carrying_conductors: int = 2
+    conduit_fill_pct: Optional[float] = None
+    ocpd_amps: Optional[int] = None
+    egc_size: str = ""
+    egc_type: str = ""
+    temp_corr_factor: float = 1.0
+    temp_basis: str = ""  # e.g., "57°C" or "35°C"
+    conduit_fill_factor: float = 1.0
+    continuous_current: float = 0.0
+    max_current: float = 0.0
+    base_ampacity: Optional[float] = None
+    derated_ampacity: Optional[float] = None
+    length_ft: float = 0.0
+    voltage_drop_pct: float = 0.0
+
+
+# ---------------------------------------------------------------------------
 # Electrical Design (computed centrally, read everywhere)
 # ---------------------------------------------------------------------------
 
@@ -199,11 +238,9 @@ class ElectricalDesign:
     rule_120_calc: str = ""
     service_voltage: int = 240
     ac_disconnect_amps: int = 60
-    wire_sizes: Dict[str, str] = field(default_factory=dict)
-    conduit_sizes: Dict[str, str] = field(default_factory=dict)
-    ocpd_ratings: Dict[str, int] = field(default_factory=dict)
-    voltage_drop_pct: float = 0.0
-    temperature_derate_factor: float = 1.0
+    conductor_runs: List[ConductorRun] = field(default_factory=list)
+    total_continuous_current: float = 0.0
+    total_max_current: float = 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -379,7 +416,13 @@ class SolarDesign:
             combiner=_dict_to_dataclass(CombinerSpec, equipment_data.get("combiner", {})),
         )
 
-        electrical = _dict_to_dataclass(ElectricalDesign, data.get("electrical", {}))
+        electrical_data = data.get("electrical", {})
+        conductor_runs = [
+            _dict_to_dataclass(ConductorRun, r)
+            for r in electrical_data.pop("conductor_runs", [])
+        ] if isinstance(electrical_data, dict) else []
+        electrical = _dict_to_dataclass(ElectricalDesign, electrical_data)
+        electrical.conductor_runs = conductor_runs
         jurisdiction = _dict_to_dataclass(JurisdictionContext, data.get("jurisdiction", {}))
 
         sheets = [
