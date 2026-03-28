@@ -18,7 +18,7 @@ def build_signage_page(renderer, address: str, today: str) -> str:
     # Page header
     svg_parts.append(
         '<text x="40" y="52" font-size="15" font-weight="700" '
-        'font-family="Arial" fill="#000">PV-6: ELECTRICAL LABELS</text>'
+        'font-family="Arial" fill="#000">E-603: SIGNAGE</text>'
     )
     _cp = renderer._code_prefix
     _is_nec = _cp == "NEC"
@@ -463,10 +463,10 @@ def build_signage_page(renderer, address: str, today: str) -> str:
         renderer._svg_title_block(
             VW,
             VH,
-            sheet_id="PV-6",
-            sheet_title="Electrical Labels",
+            sheet_id="E-603",
+            sheet_title="SIGNAGE",
             subtitle=f"{_cp} {'690 / NEC' if _is_nec else 'Rule 64'} | ANSI Z535.4",
-            page_of="8 of 13",
+            page_of="9 of 15",
             address=address,
             today=today,
         )

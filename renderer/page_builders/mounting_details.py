@@ -605,10 +605,10 @@ def build_mounting_details_page(renderer, total_panels: int, total_kw: float,
         renderer._svg_title_block(
             1280,
             960,
-            "PV-5",
-            "Mounting Details and BOM",
+            "A-104",
+            "ATTACHMENT DETAIL",
             "IronRidge FlashFoot2 / XR-10 Rails",
-            "7 of 13",
+            "6 of 15",
             address,
             today,
         )

@@ -250,7 +250,7 @@ def build_string_plan_page(renderer, insight, total_panels: int, address: str, t
     # ── Title block ────────────────────────────────────────────────────
     svg.append(
         renderer._svg_title_block(
-            VW, VH, "A-103", "STRING PLAN", "Array Branch Circuit Assignment", "10 of 13", address, today
+            VW, VH, "A-103", "STRING PLAN", "Array Branch Circuit Assignment", "5 of 15", address, today
         )
     )
 

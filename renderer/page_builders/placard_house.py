@@ -395,10 +395,10 @@ def build_placard_house_page(renderer, address: str, today: str, num_panels: int
         renderer._svg_title_block(
             1280,
             960,
-            "PV-6.1",
+            "E-604",
             "Placard House",
             f"Disconnect Locations — {'Microinverter' if _is_micro else 'String Inverter'} System",
-            "9 of 13",
+            "10 of 15",
             address,
             today,
         )

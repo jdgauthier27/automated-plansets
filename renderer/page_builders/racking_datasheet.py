@@ -632,10 +632,10 @@ def build_racking_datasheet_page(renderer, address: str, today: str) -> str:
         renderer._svg_title_block(
             VW,
             VH,
-            "PV-8.2",
-            "Racking Datasheet",
+            "R-004",
+            "EQUIPMENT SPEC (RACKING)",
             "IronRidge XR10 Flush Mount Rail System",
-            "12 of 13",
+            "14 of 15",
             address,
             today,
         )

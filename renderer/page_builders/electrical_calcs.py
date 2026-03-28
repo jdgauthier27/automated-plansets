@@ -110,7 +110,7 @@ def build_electrical_calcs_page(renderer, total_panels: int, total_kw: float,
     svg.append(f'<rect x="20" y="20" width="{VW - 40}" height="26" fill="#e8e8e8" stroke="#000" stroke-width="1"/>')
     svg.append(
         f'<text x="{VW // 2}" y="38" text-anchor="middle" font-size="13" font-weight="700" '
-        f'font-family="Arial" fill="#000">PV-4.1 — ELECTRICAL CALCULATIONS</text>'
+        f'font-family="Arial" fill="#000">E-602 — ELECTRICAL CALCULATIONS</text>'
     )
 
     # ── Helper to draw a titled table ─────────────────────────────────────
@@ -435,7 +435,7 @@ def build_electrical_calcs_page(renderer, total_panels: int, total_kw: float,
     # ── Title block ───────────────────────────────────────────────────────
     svg.append(
         renderer._svg_title_block(
-            VW, VH, "PV-4.1", "Electrical Calculations", renderer._code_edition, "6 of 13", address, today
+            VW, VH, "E-602", "Electrical Calculations", renderer._code_edition, "8 of 15", address, today
         )
     )
 

@@ -254,7 +254,7 @@ def build_racking_bottom_band(svg, renderer, address, today, calc):
     # ── Title block ──────────────────────────────────────────────
     svg.append(
         renderer._svg_title_block(
-            VW, VH, "A-102", "Racking and Framing Plan", "Setback, Rails, Panels", "4 of 13", address, today
+            VW, VH, "A-102", "Racking and Framing Plan", "Setback, Rails, Panels", "4 of 15", address, today
         )
     )
 

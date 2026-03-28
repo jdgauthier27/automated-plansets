@@ -386,10 +386,10 @@ def build_attachment_datasheet_page(renderer, address: str, today: str) -> str:
         renderer._svg_title_block(
             VW,
             VH,
-            "PV-8.3",
-            "Attachment Datasheet",
+            "R-005",
+            "EQUIPMENT SPEC (ATTACHMENT)",
             "IronRidge FlashFoot2 Roof Attachment",
-            "13 of 13",
+            "15 of 15",
             address,
             today,
         )

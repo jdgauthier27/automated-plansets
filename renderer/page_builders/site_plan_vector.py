@@ -947,7 +947,7 @@ def _build_site_plan_vector(
 
     # ── Title block ────────────────────────────────────────────────
     svg.append(
-        renderer._svg_title_block(VW, VH, "PV-3", "Site Plan", "Aerial + Mercator Panels", "3 of 13", address, today)
+        renderer._svg_title_block(VW, VH, "A-101", "SITE PLAN", "Aerial + Mercator Panels", "3 of 15", address, today)
     )
 
     content = "\n".join(svg)
@@ -971,8 +971,8 @@ def _build_blank_site_plan(renderer, address: str, today: str) -> str:
     <g transform="translate(750, 850)">
       <rect x="0" y="0" width="520" height="100" fill="#fff" stroke="#000" stroke-width="1"/>
       <text x="10" y="16" font-size="10" font-weight="700" font-family="Arial" fill="#000">{renderer.company}</text>
-      <text x="320" y="20" font-size="11" font-weight="700" font-family="Arial" fill="#000">PV-3</text>
-      <text x="320" y="55" font-size="9" font-family="Arial" fill="#666">2 of 8</text>
+      <text x="320" y="20" font-size="11" font-weight="700" font-family="Arial" fill="#000">A-101</text>
+      <text x="320" y="55" font-size="9" font-family="Arial" fill="#666">3 of 15</text>
     </g>
       </svg>
     </div>"""

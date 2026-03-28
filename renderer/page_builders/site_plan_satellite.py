@@ -156,7 +156,7 @@ def build_site_plan_satellite(
     svg.append(
         f'<text x="{DRAW_X + 8}" y="{BORDER + 16}" font-size="13" '
         f'font-weight="700" font-family="Arial" fill="#000">'
-        f"PV-3: SITE PLAN \u2014 AERIAL &amp; PANELS</text>"
+        f"A-101: SITE PLAN \u2014 AERIAL &amp; PANELS</text>"
     )
     svg.append(
         f'<text x="{DRAW_X + 8}" y="{BORDER + 29}" font-size="7.5" '
@@ -692,10 +692,10 @@ def build_site_plan_satellite(
         renderer._svg_title_block(
             VW,
             VH,
-            sheet_id="PV-3",
+            sheet_id="A-101",
             sheet_title="SITE PLAN",
             subtitle="Aerial + Mercator Panels",
-            page_of="3 of 13",
+            page_of="3 of 15",
             address=address,
             today=today,
         )

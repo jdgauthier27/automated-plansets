@@ -463,7 +463,7 @@ def build_module_datasheet_page(renderer, address: str, today: str) -> str:
 
     # ── Title block ───────────────────────────────────────────────────
     svg.append(
-        renderer._svg_title_block(VW, VH, "PV-8.1", "Module Datasheet", f"{mfr} {model}", "11 of 13", address, today)
+        renderer._svg_title_block(VW, VH, "R-001", "EQUIPMENT SPEC (MODULE)", f"{mfr} {model}", "11 of 15", address, today)
     )
 
     content = "\n".join(svg)

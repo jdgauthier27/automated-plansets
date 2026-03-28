@@ -135,7 +135,7 @@ def build_single_line_diagram(
     # Page title strip
     svg_parts.append('<rect x="20" y="20" width="1240" height="26" fill="#e8e8e8" stroke="#000" stroke-width="1"/>')
     svg_parts.append(
-        '<text x="640" y="37" text-anchor="middle" font-size="12" font-weight="700" font-family="Arial" fill="#000">SINGLE-LINE DIAGRAM — PV-4</text>'
+        '<text x="640" y="37" text-anchor="middle" font-size="12" font-weight="700" font-family="Arial" fill="#000">SINGLE-LINE DIAGRAM — E-601</text>'
     )
 
     # ── SVG defs ─────────────────────────────────────────────────────
@@ -716,10 +716,10 @@ def build_single_line_diagram(
         renderer._svg_title_block(
             1280,
             960,
-            "PV-4",
+            "E-601",
             "Single-Line Diagram",
             f"{total_kw:.2f} kW DC / {inv_kw:.2f} kW AC",
-            "5 of 13",
+            "7 of 15",
             address,
             today,
         )

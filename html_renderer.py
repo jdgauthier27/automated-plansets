@@ -4,20 +4,22 @@ HTML Planset Renderer — Professional Engineering Drawings
 Generates a multi-page professional solar permit planset as white-paper
 engineering drawings suitable for permit submission.
 
-Pages generated (Cubillas PV-prefix naming):
-  PV-1:   Cover page
-  PV-2:   Property plan
-  PV-3:   Site plan (satellite + Mercator panels)
-  PV-3.1: Racking/framing plan (vector)
-  PV-4:   Single-line diagram
-  PV-4.1: Electrical calculations
-  PV-5:   Mounting details & BOM
-  PV-6:   Signage/placards
-  PV-6.1: Placard house
-  PV-7:   Microinverter circuit map
-  PV-8.1: Module datasheet
-  PV-8.2: Racking datasheet
-  PV-8.3: Attachment datasheet
+Pages generated (15-page reference structure):
+  T-00:   Cover Page
+  G-01:   Electrical Notes
+  A-101:  Site Plan
+  A-102:  Racking and Framing Plan
+  A-103:  String Plan
+  A-104:  Attachment Detail
+  E-601:  Electrical Line Diagram
+  E-602:  Electrical Calculations, Specs
+  E-603:  Signage
+  E-604:  Placard
+  R-001:  Equipment Spec (Module)
+  R-002:  Equipment Spec (Inverter)
+  R-003:  Equipment Spec (Combiner)
+  R-004:  Equipment Spec (Racking)
+  R-005:  Equipment Spec (Attachment)
 
 Design:
   - WHITE paper background with black text/lines (engineering drawing standard)
@@ -725,13 +727,10 @@ class HtmlRenderer:
             if aerial_map_b64:
                 logger.info("Aerial map fetched OK (%d bytes b64)", len(aerial_map_b64))
 
-        # Build all pages
+        # Build all 15 pages in reference planset order
         pages_html = []
 
-        # A-100: Cover Sheet (new A-series, first page)
-        pages_html.append(self._build_cover_sheet_page(address, today, total_panels, total_kw))
-
-        # PV-1: Cover
+        # T-00: Cover Page
         pages_html.append(
             self._build_cover_page(
                 address,
@@ -745,51 +744,51 @@ class HtmlRenderer:
             )
         )
 
-        # PV-2: Property plan
-        pages_html.append(self._build_property_plan_page(address, today, building_insight))
+        # G-01: Electrical Notes
+        pages_html.append(self._build_electrical_notes_page(address, today))
 
-        # PV-3: Site plan (satellite + panels)
+        # A-101: Site Plan
         pages_html.append(
             self._build_site_plan_page(
                 building_insight, sat_b64, page_w, page_h, num_api_panels, address, today, placements, total_panels
             )
         )
 
-        # PV-3.1: Racking plan (vector)
+        # A-102: Racking and Framing Plan
         pages_html.append(self._build_racking_plan_page(building_insight, num_api_panels, address, today, placements))
 
-        # PV-4: Single-line diagram
-        pages_html.append(self._build_single_line_diagram(total_panels, total_kw, address, today))
-
-        # PV-4.1: Electrical calculations
-        pages_html.append(self._build_electrical_calcs_page(total_panels, total_kw, address, today))
-
-        # PV-5: Mounting details & BOM
-        pages_html.append(self._build_mounting_details_page(total_panels, total_kw, address, today, building_insight))
-
-        # PV-6: Signage/placards
-        pages_html.append(self._build_signage_page(address, today))
-
-        # PV-6.1: Placard house
-        pages_html.append(self._build_placard_house_page(address, today))
-
-        # PV-7: Circuit map
+        # A-103: String Plan
         pages_html.append(self._build_string_plan_page(building_insight, total_panels, address, today))
 
-        # PV-8.1: Module datasheet
+        # A-104: Attachment Detail
+        pages_html.append(self._build_mounting_details_page(total_panels, total_kw, address, today, building_insight))
+
+        # E-601: Electrical Line Diagram
+        pages_html.append(self._build_single_line_diagram(total_panels, total_kw, address, today))
+
+        # E-602: Electrical Calculations, Specs
+        pages_html.append(self._build_electrical_calcs_page(total_panels, total_kw, address, today))
+
+        # E-603: Signage
+        pages_html.append(self._build_signage_page(address, today))
+
+        # E-604: Placard
+        pages_html.append(self._build_placard_house_page(address, today))
+
+        # R-001: Equipment Spec (Module)
         pages_html.append(self._build_module_datasheet_page(address, today))
 
-        # PV-8.2: Racking datasheet
+        # R-002: Equipment Spec (Inverter)
+        pages_html.append(self._build_inverter_datasheet_page(address, today))
+
+        # R-003: Equipment Spec (Combiner)
+        pages_html.append(self._build_combiner_datasheet_page(address, today))
+
+        # R-004: Equipment Spec (Racking)
         pages_html.append(self._build_racking_datasheet_page(address, today))
 
-        # PV-8.3: Attachment datasheet
+        # R-005: Equipment Spec (Attachment)
         pages_html.append(self._build_attachment_datasheet_page(address, today))
-
-        # A-200: Electrical Single Line Diagram
-        pages_html.append(self._build_single_line_diagram_page(self._project, placements))
-
-        # A-300: Electrical Details (grounding schedule, conduit routing, OCPD)
-        pages_html.append(self._build_electrical_details_page(self._project, placements))
 
         # ── Fix page numbering across all sheets ─────────────────────
         total_pages = len(pages_html)
@@ -819,7 +818,7 @@ class HtmlRenderer:
         return output_path
 
     # ════════════════════════════════════════════════════════════════════
-    # PAGE BUILDERS
+    # PAGE BUILDERS — 15 pages matching reference planset
     # ════════════════════════════════════════════════════════════════════
 
     def _build_cover_page(
@@ -833,16 +832,18 @@ class HtmlRenderer:
         vicinity_map_b64: str = "",
         aerial_map_b64: str = "",
     ) -> str:
-        """PV-1: Cover Page — delegated to renderer.page_builders.cover_page."""
+        """T-00: Cover Page — delegated to renderer.page_builders.cover_page."""
         from renderer.page_builders.cover_page import build_cover_page
         return build_cover_page(
             self, address, total_panels, total_kw, total_kwh, today,
             insight, vicinity_map_b64, aerial_map_b64,
         )
-    def _build_property_plan_page(self, address: str, today: str, insight=None) -> str:
-        """PV-2: Property Plan — delegated to renderer.page_builders.property_plan."""
-        from renderer.page_builders.property_plan import build_property_plan_page
-        return build_property_plan_page(self, address, today, insight)
+
+    def _build_electrical_notes_page(self, address: str, today: str) -> str:
+        """G-01: Electrical Notes — delegated to renderer.page_builders.electrical_notes."""
+        from renderer.page_builders.electrical_notes import build_electrical_notes_page
+        return build_electrical_notes_page(self, address, today)
+
     def _build_site_plan_page(
         self,
         insight,
@@ -855,79 +856,80 @@ class HtmlRenderer:
         placements,
         total_panels: int = 0,
     ) -> str:
-        """PV-3: Site Plan — delegated to renderer.page_builders.site_plan_vector."""
+        """A-101: Site Plan — delegated to renderer.page_builders.site_plan_vector."""
         from renderer.page_builders.site_plan_vector import build_site_plan_page
         return build_site_plan_page(
             self, insight, sat_b64, page_w, page_h, num_api_panels,
             address, today, placements, total_panels,
         )
+
     def _build_racking_plan_page(
         self, insight, num_api_panels: int, address: str, today: str, placements=None
     ) -> str:
-        """PV-3.1: Racking Plan — delegated to renderer.page_builders.racking_plan."""
+        """A-102: Racking and Framing Plan — delegated to renderer.page_builders.racking_plan."""
         from renderer.page_builders.racking_plan import build_racking_plan_page
         return build_racking_plan_page(self, insight, num_api_panels, address, today, placements)
+
     def _build_string_plan_page(self, insight, total_panels: int, address: str, today: str) -> str:
-        """PV-7: String Plan — delegated to renderer.page_builders.string_plan."""
+        """A-103: String Plan — delegated to renderer.page_builders.string_plan."""
         from renderer.page_builders.string_plan import build_string_plan_page
         return build_string_plan_page(self, insight, total_panels, address, today)
 
-    def _build_single_line_diagram(self, total_panels: int, total_kw: float, address: str, today: str) -> str:
-        """PV-4: Single-Line Diagram — delegated to renderer.page_builders.single_line_diagram."""
-        from renderer.page_builders.single_line_diagram import build_single_line_diagram
-        return build_single_line_diagram(self, total_panels, total_kw, address, today)
-    def _build_electrical_calcs_page(self, total_panels: int, total_kw: float, address: str, today: str) -> str:
-        """PV-4.1: Electrical Calculations — delegated to renderer.page_builders.electrical_calcs."""
-        from renderer.page_builders.electrical_calcs import build_electrical_calcs_page
-        return build_electrical_calcs_page(self, total_panels, total_kw, address, today)
-    def _build_signage_page(self, address: str, today: str) -> str:
-        """PV-6: Electrical Labels — delegated to renderer.page_builders.signage."""
-        from renderer.page_builders.signage import build_signage_page
-        return build_signage_page(self, address, today)
-    def _build_placard_house_page(self, address: str, today: str) -> str:
-        """PV-6.1: Placard House — delegated to renderer.page_builders.placard_house."""
-        from renderer.page_builders.placard_house import build_placard_house_page
-        return build_placard_house_page(self, address, today)
     def _build_mounting_details_page(
         self, total_panels: int, total_kw: float, address: str, today: str, insight
     ) -> str:
-        """PV-5: Mounting Details and BOM — delegated to renderer.page_builders.mounting_details."""
+        """A-104: Attachment Detail — delegated to renderer.page_builders.mounting_details."""
         from renderer.page_builders.mounting_details import build_mounting_details_page
         return build_mounting_details_page(self, total_panels, total_kw, address, today, insight)
 
+    def _build_single_line_diagram(self, total_panels: int, total_kw: float, address: str, today: str) -> str:
+        """E-601: Electrical Line Diagram — delegated to renderer.page_builders.single_line_diagram."""
+        from renderer.page_builders.single_line_diagram import build_single_line_diagram
+        return build_single_line_diagram(self, total_panels, total_kw, address, today)
+
+    def _build_electrical_calcs_page(self, total_panels: int, total_kw: float, address: str, today: str) -> str:
+        """E-602: Electrical Calculations — delegated to renderer.page_builders.electrical_calcs."""
+        from renderer.page_builders.electrical_calcs import build_electrical_calcs_page
+        return build_electrical_calcs_page(self, total_panels, total_kw, address, today)
+
+    def _build_signage_page(self, address: str, today: str) -> str:
+        """E-603: Signage — delegated to renderer.page_builders.signage."""
+        from renderer.page_builders.signage import build_signage_page
+        return build_signage_page(self, address, today)
+
+    def _build_placard_house_page(self, address: str, today: str) -> str:
+        """E-604: Placard — delegated to renderer.page_builders.placard_house."""
+        from renderer.page_builders.placard_house import build_placard_house_page
+        return build_placard_house_page(self, address, today)
+
     # ════════════════════════════════════════════════════════════════════
-    # DATASHEET PAGES  (PV-8.1, PV-8.2, PV-8.3)
+    # EQUIPMENT SPEC PAGES  (R-001 through R-005)
     # ════════════════════════════════════════════════════════════════════
 
     def _build_module_datasheet_page(self, address: str, today: str) -> str:
-        """PV-8.1: Module Datasheet — delegated to renderer.page_builders.module_datasheet."""
+        """R-001: Equipment Spec (Module) — delegated to renderer.page_builders.module_datasheet."""
         from renderer.page_builders.module_datasheet import build_module_datasheet_page
         return build_module_datasheet_page(self, address, today)
 
+    def _build_inverter_datasheet_page(self, address: str, today: str) -> str:
+        """R-002: Equipment Spec (Inverter) — delegated to renderer.page_builders.inverter_datasheet."""
+        from renderer.page_builders.inverter_datasheet import build_inverter_datasheet_page
+        return build_inverter_datasheet_page(self, address, today)
+
+    def _build_combiner_datasheet_page(self, address: str, today: str) -> str:
+        """R-003: Equipment Spec (Combiner) — delegated to renderer.page_builders.combiner_datasheet."""
+        from renderer.page_builders.combiner_datasheet import build_combiner_datasheet_page
+        return build_combiner_datasheet_page(self, address, today)
+
     def _build_racking_datasheet_page(self, address: str, today: str) -> str:
-        """PV-8.2: Racking Datasheet — delegated to renderer.page_builders.racking_datasheet."""
+        """R-004: Equipment Spec (Racking) — delegated to renderer.page_builders.racking_datasheet."""
         from renderer.page_builders.racking_datasheet import build_racking_datasheet_page
         return build_racking_datasheet_page(self, address, today)
 
     def _build_attachment_datasheet_page(self, address: str, today: str) -> str:
-        """PV-8.3: Attachment Datasheet — delegated to renderer.page_builders.attachment_datasheet."""
+        """R-005: Equipment Spec (Attachment) — delegated to renderer.page_builders.attachment_datasheet."""
         from renderer.page_builders.attachment_datasheet import build_attachment_datasheet_page
         return build_attachment_datasheet_page(self, address, today)
-
-    def _build_single_line_diagram_page(self, project, placements) -> str:
-        """A-200: Electrical Single Line Diagram — delegated to renderer.page_builders.single_line_a200."""
-        from renderer.page_builders.single_line_a200 import build_single_line_diagram_page
-        return build_single_line_diagram_page(self, project, placements)
-
-    def _build_electrical_details_page(self, project, placements) -> str:
-        """A-300: Electrical Details — delegated to renderer.page_builders.electrical_details."""
-        from renderer.page_builders.electrical_details import build_electrical_details_page
-        return build_electrical_details_page(self, project, placements)
-
-    def _build_cover_sheet_page(self, address: str, today: str, total_panels: int, total_kw: float) -> str:
-        """A-100: Cover Sheet — delegated to renderer.page_builders.cover_sheet."""
-        from renderer.page_builders.cover_sheet import build_cover_sheet_page
-        return build_cover_sheet_page(self, address, today, total_panels, total_kw)
 
     # ════════════════════════════════════════════════════════════════════
     # HTML ASSEMBLY
