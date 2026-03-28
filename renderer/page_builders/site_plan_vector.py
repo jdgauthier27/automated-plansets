@@ -212,16 +212,38 @@ def _build_site_plan_vector(
         f'text-anchor="middle" font-size="7" font-family="Arial" fill="#777">DRVWY</text>'
     )
 
-    # ── Building footprint (axis-aligned rectangle) ─────────────────
+    # ── Building footprint ─────────────────────────────────────────
     bldg_offset_y = -2.0  # building offset from lot center (slightly toward front)
 
-    bx1, by1 = m_to_px(-bldg_w_m / 2, bldg_offset_y - bldg_h_m / 2)
-    bx2, by2 = m_to_px(bldg_w_m / 2, bldg_offset_y + bldg_h_m / 2)
-    svg.append(
-        f'<rect x="{bx1:.0f}" y="{by1:.0f}" '
-        f'width="{bx2 - bx1:.0f}" height="{by2 - by1:.0f}" '
-        f'fill="#f5f3f0" stroke="#000" stroke-width="2"/>'
-    )
+    # Check if we have real roof face geometry from GeoTIFF
+    has_real_roof = (renderer._project and renderer._project.roof_faces_latlng
+                     and len(renderer._project.roof_faces_latlng) > 0)
+
+    # Check if we have real building outline from GeoTIFF
+    has_real_outline = (renderer._project and renderer._project.building_outline_ft
+                        and len(renderer._project.building_outline_ft) >= 3)
+
+    if has_real_outline:
+        # Draw real building footprint from GeoTIFF contour
+        outline_pts = renderer._project.building_outline_ft  # [(x_ft, y_ft)] relative to centroid
+        outline_px = [m_to_px(x * 0.3048, -y * 0.3048 + bldg_offset_y) for x, y in outline_pts]
+        pts_str = " ".join(f"{px:.0f},{py:.0f}" for px, py in outline_px)
+        svg.append(f'<polygon points="{pts_str}" fill="#f5f3f0" stroke="#000" stroke-width="2"/>')
+
+        # Building bounds for later use
+        bx1 = min(px for px, py in outline_px)
+        by1 = min(py for px, py in outline_px)
+        bx2 = max(px for px, py in outline_px)
+        by2 = max(py for px, py in outline_px)
+    else:
+        # Fallback: axis-aligned rectangle
+        bx1, by1 = m_to_px(-bldg_w_m / 2, bldg_offset_y - bldg_h_m / 2)
+        bx2, by2 = m_to_px(bldg_w_m / 2, bldg_offset_y + bldg_h_m / 2)
+        svg.append(
+            f'<rect x="{bx1:.0f}" y="{by1:.0f}" '
+            f'width="{bx2 - bx1:.0f}" height="{by2 - by1:.0f}" '
+            f'fill="#f5f3f0" stroke="#000" stroke-width="2"/>'
+        )
 
     # Building label
     svg.append(
@@ -235,40 +257,125 @@ def _build_site_plan_vector(
         f"{_dim_label(bldg_w_m)} × {_dim_label(bldg_h_m)}</text>"
     )
 
-    # ── Roof ridge line ────────────────────────────────────────────
-    ridge_y = (by1 + by2) / 2
-    svg.append(
-        f'<line x1="{bx1:.0f}" y1="{ridge_y:.0f}" '
-        f'x2="{bx2:.0f}" y2="{ridge_y:.0f}" '
-        f'stroke="#000" stroke-width="1" stroke-dasharray="6,3"/>'
-    )
-    svg.append(
-        f'<text x="{bx2 + 6:.0f}" y="{ridge_y + 4:.0f}" '
-        f'font-size="8" font-family="Arial" fill="#555" font-style="italic">RIDGE</text>'
-    )
+    # ── Roof face outlines from GeoTIFF ──────────────────────────
+    if has_real_roof:
+        cos_clat = math.cos(math.radians(insight.lat))
+        for fi, face in enumerate(renderer._project.roof_faces_latlng):
+            poly_ll = face.get("polygon_latlng", [])
+            if not poly_ll:
+                continue
+            # Convert lat/lng to meters relative to building center, then to SVG
+            face_px = []
+            for pt in poly_ll:
+                dx_m = (pt["lng"] - insight.lng) * cos_clat * 111319.5
+                dy_m = (pt["lat"] - insight.lat) * 111319.5
+                face_px.append(m_to_px(dx_m, -dy_m + bldg_offset_y))
+
+            pts_str = " ".join(f"{px:.0f},{py:.0f}" for px, py in face_px)
+            # Light fill per face direction — south-ish faces lighter
+            az = face.get("azimuth_deg", 180)
+            fill_opacity = 0.15 if 90 < az < 270 else 0.08
+            svg.append(
+                f'<polygon points="{pts_str}" fill="#b0c4de" fill-opacity="{fill_opacity}" '
+                f'stroke="#555" stroke-width="1"/>'
+            )
+            # Face label (azimuth + pitch)
+            face_cx = sum(px for px, py in face_px) / len(face_px)
+            face_cy = sum(py for px, py in face_px) / len(face_px)
+            pitch = face.get("pitch_deg", 0)
+            az_lbl = azimuth_label(az)
+            svg.append(
+                f'<text x="{face_cx:.0f}" y="{face_cy:.0f}" text-anchor="middle" '
+                f'font-size="7" font-family="Arial" fill="#444" font-style="italic">'
+                f'{az_lbl} {pitch:.0f}°</text>'
+            )
+
+        # Detect ridge/hip lines from shared edges between faces
+        # Ridge: faces with ~180° azimuth difference; Hip: ~90° difference
+        faces = renderer._project.roof_faces_latlng
+        for i in range(len(faces)):
+            for j in range(i + 1, len(faces)):
+                az_i = faces[i].get("azimuth_deg", 0)
+                az_j = faces[j].get("azimuth_deg", 0)
+                az_diff = abs(az_i - az_j)
+                if az_diff > 180:
+                    az_diff = 360 - az_diff
+                # Find shared edges (vertices close together)
+                poly_i = faces[i].get("polygon_latlng", [])
+                poly_j = faces[j].get("polygon_latlng", [])
+                shared = []
+                for pi_pt in poly_i:
+                    for pj_pt in poly_j:
+                        dist = math.sqrt((pi_pt["lat"] - pj_pt["lat"])**2 + (pi_pt["lng"] - pj_pt["lng"])**2)
+                        if dist < 0.00005:  # ~5m threshold
+                            dx_m = (pi_pt["lng"] - insight.lng) * cos_clat * 111319.5
+                            dy_m = (pi_pt["lat"] - insight.lat) * 111319.5
+                            shared.append(m_to_px(dx_m, -dy_m + bldg_offset_y))
+                if len(shared) >= 2:
+                    # Classify edge type
+                    if 150 < az_diff < 210:
+                        line_style = 'stroke="#000" stroke-width="1.5" stroke-dasharray="6,3"'  # Ridge
+                        label = "RIDGE"
+                    elif 60 < az_diff < 120:
+                        line_style = 'stroke="#555" stroke-width="1" stroke-dasharray="4,2"'  # Hip
+                        label = "HIP"
+                    else:
+                        line_style = 'stroke="#777" stroke-width="0.8"'  # Valley/other
+                        label = ""
+                    svg.append(
+                        f'<line x1="{shared[0][0]:.0f}" y1="{shared[0][1]:.0f}" '
+                        f'x2="{shared[-1][0]:.0f}" y2="{shared[-1][1]:.0f}" '
+                        f'{line_style}/>'
+                    )
+                    if label:
+                        mid_x = (shared[0][0] + shared[-1][0]) / 2
+                        mid_y = (shared[0][1] + shared[-1][1]) / 2
+                        svg.append(
+                            f'<text x="{mid_x + 8:.0f}" y="{mid_y + 3:.0f}" '
+                            f'font-size="7" font-family="Arial" fill="#555" font-style="italic">{label}</text>'
+                        )
+    else:
+        # Fallback: single ridge line
+        ridge_y = (by1 + by2) / 2
+        svg.append(
+            f'<line x1="{bx1:.0f}" y1="{ridge_y:.0f}" '
+            f'x2="{bx2:.0f}" y2="{ridge_y:.0f}" '
+            f'stroke="#000" stroke-width="1" stroke-dasharray="6,3"/>'
+        )
+        svg.append(
+            f'<text x="{bx2 + 6:.0f}" y="{ridge_y + 4:.0f}" '
+            f'font-size="8" font-family="Arial" fill="#555" font-style="italic">RIDGE</text>'
+        )
 
     # ── Eave lines ─────────────────────────────────────────────────
     eave_overhang = 0.5 * scale  # 0.5m overhang
-    svg.append(
-        f'<line x1="{bx1 - eave_overhang:.0f}" y1="{by1:.0f}" '
-        f'x2="{bx2 + eave_overhang:.0f}" y2="{by1:.0f}" '
-        f'stroke="#666" stroke-width="0.8" stroke-dasharray="3,2"/>'
-    )
-    svg.append(
-        f'<line x1="{bx1 - eave_overhang:.0f}" y1="{by2:.0f}" '
-        f'x2="{bx2 + eave_overhang:.0f}" y2="{by2:.0f}" '
-        f'stroke="#666" stroke-width="0.8" stroke-dasharray="3,2"/>'
-    )
+    if not has_real_roof:
+        svg.append(
+            f'<line x1="{bx1 - eave_overhang:.0f}" y1="{by1:.0f}" '
+            f'x2="{bx2 + eave_overhang:.0f}" y2="{by1:.0f}" '
+            f'stroke="#666" stroke-width="0.8" stroke-dasharray="3,2"/>'
+        )
+        svg.append(
+            f'<line x1="{bx1 - eave_overhang:.0f}" y1="{by2:.0f}" '
+            f'x2="{bx2 + eave_overhang:.0f}" y2="{by2:.0f}" '
+            f'stroke="#666" stroke-width="0.8" stroke-dasharray="3,2"/>'
+        )
 
     # ── Solar panel array (south side of ridge) ────────────────────
     # Place panels on the south (bottom) side of the building
     # Use actual panel positions relative to cluster center, mapped onto south roof
+    ridge_y = (by1 + by2) / 2  # default ridge at building center
     array_cx = (bx1 + bx2) / 2
     array_cy = (ridge_y + by2) / 2  # center of south roof face
 
     # Precompute panel corners in SVG coords (matching SolarMap.jsx geometry)
-    half_w = insight.panel_width_m / 2
-    half_h = insight.panel_height_m / 2
+    # Prefer catalog panel dimensions over Google defaults
+    if renderer._project and renderer._project.panel and hasattr(renderer._project.panel, 'dimensions'):
+        half_w = renderer._project.panel.dimensions.width_mm / 1000 / 2
+        half_h = renderer._project.panel.dimensions.length_mm / 1000 / 2
+    else:
+        half_w = insight.panel_width_m / 2
+        half_h = insight.panel_height_m / 2
     corners_local = [(+half_w, +half_h), (+half_w, -half_h), (-half_w, -half_h), (-half_w, +half_h)]
     all_panel_corners = []
     for idx, p_obj in enumerate(panels):

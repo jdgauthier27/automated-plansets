@@ -292,9 +292,22 @@ def generate_planset(project_id: str):
             if _faces:
                 geotiff_roofs = _faces
                 geotiff_scale = float(scene.get("scale_pts_per_ft", 1.0))
+            # Store geo_roof_faces for accurate planset rendering
+            geo_faces = scene.get("geo_roof_faces", [])
+            if geo_faces:
+                project.roof_faces_latlng = geo_faces
         except Exception as _e:
-            import logging
-            logging.getLogger(__name__).warning("GeoTIFF pipeline skipped: %s", _e)
+            _logger.warning("GeoTIFF pipeline skipped: %s", _e)
+
+    # Fetch parcel boundary for accurate lot lines
+    if project.latitude and project.longitude:
+        try:
+            from engine.parcel_boundary import fetch_parcel_boundary
+            parcel = fetch_parcel_boundary(project.latitude, project.longitude)
+            if parcel:
+                project.parcel_boundary_latlng = parcel
+        except Exception:
+            pass  # Non-critical — falls back to estimated rectangle
 
     # Use GeoTIFF roof faces if available, otherwise fall back to Solar API
     if geotiff_roofs:

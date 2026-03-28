@@ -31,8 +31,13 @@ def build_site_plan_satellite(
     # SolarMap.jsx: bearing = atan2(y,x) + orientation + azimuth
     # This ensures the planset panels match the 2D viewer exactly.
     panel_data = []
-    half_w = insight.panel_width_m / 2
-    half_h = insight.panel_height_m / 2
+    # Prefer catalog panel dimensions over Google defaults
+    if renderer._project and renderer._project.panel and hasattr(renderer._project.panel, 'dimensions'):
+        half_w = renderer._project.panel.dimensions.width_mm / 1000 / 2
+        half_h = renderer._project.panel.dimensions.length_mm / 1000 / 2
+    else:
+        half_w = insight.panel_width_m / 2
+        half_h = insight.panel_height_m / 2
     corners_local = [(+half_w, +half_h), (+half_w, -half_h), (-half_w, -half_h), (-half_w, +half_h)]
     cos_clat = math.cos(math.radians(insight.lat))
 
@@ -572,9 +577,29 @@ def build_site_plan_satellite(
         ly += 10
     ly += 4  # bottom margin
 
-    # ── ROOF DETAIL ───────────────────────────────────────────────────────
+    # ── ROOF DETAIL & ENERGY ─────────────────────────────────────────────
+    # Compute per-segment panel counts and energy from Google data
+    from renderer.shared.geo_utils import azimuth_label as _az_label
+    seg_stats = {}  # segment_index -> {count, kwh, azimuth, pitch}
+    for p in panels:
+        si = getattr(p, "segment_index", 0)
+        if si not in seg_stats:
+            seg = insight.roof_segments[si] if si < len(insight.roof_segments) else None
+            seg_stats[si] = {
+                "count": 0, "kwh": 0.0,
+                "azimuth": seg.azimuth_deg if seg else 180,
+                "pitch": seg.pitch_deg if seg else 0,
+            }
+        seg_stats[si]["count"] += 1
+        seg_stats[si]["kwh"] += getattr(p, "yearly_energy_kwh", 0)
+
+    # Calculate total Google energy
+    total_google_kwh = sum(s["kwh"] for s in seg_stats.values())
+
     rd_y = sl_y + sl_h + 8
-    rd_h = 140
+    # Dynamic height based on segment count
+    num_segs = max(1, len(seg_stats))
+    rd_h = 50 + num_segs * 50
     svg.append(
         f'<rect x="{RC_X}" y="{rd_y}" width="{RC_W}" height="{rd_h}" fill="#fff" stroke="#000" stroke-width="1.2"/>'
     )
@@ -584,33 +609,53 @@ def build_site_plan_satellite(
     svg.append(
         f'<text x="{RC_X + RC_W // 2}" y="{rd_y + 12}" '
         f'text-anchor="middle" font-size="9" font-weight="700" '
-        f'font-family="Arial" fill="#000">ROOF DETAIL</text>'
+        f'font-family="Arial" fill="#000">ROOF DETAIL &amp; PRODUCTION</text>'
     )
-    # Section circle
+
+    # Roof material
+    _roof_mat = renderer._project.roof_material.upper().replace("_", " ") if renderer._project else "ASPHALT SHINGLE"
+    rd_ly = rd_y + 28
     svg.append(
-        f'<circle cx="{RC_X + RC_W - 22}" cy="{rd_y + rd_h // 2 + 10}" '
-        f'r="14" fill="#fff" stroke="#000" stroke-width="1.5"/>'
+        f'<text x="{RC_X + 7}" y="{rd_ly}" font-size="7.5" font-weight="700" '
+        f'font-family="Arial" fill="#000">ROOF TYPE:</text>'
     )
     svg.append(
-        f'<text x="{RC_X + RC_W - 22}" y="{rd_y + rd_h // 2 + 16}" '
-        f'text-anchor="middle" font-size="15" font-weight="700" '
-        f'font-family="Arial" fill="#000">1</text>'
+        f'<text x="{RC_X + 7}" y="{rd_ly + 12}" font-size="8" font-family="Arial" fill="#333">{_roof_mat}</text>'
     )
-    rd_rows = [
-        ("ROOF TYPE:", "ASPHALT-SHINGLES"),
-        ("ROOF SECTION 1:", f"{n_panels} MODULES"),
-        ("AZIMUTH:", f"{az_deg:.0f}\u00b0"),
-        ("PITCH:", f"{pitch_deg:.0f}\u00b0"),
-        ("SCALE:", '1/8" = 1\'-0"'),
-    ]
-    for i, (lbl, val) in enumerate(rd_rows):
-        ry2 = rd_y + 22 + i * 22
+    rd_ly += 22
+
+    # Per-segment detail with energy
+    for si_idx, (si, stats) in enumerate(sorted(seg_stats.items())):
+        az_lbl = _az_label(stats["azimuth"])
         svg.append(
-            f'<text x="{RC_X + 7}" y="{ry2}" font-size="7.5" '
-            f'font-weight="700" font-family="Arial" fill="#000">{lbl}</text>'
+            f'<text x="{RC_X + 7}" y="{rd_ly}" font-size="7" font-weight="700" '
+            f'font-family="Arial" fill="#000">SECTION S-{si_idx + 1} ({az_lbl}-FACING):</text>'
         )
+        rd_ly += 11
         svg.append(
-            f'<text x="{RC_X + 7}" y="{ry2 + 13}" font-size="8" font-family="Arial" fill="#333">{val}</text>'
+            f'<text x="{RC_X + 12}" y="{rd_ly}" font-size="7" font-family="Arial" fill="#333">'
+            f'{stats["count"]} panels \u00b7 {stats["azimuth"]:.0f}\u00b0 azm \u00b7 {stats["pitch"]:.0f}\u00b0 pitch</text>'
+        )
+        rd_ly += 11
+        if stats["kwh"] > 0:
+            svg.append(
+                f'<text x="{RC_X + 12}" y="{rd_ly}" font-size="7" font-family="Arial" fill="#006600">'
+                f'\u2600 {stats["kwh"]:,.0f} kWh/yr (Google Solar)</text>'
+            )
+            rd_ly += 14
+        else:
+            rd_ly += 4
+
+    # Total production
+    if total_google_kwh > 0:
+        svg.append(
+            f'<line x1="{RC_X + 4}" y1="{rd_ly}" x2="{RC_X + RC_W - 4}" y2="{rd_ly}" '
+            f'stroke="#999" stroke-width="0.6"/>'
+        )
+        rd_ly += 10
+        svg.append(
+            f'<text x="{RC_X + 7}" y="{rd_ly}" font-size="8" font-weight="700" '
+            f'font-family="Arial" fill="#006600">TOTAL: {total_google_kwh:,.0f} kWh/yr</text>'
         )
 
     # ── ADDITIONAL NOTES ──────────────────────────────────────────────────

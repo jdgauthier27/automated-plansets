@@ -22,9 +22,9 @@ export default function App() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <div className="w-8 h-8 bg-solar-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">QS</span>
+              <span className="text-white font-bold text-sm">SP</span>
             </div>
-            <span className="text-lg font-semibold" style={{ color: 'var(--text)' }}>Quebec Solaire</span>
+            <span className="text-lg font-semibold" style={{ color: 'var(--text)' }}>Solar Planset</span>
             <span className="text-sm ml-1" style={{ color: 'var(--text-muted)' }}>Planset Generator</span>
           </Link>
           <div className="flex items-center gap-3">

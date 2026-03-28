@@ -420,6 +420,23 @@ def run_address_mode(args, logger):
             except Exception as _e:
                 logger.warning("Shade factor skipped: %s", _e)
 
+        # Fetch GeoTIFF roof face polygons for accurate planset rendering
+        if api_key:
+            try:
+                from engine.geotiff_roof import get_roof_geometry_from_geotiff
+
+                roof_geom = get_roof_geometry_from_geotiff(insight.lat, insight.lng, api_key)
+                geo_faces = roof_geom.get("geo_roof_faces", [])
+                if geo_faces:
+                    project.roof_faces_latlng = geo_faces
+                    logger.info("  GeoTIFF roof faces: %d", len(geo_faces))
+                # Also store building outline if not already set
+                outline = roof_geom.get("building_outline_ft", [])
+                if outline and not project.building_outline_ft:
+                    project.building_outline_ft = outline
+            except Exception as _e:
+                logger.warning("GeoTIFF roof geometry skipped: %s", _e)
+
         logger.info("Using ProjectSpec with catalog equipment:")
         logger.info("  Panel: %s (%dW)", panel_entry.model_short, panel_entry.wattage_w)
         logger.info("  Inverter: %s (%s)", inverter_entry.model_short, inverter_entry.type)

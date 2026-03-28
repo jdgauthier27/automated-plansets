@@ -80,6 +80,8 @@ def build_property_plan_page(renderer, address: str, today: str, insight=None) -
     house_x2 = house_x1 + house_w
     house_y2 = lot_y2 - int(front_setback * S)
     house_y1 = house_y2 - house_d
+    house_cx = (house_x1 + house_x2) // 2
+    house_cy = (house_y1 + house_y2) // 2
 
     # Driveway
     drv_w_ft = 10.0
@@ -129,10 +131,29 @@ def build_property_plan_page(renderer, address: str, today: str, insight=None) -
     )
 
     # ── Lot boundary ─────────────────────────────────────────────────
-    p.append(
-        f'<rect x="{lot_x1}" y="{lot_y1}" width="{lot_w}" height="{lot_d}" '
-        f'fill="none" stroke="#000" stroke-width="2.5"/>'
-    )
+    has_real_parcel = (renderer._project and renderer._project.parcel_boundary_latlng
+                       and len(renderer._project.parcel_boundary_latlng) >= 3)
+
+    if has_real_parcel and insight:
+        # Draw real parcel polygon from API data
+        import math as _math
+        _cos_clat = _math.cos(_math.radians(insight.lat))
+        parcel_px = []
+        for pt in renderer._project.parcel_boundary_latlng:
+            # Convert lat/lng to feet from building center, then to page pixels
+            dx_ft = (pt["lng"] - insight.lng) * _cos_clat * 111319.5 / 0.3048
+            dy_ft = (pt["lat"] - insight.lat) * 111319.5 / 0.3048
+            px = house_cx + dx_ft * S
+            py = house_cy - dy_ft * S
+            parcel_px.append((px, py))
+        pts_str = " ".join(f"{px:.0f},{py:.0f}" for px, py in parcel_px)
+        p.append(f'<polygon points="{pts_str}" fill="none" stroke="#000" stroke-width="2.5"/>')
+    else:
+        # Fallback: estimated rectangular lot
+        p.append(
+            f'<rect x="{lot_x1}" y="{lot_y1}" width="{lot_w}" height="{lot_d}" '
+            f'fill="none" stroke="#000" stroke-width="2.5"/>'
+        )
 
     # ── Fence lines (dashed) ─────────────────────────────────────────
     dash = 'stroke-dasharray="10,5"'
@@ -163,16 +184,32 @@ def build_property_plan_page(renderer, address: str, today: str, insight=None) -
     )
 
     # ── Main home ────────────────────────────────────────────────────
-    house_cx = (house_x1 + house_x2) // 2
-    house_cy = (house_y1 + house_y2) // 2
-    p.append(
-        f'<rect x="{house_x1}" y="{house_y1}" width="{house_w}" height="{house_d}" '
-        f'fill="url(#bldg_hatch)" stroke="none"/>'
-    )
-    p.append(
-        f'<rect x="{house_x1}" y="{house_y1}" width="{house_w}" height="{house_d}" '
-        f'fill="none" stroke="#000" stroke-width="2.5"/>'
-    )
+    # Check for real building outline from GeoTIFF
+    has_real_outline = (renderer._project and renderer._project.building_outline_ft
+                        and len(renderer._project.building_outline_ft) >= 3)
+
+    if has_real_outline:
+        # Draw real building footprint from GeoTIFF contour
+        outline_pts = renderer._project.building_outline_ft  # [(x_ft, y_ft)] relative to centroid
+        # Convert feet-from-centroid to page pixels centered on house position
+        outline_px = []
+        for x_ft, y_ft in outline_pts:
+            px = house_cx + x_ft * S
+            py = house_cy - y_ft * S  # Y inverted (feet go up, pixels go down)
+            outline_px.append((px, py))
+        pts_str = " ".join(f"{px:.0f},{py:.0f}" for px, py in outline_px)
+        p.append(f'<polygon points="{pts_str}" fill="url(#bldg_hatch)" stroke="none"/>')
+        p.append(f'<polygon points="{pts_str}" fill="none" stroke="#000" stroke-width="2.5"/>')
+    else:
+        # Fallback: axis-aligned rectangle
+        p.append(
+            f'<rect x="{house_x1}" y="{house_y1}" width="{house_w}" height="{house_d}" '
+            f'fill="url(#bldg_hatch)" stroke="none"/>'
+        )
+        p.append(
+            f'<rect x="{house_x1}" y="{house_y1}" width="{house_w}" height="{house_d}" '
+            f'fill="none" stroke="#000" stroke-width="2.5"/>'
+        )
 
     p.append(
         f'<text x="{house_cx}" y="{house_cy - 10}" text-anchor="middle" '

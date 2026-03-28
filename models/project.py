@@ -120,6 +120,8 @@ class ProjectSpec:
     building_insight: Optional[Any] = None  # BuildingInsight from Google Solar
     placements: Optional[List[Any]] = None  # List[PlacementResult]
     electrical_design: Optional[Any] = None  # ElectricalDesign result
+    roof_faces_latlng: Optional[List[Dict]] = None  # GeoTIFF roof face polygons [{polygon_latlng, usable_polygon_latlng, azimuth_deg, pitch_deg, area_sqft}]
+    parcel_boundary_latlng: Optional[List[Dict]] = None  # Lot boundary [{lat, lng}] from parcel API
 
     # ── Convenience properties ────────────────────────────────────────────
 
@@ -144,18 +146,24 @@ class ProjectSpec:
     def estimated_annual_kwh(self) -> float:
         """Estimated annual production in kWh.
 
-        Uses: system_dc_kw × peak_sun_hours × 365 × system_losses
-        If sun_hours_peak is 0, use a default based on location.
+        Prefers Google Solar API per-panel energy data (accounts for shading
+        hour-by-hour). Falls back to generic formula if not available.
         """
+        # Use Google's per-panel energy if available — much more accurate
+        if self.building_insight and hasattr(self.building_insight, 'panels') and self.building_insight.panels:
+            google_panels = self.building_insight.panels[:self.num_panels] if self.num_panels else self.building_insight.panels
+            google_total = sum(p.yearly_energy_kwh for p in google_panels if hasattr(p, 'yearly_energy_kwh'))
+            if google_total > 0:
+                return round(google_total, 0)
+
+        # Fallback: generic formula
         psh = self.sun_hours_peak
         if psh <= 0:
-            # Defaults by region
             if self.country == "US":
                 psh = 5.5  # California average
             else:
                 psh = 3.8  # Quebec average
         shade = self.shade_factor if 0.0 < self.shade_factor <= 1.0 else 1.0
-        # System losses: ~85% (soiling, wiring, inverter, temp) × shade_factor
         return round(self.system_dc_kw * psh * 365 * shade * 0.85, 0)
 
     @property
