@@ -17,8 +17,9 @@ logger = logging.getLogger(__name__)
 @dataclass
 class GapItem:
     """A specific quality gap identified during comparison."""
-    category: str           # "completeness", "accuracy", "layout", "compliance"
-    severity: str           # "critical", "major", "minor"
+
+    category: str  # "completeness", "accuracy", "layout", "compliance"
+    severity: str  # "critical", "major", "minor"
     description: str
     page: Optional[str] = None  # which page is affected
     suggestion: str = ""
@@ -27,18 +28,24 @@ class GapItem:
 @dataclass
 class QualityReport:
     """Quality assessment result."""
-    overall_score: float = 0.0          # 0-100
-    completeness_score: float = 0.0     # 0-100
-    accuracy_score: float = 0.0         # 0-100
-    compliance_score: float = 0.0       # 0-100
+
+    overall_score: float = 0.0  # 0-100
+    completeness_score: float = 0.0  # 0-100
+    accuracy_score: float = 0.0  # 0-100
+    compliance_score: float = 0.0  # 0-100
     gaps: List[GapItem] = field(default_factory=list)
     summary: str = ""
 
 
 # Required pages for a complete planset
 REQUIRED_PAGES = [
-    "cover", "site_plan", "single_line", "electrical_calcs",
-    "signage", "module_datasheet", "racking_datasheet",
+    "cover",
+    "site_plan",
+    "single_line",
+    "electrical_calcs",
+    "signage",
+    "module_datasheet",
+    "racking_datasheet",
 ]
 
 # Required quality indicators
@@ -74,12 +81,14 @@ def score_planset(analysis: PlansetAnalysis) -> QualityReport:
         if analysis.quality_indicators.get(indicator, False):
             completeness_points += points
         else:
-            report.gaps.append(GapItem(
-                category="completeness",
-                severity="major" if points >= 10 else "minor",
-                description=f"Missing: {desc}",
-                suggestion=f"Add {desc.lower()} to the planset.",
-            ))
+            report.gaps.append(
+                GapItem(
+                    category="completeness",
+                    severity="major" if points >= 10 else "minor",
+                    description=f"Missing: {desc}",
+                    suggestion=f"Add {desc.lower()} to the planset.",
+                )
+            )
     report.completeness_score = (completeness_points / completeness_max * 100) if completeness_max > 0 else 0
 
     # ── Compliance scoring ──────────────────────────────────────────────
@@ -95,12 +104,14 @@ def score_planset(analysis: PlansetAnalysis) -> QualityReport:
 
     for check, passes in compliance_checks.items():
         if not passes:
-            report.gaps.append(GapItem(
-                category="compliance",
-                severity="major",
-                description=f"Missing code reference: {check}",
-                suggestion=f"Add {check} references to governing codes section.",
-            ))
+            report.gaps.append(
+                GapItem(
+                    category="compliance",
+                    severity="major",
+                    description=f"Missing code reference: {check}",
+                    suggestion=f"Add {check} references to governing codes section.",
+                )
+            )
 
     # ── Accuracy scoring ────────────────────────────────────────────────
     # Check that equipment specs are consistent across pages
@@ -109,29 +120,25 @@ def score_planset(analysis: PlansetAnalysis) -> QualityReport:
         report.accuracy_score = 90.0  # base score when equipment is referenced
     else:
         report.accuracy_score = 50.0
-        report.gaps.append(GapItem(
-            category="accuracy",
-            severity="critical",
-            description="No equipment references found in planset",
-            suggestion="Ensure panel, inverter, and racking models appear on relevant pages.",
-        ))
+        report.gaps.append(
+            GapItem(
+                category="accuracy",
+                severity="critical",
+                description="No equipment references found in planset",
+                suggestion="Ensure panel, inverter, and racking models appear on relevant pages.",
+            )
+        )
 
     # ── Overall score ───────────────────────────────────────────────────
     report.overall_score = round(
-        report.completeness_score * 0.4 +
-        report.accuracy_score * 0.3 +
-        report.compliance_score * 0.3,
-        1
+        report.completeness_score * 0.4 + report.accuracy_score * 0.3 + report.compliance_score * 0.3, 1
     )
 
     # Summary
     critical = sum(1 for g in report.gaps if g.severity == "critical")
     major = sum(1 for g in report.gaps if g.severity == "major")
     minor = sum(1 for g in report.gaps if g.severity == "minor")
-    report.summary = (
-        f"Score: {report.overall_score}/100 "
-        f"({critical} critical, {major} major, {minor} minor gaps)"
-    )
+    report.summary = f"Score: {report.overall_score}/100 ({critical} critical, {major} major, {minor} minor gaps)"
 
     logger.info("Quality score: %.1f/100 — %s", report.overall_score, report.summary)
     return report
@@ -150,31 +157,37 @@ def compare_plansets(generated: PlansetAnalysis, reference: PlansetAnalysis) -> 
     missing_types = ref_types - gen_types - {"unknown"}
 
     for ptype in missing_types:
-        report.gaps.append(GapItem(
-            category="completeness",
-            severity="major",
-            description=f"Reference has '{ptype}' page but generated planset does not",
-            suggestion=f"Add a {ptype.replace('_', ' ')} page to the planset.",
-        ))
+        report.gaps.append(
+            GapItem(
+                category="completeness",
+                severity="major",
+                description=f"Reference has '{ptype}' page but generated planset does not",
+                suggestion=f"Add a {ptype.replace('_', ' ')} page to the planset.",
+            )
+        )
 
     # Compare page counts
     if generated.total_pages < reference.total_pages:
-        report.gaps.append(GapItem(
-            category="completeness",
-            severity="minor",
-            description=f"Generated has {generated.total_pages} pages vs reference {reference.total_pages}",
-            suggestion="Consider adding additional detail pages.",
-        ))
+        report.gaps.append(
+            GapItem(
+                category="completeness",
+                severity="minor",
+                description=f"Generated has {generated.total_pages} pages vs reference {reference.total_pages}",
+                suggestion="Consider adding additional detail pages.",
+            )
+        )
 
     # Compare equipment coverage
     ref_equipment = set(reference.equipment_found.keys())
     gen_equipment = set(generated.equipment_found.keys())
     for eq in ref_equipment - gen_equipment:
-        report.gaps.append(GapItem(
-            category="accuracy",
-            severity="minor",
-            description=f"Reference mentions '{eq}' but generated does not",
-        ))
+        report.gaps.append(
+            GapItem(
+                category="accuracy",
+                severity="minor",
+                description=f"Reference mentions '{eq}' but generated does not",
+            )
+        )
 
     # Recalculate overall score
     critical = sum(1 for g in report.gaps if g.severity == "critical")

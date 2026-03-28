@@ -18,7 +18,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from google_solar import (
-    GoogleSolarClient, BuildingInsight, SolarRoofSegment, SolarPanel,
+    GoogleSolarClient,
+    BuildingInsight,
+    SolarRoofSegment,
+    SolarPanel,
     solar_insight_to_roof_faces,
 )
 from panel_placer import PanelPlacer, PanelSpec, PlacementConfig
@@ -70,8 +73,12 @@ if not best_config:
     best_config = configs[-1] if configs else {"panelsCount": 13}
 
 num_panels = best_config.get("panelsCount", 13)
-logger.info("Auto-sized to %d panels for target %.0f kWh/yr (API config: %.0f kWh/yr)",
-            num_panels, target_kwh, best_config.get("yearlyEnergyDcKwh", 0))
+logger.info(
+    "Auto-sized to %d panels for target %.0f kWh/yr (API config: %.0f kWh/yr)",
+    num_panels,
+    target_kwh,
+    best_config.get("yearlyEnergyDcKwh", 0),
+)
 
 # ── Generate satellite image placeholder ──────────────────────────────────
 # Since we don't have an API key, create a green placeholder
@@ -90,7 +97,7 @@ noise = np.random.randint(-15, 15, (img_h, img_w, 3), dtype=np.int16)
 bg = np.clip(bg.astype(np.int16) + noise, 0, 255).astype(np.uint8)
 # Draw rough building outline at center
 cx, cy = img_w // 2, img_h // 2
-bg[cy-60:cy+60, cx-100:cx+100] = [90, 85, 80]  # building footprint
+bg[cy - 60 : cy + 60, cx - 100 : cx + 100] = [90, 85, 80]  # building footprint
 
 logger.info("Created %dx%d placeholder satellite image", img_w, img_h)
 
@@ -147,7 +154,9 @@ html_renderer = HtmlRenderer(
 
 output_path = str(Path(__file__).parent.parent / "generated_plansets" / "34_rue_Bernier_planset.html")
 html_renderer.render(
-    planset, placements, output_path,
+    planset,
+    placements,
+    output_path,
     building_insight=insight,
     num_api_panels=num_panels,
 )

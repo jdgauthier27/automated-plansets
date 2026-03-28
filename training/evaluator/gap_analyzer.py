@@ -16,13 +16,14 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Improvement:
     """A concrete improvement action to apply."""
+
     id: str
-    priority: int           # 1=highest
-    category: str           # "add_page", "add_content", "fix_layout", "add_notes"
-    target_file: str        # which page builder or template to modify
+    priority: int  # 1=highest
+    category: str  # "add_page", "add_content", "fix_layout", "add_notes"
+    target_file: str  # which page builder or template to modify
     description: str
-    details: str            # specific change to make
-    estimated_impact: float # expected score improvement (0-15)
+    details: str  # specific change to make
+    estimated_impact: float  # expected score improvement (0-15)
 
 
 def analyze_gaps(report: QualityReport) -> List[Improvement]:
@@ -58,8 +59,7 @@ def analyze_gaps(report: QualityReport) -> List[Improvement]:
             improvements.append(imp)
             priority += 1
 
-    logger.info("Generated %d improvement actions from %d gaps",
-                len(improvements), len(report.gaps))
+    logger.info("Generated %d improvement actions from %d gaps", len(improvements), len(report.gaps))
     return improvements
 
 

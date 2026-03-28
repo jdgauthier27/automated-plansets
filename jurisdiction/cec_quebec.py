@@ -26,14 +26,14 @@ from .base import JurisdictionEngine
 # ── Conductor ampacity table (CEC Table 2 / 75 °C copper) ─────────────
 
 CONDUCTOR_AMPACITY_75C = [
-    (15,  "#14 AWG Cu"),
-    (20,  "#12 AWG Cu"),
-    (30,  "#10 AWG Cu"),
-    (40,  "#8 AWG Cu"),
-    (55,  "#6 AWG Cu"),
-    (70,  "#4 AWG Cu"),
-    (85,  "#3 AWG Cu"),
-    (95,  "#2 AWG Cu"),
+    (15, "#14 AWG Cu"),
+    (20, "#12 AWG Cu"),
+    (30, "#10 AWG Cu"),
+    (40, "#8 AWG Cu"),
+    (55, "#6 AWG Cu"),
+    (70, "#4 AWG Cu"),
+    (85, "#3 AWG Cu"),
+    (95, "#2 AWG Cu"),
     (110, "#1 AWG Cu"),
     (125, "#1/0 AWG Cu"),
     (145, "#2/0 AWG Cu"),
@@ -44,9 +44,9 @@ CONDUCTOR_AMPACITY_75C = [
 # ── EGC sizing table (CEC 10-814) ─────────────────────────────────────
 
 EGC_TABLE = [
-    (15,  "#14 AWG Cu"),
-    (20,  "#12 AWG Cu"),
-    (60,  "#10 AWG Cu"),
+    (15, "#14 AWG Cu"),
+    (20, "#12 AWG Cu"),
+    (60, "#10 AWG Cu"),
     (100, "#8 AWG Cu"),
     (200, "#6 AWG Cu"),
     (300, "#4 AWG Cu"),
@@ -63,63 +63,63 @@ STANDARD_BREAKER_SIZES = [15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 100, 125, 150,
 # ── Design temperatures by city (NBCC 2020 Appendix C) ────────────────
 
 CITY_DESIGN_TEMPS = {
-    "gatineau":        -25,
-    "montreal":        -23,
-    "quebec city":     -28,
+    "gatineau": -25,
+    "montreal": -23,
+    "quebec city": -28,
     "ville de québec": -28,
-    "sherbrooke":      -26,
-    "trois-rivieres":  -27,
-    "trois-rivières":  -27,
-    "laval":           -23,
-    "longueuil":       -23,
-    "saguenay":        -31,   # Saguenay–Lac-Saint-Jean, coldest major city QC
-    "lévis":           -28,   # Same climatic zone as Quebec City
-    "levis":           -28,
-    "terrebonne":      -23,   # North shore of Montreal, same zone
+    "sherbrooke": -26,
+    "trois-rivieres": -27,
+    "trois-rivières": -27,
+    "laval": -23,
+    "longueuil": -23,
+    "saguenay": -31,  # Saguenay–Lac-Saint-Jean, coldest major city QC
+    "lévis": -28,  # Same climatic zone as Quebec City
+    "levis": -28,
+    "terrebonne": -23,  # North shore of Montreal, same zone
 }
 
-DEFAULT_COLD_TEMP_C = -25   # Conservative Quebec default
+DEFAULT_COLD_TEMP_C = -25  # Conservative Quebec default
 
 # ── Snow loads by city (PSF) — NBCC 2020 Appendix C ──────────────────
 # Quebec has heavy snowfall; all residential racking must be designed for full load.
 
 CITY_SNOW_LOAD_PSF = {
-    "montreal":        40,
-    "laval":           40,
-    "longueuil":       40,
-    "terrebonne":      40,
-    "gatineau":        40,
-    "sherbrooke":      45,
-    "trois-rivieres":  42,
-    "trois-rivières":  42,
-    "quebec city":     50,
+    "montreal": 40,
+    "laval": 40,
+    "longueuil": 40,
+    "terrebonne": 40,
+    "gatineau": 40,
+    "sherbrooke": 45,
+    "trois-rivieres": 42,
+    "trois-rivières": 42,
+    "quebec city": 50,
     "ville de québec": 50,
-    "lévis":           50,
-    "levis":           50,
-    "saguenay":        55,   # Saguenay–Lac-Saint-Jean — highest snow region
+    "lévis": 50,
+    "levis": 50,
+    "saguenay": 55,  # Saguenay–Lac-Saint-Jean — highest snow region
 }
 
-DEFAULT_SNOW_LOAD_PSF = 40   # Montreal/southern Quebec baseline
+DEFAULT_SNOW_LOAD_PSF = 40  # Montreal/southern Quebec baseline
 
 # ── Wind design speed by city (mph, NBCC 2020 / ASCE 7 equivalent) ────
 
 CITY_WIND_MPH = {
-    "montreal":        90,
-    "laval":           90,
-    "longueuil":       90,
-    "terrebonne":      90,
-    "gatineau":        90,
-    "sherbrooke":      90,
-    "trois-rivieres":  90,
-    "trois-rivières":  90,
-    "quebec city":     90,
+    "montreal": 90,
+    "laval": 90,
+    "longueuil": 90,
+    "terrebonne": 90,
+    "gatineau": 90,
+    "sherbrooke": 90,
+    "trois-rivieres": 90,
+    "trois-rivières": 90,
+    "quebec city": 90,
     "ville de québec": 90,
-    "lévis":           90,
-    "levis":           90,
-    "saguenay":        90,
+    "lévis": 90,
+    "levis": 90,
+    "saguenay": 90,
 }
 
-DEFAULT_WIND_MPH = 90   # Standard inland Quebec; coastal/Gaspésie = 100 mph
+DEFAULT_WIND_MPH = 90  # Standard inland Quebec; coastal/Gaspésie = 100 mph
 
 
 class CECQuebecEngine(JurisdictionEngine):
@@ -132,8 +132,7 @@ class CECQuebecEngine(JurisdictionEngine):
         province:   Accepted but ignored (always Quebec).
     """
 
-    def __init__(self, city: str = "", utility: str = "",
-                 municipality: str = "", province: str = ""):
+    def __init__(self, city: str = "", utility: str = "", municipality: str = "", province: str = ""):
         # Accept municipality as alias for city
         if not city and municipality:
             city = municipality
@@ -144,7 +143,7 @@ class CECQuebecEngine(JurisdictionEngine):
         self.wire_type = "RW90-XLPE"
         self.conduit_type = "EMT (exposed); Schedule-40 PVC (concealed)"
         self.electrical_code = "CEC 25th Edition"
-        self.cmeq = True   # CMEQ supervision required for all Quebec electrical work
+        self.cmeq = True  # CMEQ supervision required for all Quebec electrical work
 
         # Utility — always Hydro-Québec in Quebec
         self.utility_name = utility if utility else "Hydro-Québec"
@@ -155,6 +154,9 @@ class CECQuebecEngine(JurisdictionEngine):
         self.wind_speed_mph = CITY_WIND_MPH.get(city_lower, DEFAULT_WIND_MPH)
 
     # ── Identity ──────────────────────────────────────────────────────
+
+    def get_building_code(self) -> str:
+        return "CCQ"
 
     def get_code_name(self) -> str:
         return "CEC"

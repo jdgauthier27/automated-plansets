@@ -58,14 +58,23 @@ class TrainingRunner:
             "improvements_count": len(improvements),
             "summary": report.summary,
             "gaps": [
-                {"category": g.category, "severity": g.severity,
-                 "description": g.description, "suggestion": g.suggestion}
+                {
+                    "category": g.category,
+                    "severity": g.severity,
+                    "description": g.description,
+                    "suggestion": g.suggestion,
+                }
                 for g in report.gaps
             ],
             "improvements": [
-                {"id": imp.id, "priority": imp.priority, "category": imp.category,
-                 "target_file": imp.target_file, "description": imp.description,
-                 "estimated_impact": imp.estimated_impact}
+                {
+                    "id": imp.id,
+                    "priority": imp.priority,
+                    "category": imp.category,
+                    "target_file": imp.target_file,
+                    "description": imp.description,
+                    "estimated_impact": imp.estimated_impact,
+                }
                 for imp in improvements
             ],
         }
@@ -102,14 +111,23 @@ class TrainingRunner:
             "improvements_count": len(improvements),
             "summary": report.summary,
             "gaps": [
-                {"category": g.category, "severity": g.severity,
-                 "description": g.description, "suggestion": g.suggestion}
+                {
+                    "category": g.category,
+                    "severity": g.severity,
+                    "description": g.description,
+                    "suggestion": g.suggestion,
+                }
                 for g in report.gaps
             ],
             "improvements": [
-                {"id": imp.id, "priority": imp.priority, "category": imp.category,
-                 "target_file": imp.target_file, "description": imp.description,
-                 "estimated_impact": imp.estimated_impact}
+                {
+                    "id": imp.id,
+                    "priority": imp.priority,
+                    "category": imp.category,
+                    "target_file": imp.target_file,
+                    "description": imp.description,
+                    "estimated_impact": imp.estimated_impact,
+                }
                 for imp in improvements[:10]  # top 10
             ],
         }
@@ -159,6 +177,7 @@ class TrainingRunner:
 
 def main():
     import argparse
+
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
     parser = argparse.ArgumentParser(description="Training loop for planset quality improvement")
@@ -173,7 +192,7 @@ def main():
         result = runner.self_score(args.self_score)
         print(f"\nScore: {result['overall_score']}/100")
         print(f"Summary: {result['summary']}")
-        for gap in result['gaps']:
+        for gap in result["gaps"]:
             print(f"  [{gap['severity']}] {gap['description']}")
 
     elif args.reference and args.our:

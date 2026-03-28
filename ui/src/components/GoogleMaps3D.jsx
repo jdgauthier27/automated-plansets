@@ -4,6 +4,7 @@ import {
   Raycaster, Vector2, CanvasTexture, DoubleSide,
 } from 'three'
 import { ThreeJSOverlayView } from '@googlemaps/three'
+import { solarToThreeTransform, createRedSquareTest } from '../utils/solarToThree'
 
 /**
  * 3D Solar Panel Viewer — Google Maps WebGL Overlay + THREE.js
@@ -115,9 +116,7 @@ export default function GoogleMaps3D({
         zoom: 20,
         tilt: 45,
         heading: 0,
-        // Note: mapTypeId 'satellite' may not support WebGL overlay
-        // Vector map rendering requires a real Map ID from Google Cloud Console
-        mapId: 'DEMO_MAP_ID',
+        mapId: 'b27ceeb795ccc182b0569a21',
         disableDefaultUI: true,
         gestureHandling: 'greedy',
         zoomControl: true,
@@ -148,6 +147,16 @@ export default function GoogleMaps3D({
             tilt: 55,
             heading: getPrimaryAzimuth() + 135,
           })
+
+          // ── RED SQUARE TEST (Mission 1) ──
+          // Place a single 2×2m red square on the first roof segment
+          if (segments.length > 0 && !window.__redSquarePlaced) {
+            window.__redSquarePlaced = true
+            const seg = segments[0]
+            console.log('[GoogleMaps3D] ── TRIGGERING RED SQUARE TEST ──')
+            console.log('[GoogleMaps3D] First segment:', JSON.stringify(seg))
+            createRedSquareTest(overlay, seg, dsmHeights?.building?.ground_elevation_m || 0)
+          }
         }
       })
 
@@ -203,33 +212,46 @@ export default function GoogleMaps3D({
     selectedPanels.forEach((panel, i) => {
       if (!panel.lat || !panel.lng) return
 
-      // Altitude: height above ground from DSM
+      // Altitude: height above ground from DSM (both values are absolute MSL)
       const panelDsmH = dsmHeights?.panel_heights?.[String(i)]
-      const altAboveGround = panelDsmH > 0
-        ? (panelDsmH - groundElev) + 0.3  // DSM roof height + 30cm
-        : 7  // fallback: ~7m for typical 2-story house
+      let altAboveGround
+      if (panelDsmH > 0 && groundElev > 0) {
+        altAboveGround = (panelDsmH - groundElev) + 0.3  // DSM roof height + 30cm offset
+      } else {
+        // Fallback: use segment's planeHeightAtCenterMeters (MSL) - ground
+        const segIdx = panel.segment_index || 0
+        const segHeightM = segments[segIdx]?.height_m || 0
+        if (segHeightM > 100 && groundElev > 0) {
+          altAboveGround = (segHeightM - groundElev) + 0.3
+        } else if (segHeightM > 0 && segHeightM < 30) {
+          altAboveGround = segHeightM + 0.3  // already relative
+        } else {
+          altAboveGround = 7  // last resort: ~7m for typical 2-story house
+        }
+      }
 
-      // Convert to local THREE.js coordinates relative to anchor
-      const pos = overlay.latLngAltitudeToVector3({
+      // Convert to local THREE.js coordinates using corrected transform
+      const segIdx = panel.segment_index || 0
+      const azimuthDeg = segments[segIdx]?.azimuth_deg || 180
+      const pitchDeg = segments[segIdx]?.pitch_deg || 15
+
+      const { position: pos, rotation: rot } = solarToThreeTransform(overlay, {
         lat: panel.lat,
         lng: panel.lng,
-        altitude: altAboveGround,
+        altitudeAboveGround: altAboveGround,
+        pitchDeg,
+        azimuthDeg,
+        widthM: panelW,
+        heightM: panelH,
       })
 
       const geom = new PlaneGeometry(panelW, panelH)
       const mesh = new Mesh(geom, material)
       mesh.position.copy(pos)
-
-      // Rotate to match roof segment
-      const segIdx = panel.segment_index || 0
-      const azimuthDeg = segments[segIdx]?.azimuth_deg || 180
-      const pitchDeg = segments[segIdx]?.pitch_deg || 15
-
-      // Panel faces up by default (PlaneGeometry normal = +Z in local)
-      // With upAxis='Y': Y is up, so rotate panel to lay flat first
-      mesh.rotation.x = -Math.PI / 2 // lay flat (face up)
-      mesh.rotation.x += (pitchDeg * Math.PI / 180) // tilt to roof pitch
-      mesh.rotation.z = -((azimuthDeg - 180) * Math.PI / 180) // rotate to azimuth
+      mesh.rotation.order = rot.order
+      mesh.rotation.x = rot.x
+      mesh.rotation.y = rot.y
+      mesh.rotation.z = rot.z
 
       // Store panel data for click tooltips
       mesh.userData.panelData = {

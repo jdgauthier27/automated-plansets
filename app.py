@@ -38,7 +38,7 @@ from api.solar import router as solar_router
 
 app = FastAPI(
     title="Solar Planset Tool API",
-    description="Quebec Solaire — Automated solar permit planset generation",
+    description="Automated solar permit planset generation",
     version="1.0.0",
 )
 
@@ -135,18 +135,26 @@ def download_proposal_pdf(project_id: str):
 
     # Monthly distribution (seasonal factors, sums to ~1.0)
     monthly_factors = {
-        "Jan": 0.058, "Feb": 0.068, "Mar": 0.088,
-        "Apr": 0.098, "May": 0.108, "Jun": 0.118,
-        "Jul": 0.112, "Aug": 0.104, "Sep": 0.090,
-        "Oct": 0.076, "Nov": 0.058, "Dec": 0.022,
+        "Jan": 0.058,
+        "Feb": 0.068,
+        "Mar": 0.088,
+        "Apr": 0.098,
+        "May": 0.108,
+        "Jun": 0.118,
+        "Jul": 0.112,
+        "Aug": 0.104,
+        "Sep": 0.090,
+        "Oct": 0.076,
+        "Nov": 0.058,
+        "Dec": 0.022,
     }
     monthly_prod = {m: round(annual_prod * f) for m, f in monthly_factors.items()}
 
     annual_cons = data.get("annual_consumption_kwh", annual_prod)
     offset_pct = round(annual_prod / annual_cons * 100, 1) if annual_cons > 0 else 0.0
 
-    co2_lbs = round(annual_prod * 0.92)     # ~0.92 lbs CO2/kWh (US grid avg)
-    trees_eq = round(co2_lbs / 48)          # ~48 lbs CO2 absorbed per tree/year
+    co2_lbs = round(annual_prod * 0.92)  # ~0.92 lbs CO2/kWh (US grid avg)
+    trees_eq = round(co2_lbs / 48)  # ~48 lbs CO2 absorbed per tree/year
 
     total_cost = data.get("total_cost_usd", 0)
     cost_per_w = round(total_cost / (system_kw * 1000), 2) if system_kw > 0 else 0.0
@@ -282,4 +290,5 @@ if UI_BUILD_DIR.exists():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)

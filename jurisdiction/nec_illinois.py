@@ -27,36 +27,108 @@ from jurisdiction.nec_base import NECBaseEngine
 # 'region': 'comed' | 'ameren'
 IL_CITIES = {
     # ComEd territory — Chicago metro and northern Illinois
-    'chicago':          {'utility': 'ComEd', 'wind_mph': 90, 'snow_psf': 25, 'region': 'comed', 'ahj': 'City of Chicago'},
-    'aurora':           {'utility': 'ComEd', 'wind_mph': 90, 'snow_psf': 25, 'region': 'comed', 'ahj': 'City of Aurora'},
-    'naperville':       {'utility': 'ComEd', 'wind_mph': 90, 'snow_psf': 25, 'region': 'comed', 'ahj': 'City of Naperville'},
-    'joliet':           {'utility': 'ComEd', 'wind_mph': 90, 'snow_psf': 25, 'region': 'comed', 'ahj': 'City of Joliet'},
-    'rockford':         {'utility': 'ComEd', 'wind_mph': 90, 'snow_psf': 25, 'region': 'comed', 'ahj': 'City of Rockford'},
-    'waukegan':         {'utility': 'ComEd', 'wind_mph': 90, 'snow_psf': 25, 'region': 'comed', 'ahj': 'City of Waukegan'},
-    'elgin':            {'utility': 'ComEd', 'wind_mph': 90, 'snow_psf': 25, 'region': 'comed', 'ahj': 'City of Elgin'},
-    'evanston':         {'utility': 'ComEd', 'wind_mph': 90, 'snow_psf': 25, 'region': 'comed', 'ahj': 'City of Evanston'},
-    'schaumburg':       {'utility': 'ComEd', 'wind_mph': 90, 'snow_psf': 25, 'region': 'comed', 'ahj': 'Village of Schaumburg'},
-    'bolingbrook':      {'utility': 'ComEd', 'wind_mph': 90, 'snow_psf': 25, 'region': 'comed', 'ahj': 'Village of Bolingbrook'},
-    'arlington heights':{'utility': 'ComEd', 'wind_mph': 90, 'snow_psf': 25, 'region': 'comed', 'ahj': 'Village of Arlington Heights'},
+    "chicago": {"utility": "ComEd", "wind_mph": 90, "snow_psf": 25, "region": "comed", "ahj": "City of Chicago"},
+    "aurora": {"utility": "ComEd", "wind_mph": 90, "snow_psf": 25, "region": "comed", "ahj": "City of Aurora"},
+    "naperville": {"utility": "ComEd", "wind_mph": 90, "snow_psf": 25, "region": "comed", "ahj": "City of Naperville"},
+    "joliet": {"utility": "ComEd", "wind_mph": 90, "snow_psf": 25, "region": "comed", "ahj": "City of Joliet"},
+    "rockford": {"utility": "ComEd", "wind_mph": 90, "snow_psf": 25, "region": "comed", "ahj": "City of Rockford"},
+    "waukegan": {"utility": "ComEd", "wind_mph": 90, "snow_psf": 25, "region": "comed", "ahj": "City of Waukegan"},
+    "elgin": {"utility": "ComEd", "wind_mph": 90, "snow_psf": 25, "region": "comed", "ahj": "City of Elgin"},
+    "evanston": {"utility": "ComEd", "wind_mph": 90, "snow_psf": 25, "region": "comed", "ahj": "City of Evanston"},
+    "schaumburg": {
+        "utility": "ComEd",
+        "wind_mph": 90,
+        "snow_psf": 25,
+        "region": "comed",
+        "ahj": "Village of Schaumburg",
+    },
+    "bolingbrook": {
+        "utility": "ComEd",
+        "wind_mph": 90,
+        "snow_psf": 25,
+        "region": "comed",
+        "ahj": "Village of Bolingbrook",
+    },
+    "arlington heights": {
+        "utility": "ComEd",
+        "wind_mph": 90,
+        "snow_psf": 25,
+        "region": "comed",
+        "ahj": "Village of Arlington Heights",
+    },
     # Ameren Illinois territory — central and southern Illinois
-    'springfield':      {'utility': 'Ameren Illinois', 'wind_mph': 90, 'snow_psf': 20, 'region': 'ameren', 'ahj': 'City of Springfield'},
-    'decatur':          {'utility': 'Ameren Illinois', 'wind_mph': 90, 'snow_psf': 20, 'region': 'ameren', 'ahj': 'City of Decatur'},
-    'bloomington':      {'utility': 'Ameren Illinois', 'wind_mph': 90, 'snow_psf': 20, 'region': 'ameren', 'ahj': 'City of Bloomington'},
-    'peoria':           {'utility': 'Ameren Illinois', 'wind_mph': 90, 'snow_psf': 20, 'region': 'ameren', 'ahj': 'City of Peoria'},
-    'champaign':        {'utility': 'Ameren Illinois', 'wind_mph': 90, 'snow_psf': 20, 'region': 'ameren', 'ahj': 'City of Champaign'},
-    'urbana':           {'utility': 'Ameren Illinois', 'wind_mph': 90, 'snow_psf': 20, 'region': 'ameren', 'ahj': 'City of Urbana'},
-    'normal':           {'utility': 'Ameren Illinois', 'wind_mph': 90, 'snow_psf': 20, 'region': 'ameren', 'ahj': 'Town of Normal'},
-    'east st. louis':   {'utility': 'Ameren Illinois', 'wind_mph': 90, 'snow_psf': 20, 'region': 'ameren', 'ahj': 'City of East St. Louis'},
-    'galesburg':        {'utility': 'Ameren Illinois', 'wind_mph': 90, 'snow_psf': 20, 'region': 'ameren', 'ahj': 'City of Galesburg'},
+    "springfield": {
+        "utility": "Ameren Illinois",
+        "wind_mph": 90,
+        "snow_psf": 20,
+        "region": "ameren",
+        "ahj": "City of Springfield",
+    },
+    "decatur": {
+        "utility": "Ameren Illinois",
+        "wind_mph": 90,
+        "snow_psf": 20,
+        "region": "ameren",
+        "ahj": "City of Decatur",
+    },
+    "bloomington": {
+        "utility": "Ameren Illinois",
+        "wind_mph": 90,
+        "snow_psf": 20,
+        "region": "ameren",
+        "ahj": "City of Bloomington",
+    },
+    "peoria": {
+        "utility": "Ameren Illinois",
+        "wind_mph": 90,
+        "snow_psf": 20,
+        "region": "ameren",
+        "ahj": "City of Peoria",
+    },
+    "champaign": {
+        "utility": "Ameren Illinois",
+        "wind_mph": 90,
+        "snow_psf": 20,
+        "region": "ameren",
+        "ahj": "City of Champaign",
+    },
+    "urbana": {
+        "utility": "Ameren Illinois",
+        "wind_mph": 90,
+        "snow_psf": 20,
+        "region": "ameren",
+        "ahj": "City of Urbana",
+    },
+    "normal": {
+        "utility": "Ameren Illinois",
+        "wind_mph": 90,
+        "snow_psf": 20,
+        "region": "ameren",
+        "ahj": "Town of Normal",
+    },
+    "east st. louis": {
+        "utility": "Ameren Illinois",
+        "wind_mph": 90,
+        "snow_psf": 20,
+        "region": "ameren",
+        "ahj": "City of East St. Louis",
+    },
+    "galesburg": {
+        "utility": "Ameren Illinois",
+        "wind_mph": 90,
+        "snow_psf": 20,
+        "region": "ameren",
+        "ahj": "City of Galesburg",
+    },
     # Default
-    '_default':         {'utility': 'ComEd', 'wind_mph': 90, 'snow_psf': 25, 'region': 'comed', 'ahj': ''},
+    "_default": {"utility": "ComEd", "wind_mph": 90, "snow_psf": 25, "region": "comed", "ahj": ""},
 }
 
 # Interconnection standards by utility
 UTILITY_INTERCONNECTION = {
-    'ComEd':           'ComEd Net Metering / IEEE 1547 (ICC / ILSFA)',
-    'Ameren Illinois': 'Ameren Illinois Net Metering / IEEE 1547 (ICC / ILSFA)',
-    '_default':        'Illinois Commerce Commission Net Metering / IEEE 1547',
+    "ComEd": "ComEd Net Metering / IEEE 1547 (ICC / ILSFA)",
+    "Ameren Illinois": "Ameren Illinois Net Metering / IEEE 1547 (ICC / ILSFA)",
+    "_default": "Illinois Commerce Commission Net Metering / IEEE 1547",
 }
 
 
@@ -70,27 +142,25 @@ class IllinoisJurisdiction(NECBaseEngine):
     systems >10 kW on residential.
     """
 
-    AHJ_NOTE = (
-        "Illinois Structural Engineering Act requires PE stamp for systems >10 kW on residential"
-    )
+    AHJ_NOTE = "Illinois Structural Engineering Act requires PE stamp for systems >10 kW on residential"
 
     def __init__(self, city: str = "", state: str = "IL"):
         self.city = city.lower().strip()
         self._state = state
         city_data = self._resolve_city_data()
-        self.wind_speed_mph = city_data['wind_mph']
-        self.snow_load_psf = city_data['snow_psf']
-        self.utility_name = city_data['utility']
-        self._region = city_data['region']
-        self._ahj = city_data['ahj']
-        intercon_key = self.utility_name if self.utility_name in UTILITY_INTERCONNECTION else '_default'
+        self.wind_speed_mph = city_data["wind_mph"]
+        self.snow_load_psf = city_data["snow_psf"]
+        self.utility_name = city_data["utility"]
+        self._region = city_data["region"]
+        self._ahj = city_data["ahj"]
+        intercon_key = self.utility_name if self.utility_name in UTILITY_INTERCONNECTION else "_default"
         self._interconnection_std = UTILITY_INTERCONNECTION[intercon_key]
         self._utility_info = {
-            'name': self.utility_name,
-            'full_name': self.utility_name,
-            'interconnection_standard': self._interconnection_std,
-            'net_metering_max_kw': 2000,
-            'rate_per_kwh': 0.13,
+            "name": self.utility_name,
+            "full_name": self.utility_name,
+            "interconnection_standard": self._interconnection_std,
+            "net_metering_max_kw": 2000,
+            "rate_per_kwh": 0.13,
         }
 
     # ------------------------------------------------------------------
@@ -101,11 +171,11 @@ class IllinoisJurisdiction(NECBaseEngine):
         """Match city name against IL_CITIES table using substring matching."""
         city_key = self.city
         for name, data in IL_CITIES.items():
-            if name == '_default':
+            if name == "_default":
                 continue
             if name in city_key or city_key in name:
                 return data
-        return dict(IL_CITIES['_default'])
+        return dict(IL_CITIES["_default"])
 
     # ------------------------------------------------------------------
     # JurisdictionEngine interface
@@ -123,28 +193,28 @@ class IllinoisJurisdiction(NECBaseEngine):
 
     def get_governing_codes(self) -> List[Dict]:
         return [
-            {"code": "NEC 2020",    "title": "National Electrical Code",              "edition": "2020"},
-            {"code": "IECC 2021",   "title": "Illinois Energy Code (IECC)",           "edition": "2021"},
-            {"code": "ASCE 7-16",   "title": "Minimum Design Loads for Buildings",    "edition": "2016"},
-            {"code": "IFC 2021",    "title": "International Fire Code",               "edition": "2021"},
-            {"code": "UL 1741",     "title": "Inverters, Converters, Controllers",    "edition": "SA"},
-            {"code": "UL 2703",     "title": "Mounting Systems, Bonding",             "edition": "2023"},
-            {"code": "IEEE 1547",   "title": "Interconnection Standard",              "edition": "2018"},
+            {"code": "NEC 2020", "title": "National Electrical Code", "edition": "2020"},
+            {"code": "IECC 2021", "title": "Illinois Energy Code (IECC)", "edition": "2021"},
+            {"code": "ASCE 7-16", "title": "Minimum Design Loads for Buildings", "edition": "2016"},
+            {"code": "IFC 2021", "title": "International Fire Code", "edition": "2021"},
+            {"code": "UL 1741", "title": "Inverters, Converters, Controllers", "edition": "SA"},
+            {"code": "UL 2703", "title": "Mounting Systems, Bonding", "edition": "2023"},
+            {"code": "IEEE 1547", "title": "Interconnection Standard", "edition": "2018"},
         ]
 
     def get_design_temperatures(self, city: str = "") -> Dict:
         city_key = (city or self.city).lower()
         temps = {
-            'chicago':     {"cold_c": -20, "hot_module_c": 65, "stc_c": 25},
-            'rockford':    {"cold_c": -22, "hot_module_c": 64, "stc_c": 25},
-            'waukegan':    {"cold_c": -20, "hot_module_c": 64, "stc_c": 25},
-            'aurora':      {"cold_c": -20, "hot_module_c": 64, "stc_c": 25},
-            'joliet':      {"cold_c": -20, "hot_module_c": 64, "stc_c": 25},
-            'springfield': {"cold_c": -18, "hot_module_c": 66, "stc_c": 25},
-            'peoria':      {"cold_c": -18, "hot_module_c": 65, "stc_c": 25},
-            'decatur':     {"cold_c": -18, "hot_module_c": 66, "stc_c": 25},
-            'champaign':   {"cold_c": -16, "hot_module_c": 67, "stc_c": 25},
-            'urbana':      {"cold_c": -16, "hot_module_c": 67, "stc_c": 25},
+            "chicago": {"cold_c": -20, "hot_module_c": 65, "stc_c": 25},
+            "rockford": {"cold_c": -22, "hot_module_c": 64, "stc_c": 25},
+            "waukegan": {"cold_c": -20, "hot_module_c": 64, "stc_c": 25},
+            "aurora": {"cold_c": -20, "hot_module_c": 64, "stc_c": 25},
+            "joliet": {"cold_c": -20, "hot_module_c": 64, "stc_c": 25},
+            "springfield": {"cold_c": -18, "hot_module_c": 66, "stc_c": 25},
+            "peoria": {"cold_c": -18, "hot_module_c": 65, "stc_c": 25},
+            "decatur": {"cold_c": -18, "hot_module_c": 66, "stc_c": 25},
+            "champaign": {"cold_c": -16, "hot_module_c": 67, "stc_c": 25},
+            "urbana": {"cold_c": -16, "hot_module_c": 67, "stc_c": 25},
         }
         for key, t in temps.items():
             if key in city_key:
@@ -233,15 +303,15 @@ class IllinoisJurisdiction(NECBaseEngine):
         if city and city.lower().strip() != self.city:
             return IllinoisJurisdiction(city=city, state=state).get_jurisdiction_data()
         return {
-            "utility":         self.utility_name,
-            "wire_type":       self.wire_type,
+            "utility": self.utility_name,
+            "wire_type": self.wire_type,
             "electrical_code": self.get_code_edition(),
-            "utility_full":    self.utility_name,
-            "wind_mph":        self.wind_speed_mph,
-            "snow_load_psf":   self.snow_load_psf,
-            "snow_psf":        self.snow_load_psf,
-            "ahj":             self.get_ahj_label(),
-            "licensing_body":  self.get_licensing_body(),
-            "code_name":       self.get_code_name(),
-            "ahj_note":        self.AHJ_NOTE,
+            "utility_full": self.utility_name,
+            "wind_mph": self.wind_speed_mph,
+            "snow_load_psf": self.snow_load_psf,
+            "snow_psf": self.snow_load_psf,
+            "ahj": self.get_ahj_label(),
+            "licensing_body": self.get_licensing_body(),
+            "code_name": self.get_code_name(),
+            "ahj_note": self.AHJ_NOTE,
         }

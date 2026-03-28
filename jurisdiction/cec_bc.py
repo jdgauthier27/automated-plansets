@@ -28,14 +28,14 @@ from .base import JurisdictionEngine
 # ── Conductor ampacity table (CEC Table 2 / 75 deg C copper / RW90) ──────
 
 CONDUCTOR_AMPACITY_75C = [
-    (15,  "#14 AWG Cu"),
-    (20,  "#12 AWG Cu"),
-    (30,  "#10 AWG Cu"),
-    (40,  "#8 AWG Cu"),
-    (55,  "#6 AWG Cu"),
-    (70,  "#4 AWG Cu"),
-    (85,  "#3 AWG Cu"),
-    (95,  "#2 AWG Cu"),
+    (15, "#14 AWG Cu"),
+    (20, "#12 AWG Cu"),
+    (30, "#10 AWG Cu"),
+    (40, "#8 AWG Cu"),
+    (55, "#6 AWG Cu"),
+    (70, "#4 AWG Cu"),
+    (85, "#3 AWG Cu"),
+    (95, "#2 AWG Cu"),
     (110, "#1 AWG Cu"),
     (125, "#1/0 AWG Cu"),
     (145, "#2/0 AWG Cu"),
@@ -46,9 +46,9 @@ CONDUCTOR_AMPACITY_75C = [
 # ── EGC sizing table (CEC 10-814) ────────────────────────────────────────
 
 EGC_TABLE = [
-    (15,  "#14 AWG Cu"),
-    (20,  "#12 AWG Cu"),
-    (60,  "#10 AWG Cu"),
+    (15, "#14 AWG Cu"),
+    (20, "#12 AWG Cu"),
+    (60, "#10 AWG Cu"),
     (100, "#8 AWG Cu"),
     (200, "#6 AWG Cu"),
     (300, "#4 AWG Cu"),
@@ -65,31 +65,31 @@ STANDARD_BREAKER_SIZES = [15, 20, 25, 30, 35, 40, 50, 60, 70, 80, 100, 125, 150,
 # ── Design temperatures by BC city (BCBC 2018 / NBCC 2020 Appendix C) ────
 
 CITY_DESIGN_TEMPS = {
-    "vancouver":    -7,
-    "surrey":       -8,
-    "burnaby":      -7,
-    "richmond":     -7,
-    "abbotsford":  -12,
-    "coquitlam":    -9,
-    "langley":     -10,
-    "saanich":      -6,   # Victoria area — mild marine climate
-    "victoria":     -6,
-    "kelowna":     -22,   # Interior — much colder
-    "penticton":   -20,
-    "vernon":      -22,
-    "kamloops":    -23,
+    "vancouver": -7,
+    "surrey": -8,
+    "burnaby": -7,
+    "richmond": -7,
+    "abbotsford": -12,
+    "coquitlam": -9,
+    "langley": -10,
+    "saanich": -6,  # Victoria area — mild marine climate
+    "victoria": -6,
+    "kelowna": -22,  # Interior — much colder
+    "penticton": -20,
+    "vernon": -22,
+    "kamloops": -23,
     "prince george": -33,
-    "nanaimo":      -7,
-    "trail":       -18,
-    "nelson":      -19,
-    "castlegar":   -18,
-    "chilliwack":  -12,
+    "nanaimo": -7,
+    "trail": -18,
+    "nelson": -19,
+    "castlegar": -18,
+    "chilliwack": -12,
     "maple ridge": -10,
     "north vancouver": -8,
-    "west vancouver":  -7,
+    "west vancouver": -7,
     "new westminster": -8,
-    "port coquitlam":  -9,
-    "port moody":      -9,
+    "port coquitlam": -9,
+    "port moody": -9,
 }
 
 DEFAULT_COLD_TEMP_C = -15  # Conservative BC default (balances coastal/interior)
@@ -97,30 +97,30 @@ DEFAULT_COLD_TEMP_C = -15  # Conservative BC default (balances coastal/interior)
 # ── Snow loads by city (kPa) — BCBC 2018 Table C-2 ───────────────────────
 
 CITY_SNOW_LOAD_KPA = {
-    "vancouver":    1.9,
-    "surrey":       1.9,
-    "burnaby":      1.9,
-    "richmond":     1.9,
-    "abbotsford":   2.2,
-    "coquitlam":    2.0,
-    "langley":      2.0,
-    "saanich":      1.4,   # Victoria area — less snow
-    "victoria":     1.4,
-    "kelowna":      2.5,
-    "penticton":    2.2,
-    "vernon":       2.6,
-    "kamloops":     2.2,
+    "vancouver": 1.9,
+    "surrey": 1.9,
+    "burnaby": 1.9,
+    "richmond": 1.9,
+    "abbotsford": 2.2,
+    "coquitlam": 2.0,
+    "langley": 2.0,
+    "saanich": 1.4,  # Victoria area — less snow
+    "victoria": 1.4,
+    "kelowna": 2.5,
+    "penticton": 2.2,
+    "vernon": 2.6,
+    "kamloops": 2.2,
     "prince george": 3.8,
-    "nanaimo":      1.6,
-    "trail":        2.8,
-    "nelson":       3.0,
-    "castlegar":    2.6,
-    "chilliwack":   2.0,
+    "nanaimo": 1.6,
+    "trail": 2.8,
+    "nelson": 3.0,
+    "castlegar": 2.6,
+    "chilliwack": 2.0,
     "north vancouver": 2.2,
-    "west vancouver":  2.0,
+    "west vancouver": 2.0,
     "new westminster": 1.9,
-    "port coquitlam":  2.0,
-    "port moody":      2.0,
+    "port coquitlam": 2.0,
+    "port moody": 2.0,
 }
 
 DEFAULT_SNOW_LOAD_KPA = 2.4  # Conservative BC default (interior bias)
@@ -128,30 +128,30 @@ DEFAULT_SNOW_LOAD_KPA = 2.4  # Conservative BC default (interior bias)
 # ── Seismic design category by city ──────────────────────────────────────
 
 CITY_SEISMIC = {
-    "vancouver":       "SDC D",   # Lower Mainland — high seismic zone
-    "surrey":          "SDC D",
-    "burnaby":         "SDC D",
-    "richmond":        "SDC D",   # Extreme liquefaction risk
-    "coquitlam":       "SDC D",
+    "vancouver": "SDC D",  # Lower Mainland — high seismic zone
+    "surrey": "SDC D",
+    "burnaby": "SDC D",
+    "richmond": "SDC D",  # Extreme liquefaction risk
+    "coquitlam": "SDC D",
     "north vancouver": "SDC D",
-    "west vancouver":  "SDC D",
+    "west vancouver": "SDC D",
     "new westminster": "SDC D",
-    "port coquitlam":  "SDC D",
-    "port moody":      "SDC D",
-    "abbotsford":      "SDC C",
-    "langley":         "SDC D",
-    "saanich":         "SDC D",   # Victoria — also high seismic
-    "victoria":        "SDC D",
-    "nanaimo":         "SDC C",
-    "kelowna":         "SDC B",
-    "penticton":       "SDC B",
-    "vernon":          "SDC B",
-    "kamloops":        "SDC B",
-    "prince george":   "SDC B",
-    "trail":           "SDC B",
-    "nelson":          "SDC B",
-    "castlegar":       "SDC B",
-    "chilliwack":      "SDC C",
+    "port coquitlam": "SDC D",
+    "port moody": "SDC D",
+    "abbotsford": "SDC C",
+    "langley": "SDC D",
+    "saanich": "SDC D",  # Victoria — also high seismic
+    "victoria": "SDC D",
+    "nanaimo": "SDC C",
+    "kelowna": "SDC B",
+    "penticton": "SDC B",
+    "vernon": "SDC B",
+    "kamloops": "SDC B",
+    "prince george": "SDC B",
+    "trail": "SDC B",
+    "nelson": "SDC B",
+    "castlegar": "SDC B",
+    "chilliwack": "SDC C",
 }
 
 DEFAULT_SEISMIC = "SDC C"
@@ -159,11 +159,33 @@ DEFAULT_SEISMIC = "SDC C"
 # ── FortisBC service territory cities ────────────────────────────────────
 
 FORTISBC_CITIES = {
-    "kelowna", "penticton", "vernon", "trail", "nelson", "castlegar",
-    "osoyoos", "oliver", "keremeos", "princeton", "summerland", "peachland",
-    "west kelowna", "lake country", "enderby", "armstrong", "lumby",
-    "grand forks", "greenwood", "midway", "rossland", "fruitvale",
-    "salmo", "creston", "kaslo", "nakusp", "new denver",
+    "kelowna",
+    "penticton",
+    "vernon",
+    "trail",
+    "nelson",
+    "castlegar",
+    "osoyoos",
+    "oliver",
+    "keremeos",
+    "princeton",
+    "summerland",
+    "peachland",
+    "west kelowna",
+    "lake country",
+    "enderby",
+    "armstrong",
+    "lumby",
+    "grand forks",
+    "greenwood",
+    "midway",
+    "rossland",
+    "fruitvale",
+    "salmo",
+    "creston",
+    "kaslo",
+    "nakusp",
+    "new denver",
 }
 
 DEFAULT_UTILITY = "BC Hydro"
@@ -181,8 +203,7 @@ class BCJurisdiction(JurisdictionEngine):
         utility: Override utility name. If omitted, auto-selected by city.
     """
 
-    def __init__(self, city: str = "", utility: str = "",
-                 municipality: str = "", province: str = ""):
+    def __init__(self, city: str = "", utility: str = "", municipality: str = "", province: str = ""):
         # Accept municipality/province as aliases for city (test harness compatibility)
         if not city and municipality:
             city = municipality
@@ -201,6 +222,9 @@ class BCJurisdiction(JurisdictionEngine):
         self.wind_speed_ms = 40  # 40 m/s coastal design wind (BCBC 2018)
 
     # ── Identity ──────────────────────────────────────────────────────────
+
+    def get_building_code(self) -> str:
+        return "BCBC"
 
     def get_code_name(self) -> str:
         return "CEC"
@@ -380,8 +404,7 @@ class BCJurisdiction(JurisdictionEngine):
     def get_general_notes(self) -> List[str]:
         """General notes for BC solar installations."""
         net_metering_program = (
-            "FortisBC Net Metering program" if "FortisBC" in self.utility_name
-            else "BC Hydro Net Metering program"
+            "FortisBC Net Metering program" if "FortisBC" in self.utility_name else "BC Hydro Net Metering program"
         )
         return [
             f"Notify {self.utility_name} prior to activating the PV system. Net metering application must be approved under the {net_metering_program} before grid connection.",
@@ -469,7 +492,7 @@ class BCJurisdiction(JurisdictionEngine):
             return {
                 "name": utility_name,
                 "net_metering_max_kw": 100,
-                "rate_per_kwh": 0.1223,   # FortisBC residential rate Step 1 (2024)
+                "rate_per_kwh": 0.1223,  # FortisBC residential rate Step 1 (2024)
                 "incentive_per_kw": 0,
                 "program_name": "FortisBC Net Metering Program",
                 "voltage": "240V split-phase",
@@ -480,7 +503,7 @@ class BCJurisdiction(JurisdictionEngine):
             return {
                 "name": utility_name,
                 "net_metering_max_kw": 100,
-                "rate_per_kwh": 0.1399,   # BC Hydro residential rate Step 1 (2024)
+                "rate_per_kwh": 0.1399,  # BC Hydro residential rate Step 1 (2024)
                 "incentive_per_kw": 0,
                 "program_name": "BC Hydro Net Metering Program",
                 "voltage": "240V split-phase",

@@ -48,6 +48,7 @@ QUEBEC_SUN_HOURS = {
 @dataclass
 class SolarRoofSegment:
     """A roof segment returned by the Solar API."""
+
     index: int
     pitch_deg: float
     azimuth_deg: float
@@ -62,6 +63,7 @@ class SolarRoofSegment:
 @dataclass
 class SolarPanel:
     """A panel position returned by the Solar API."""
+
     center_lat: float
     center_lng: float
     orientation: str  # "LANDSCAPE" or "PORTRAIT"
@@ -72,6 +74,7 @@ class SolarPanel:
 @dataclass
 class BuildingInsight:
     """Full building insight from the Solar API."""
+
     address: str
     lat: float
     lng: float
@@ -83,7 +86,7 @@ class BuildingInsight:
     panels: List[SolarPanel] = field(default_factory=list)
     carbon_offset_kg: float = 0.0
     panel_height_m: float = 1.879  # from API panelHeightMeters
-    panel_width_m: float = 1.045   # from API panelWidthMeters
+    panel_width_m: float = 1.045  # from API panelWidthMeters
     panel_capacity_w: float = 400  # from API panelCapacityWatts
     raw_response: Optional[Dict] = None
 
@@ -160,11 +163,9 @@ class GoogleSolarClient:
             return None
 
         def _download(url_str: str) -> Optional[bytes]:
-            dl = (f"{url_str}&key={self.api_key}" if "?" in url_str
-                  else f"{url_str}?key={self.api_key}")
+            dl = f"{url_str}&key={self.api_key}" if "?" in url_str else f"{url_str}?key={self.api_key}"
             try:
-                with urllib.request.urlopen(urllib.request.Request(dl),
-                                            timeout=60, context=_ssl_ctx) as r:
+                with urllib.request.urlopen(urllib.request.Request(dl), timeout=60, context=_ssl_ctx) as r:
                     return r.read()
             except Exception as e:
                 logger.error("GeoTIFF download failed: %s", e)
@@ -235,28 +236,32 @@ class GoogleSolarClient:
         for i, seg in enumerate(solar.get("roofSegmentStats", [])):
             stats = seg.get("stats", {})
             seg_center = seg.get("center", {})
-            segments.append(SolarRoofSegment(
-                index=i,
-                pitch_deg=seg.get("pitchDegrees", 0),
-                azimuth_deg=seg.get("azimuthDegrees", 180),
-                area_m2=stats.get("areaMeters2", 0),
-                center_lat=seg_center.get("latitude", 0),
-                center_lng=seg_center.get("longitude", 0),
-                bounding_box=seg.get("boundingBox"),
-                height_m=seg.get("planeHeightAtCenterMeters", 0),
-            ))
+            segments.append(
+                SolarRoofSegment(
+                    index=i,
+                    pitch_deg=seg.get("pitchDegrees", 0),
+                    azimuth_deg=seg.get("azimuthDegrees", 180),
+                    area_m2=stats.get("areaMeters2", 0),
+                    center_lat=seg_center.get("latitude", 0),
+                    center_lng=seg_center.get("longitude", 0),
+                    bounding_box=seg.get("boundingBox"),
+                    height_m=seg.get("planeHeightAtCenterMeters", 0),
+                )
+            )
 
         # Individual panels
         panels = []
         for p in solar.get("solarPanels", []):
             pc = p.get("center", {})
-            panels.append(SolarPanel(
-                center_lat=pc.get("latitude", 0),
-                center_lng=pc.get("longitude", 0),
-                orientation=p.get("orientation", "PORTRAIT"),
-                segment_index=p.get("segmentIndex", 0),
-                yearly_energy_kwh=p.get("yearlyEnergyDcKwh", 0),
-            ))
+            panels.append(
+                SolarPanel(
+                    center_lat=pc.get("latitude", 0),
+                    center_lng=pc.get("longitude", 0),
+                    orientation=p.get("orientation", "PORTRAIT"),
+                    segment_index=p.get("segmentIndex", 0),
+                    yearly_energy_kwh=p.get("yearlyEnergyDcKwh", 0),
+                )
+            )
 
         # Best config (max panels)
         configs = solar.get("solarPanelConfigs", [])
@@ -268,13 +273,13 @@ class GoogleSolarClient:
             lng=center.get("longitude", 0),
             imagery_quality=data.get("imageryQuality", "UNKNOWN"),
             max_panels=best_config.get("panelsCount", len(panels)),
-            max_kw=round(solar.get("maxArrayPanelsCount", 0) *
-                         solar.get("panelCapacityWatts", 400) / 1000, 2),
+            max_kw=round(solar.get("maxArrayPanelsCount", 0) * solar.get("panelCapacityWatts", 400) / 1000, 2),
             max_annual_kwh=round(best_config.get("yearlyEnergyDcKwh", 0), 0),
             roof_segments=segments,
             panels=panels,
-            carbon_offset_kg=round(solar.get("carbonOffsetFactorKgPerMwh", 0) *
-                                   best_config.get("yearlyEnergyDcKwh", 0) / 1000, 1),
+            carbon_offset_kg=round(
+                solar.get("carbonOffsetFactorKgPerMwh", 0) * best_config.get("yearlyEnergyDcKwh", 0) / 1000, 1
+            ),
             panel_height_m=solar.get("panelHeightMeters", 1.879),
             panel_width_m=solar.get("panelWidthMeters", 1.045),
             panel_capacity_w=solar.get("panelCapacityWatts", 400),
@@ -288,10 +293,7 @@ class GoogleSolarClient:
         import urllib.parse
 
         encoded = urllib.parse.quote(address)
-        url = (
-            f"https://maps.googleapis.com/maps/api/geocode/json"
-            f"?address={encoded}&key={self.api_key}"
-        )
+        url = f"https://maps.googleapis.com/maps/api/geocode/json?address={encoded}&key={self.api_key}"
 
         try:
             req = urllib.request.Request(url)
@@ -319,8 +321,8 @@ class GoogleSolarClient:
             SolarRoofSegment(
                 index=0,
                 pitch_deg=25.0,
-                azimuth_deg=180.0,   # south-facing (ideal)
-                area_m2=65.0,        # ~700 sq ft
+                azimuth_deg=180.0,  # south-facing (ideal)
+                area_m2=65.0,  # ~700 sq ft
                 center_lat=45.5017,
                 center_lng=-73.5673,
                 height_m=8.5,
@@ -329,7 +331,7 @@ class GoogleSolarClient:
             SolarRoofSegment(
                 index=1,
                 pitch_deg=25.0,
-                azimuth_deg=0.0,     # north-facing
+                azimuth_deg=0.0,  # north-facing
                 area_m2=65.0,
                 center_lat=45.5018,
                 center_lng=-73.5673,
@@ -339,8 +341,8 @@ class GoogleSolarClient:
             SolarRoofSegment(
                 index=2,
                 pitch_deg=15.0,
-                azimuth_deg=180.0,   # south garage
-                area_m2=28.0,        # ~300 sq ft
+                azimuth_deg=180.0,  # south garage
+                area_m2=28.0,  # ~300 sq ft
                 center_lat=45.5015,
                 center_lng=-73.5671,
                 height_m=4.0,
@@ -362,13 +364,15 @@ class GoogleSolarClient:
                     frac = (i + 0.5) / n_panels
                     offset_lat = (frac - 0.5) * 0.0002
                     offset_lng = ((i % 4) - 1.5) * 0.00005
-                    panels.append(SolarPanel(
-                        center_lat=seg.center_lat + offset_lat,
-                        center_lng=seg.center_lng + offset_lng,
-                        orientation="PORTRAIT",
-                        segment_index=seg.index,
-                        yearly_energy_kwh=480,  # typical for QC
-                    ))
+                    panels.append(
+                        SolarPanel(
+                            center_lat=seg.center_lat + offset_lat,
+                            center_lng=seg.center_lng + offset_lng,
+                            orientation="PORTRAIT",
+                            segment_index=seg.index,
+                            yearly_energy_kwh=480,  # typical for QC
+                        )
+                    )
                     panel_id += 1
 
         total_kwh = sum(p.yearly_energy_kwh for p in panels)

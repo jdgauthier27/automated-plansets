@@ -20,12 +20,13 @@ logger = logging.getLogger(__name__)
 @dataclass
 class OptimizedPanel:
     """A panel in the optimized layout with cost-effectiveness data."""
+
     panel_id: int
     segment_index: int
     yearly_kwh: float
-    kwh_rank: int             # 1 = highest producer
-    string_id: int = 0       # which string/branch this panel belongs to
-    branch_id: int = 0       # which AC branch circuit
+    kwh_rank: int  # 1 = highest producer
+    string_id: int = 0  # which string/branch this panel belongs to
+    branch_id: int = 0  # which AC branch circuit
     is_included: bool = True  # False if excluded by constraints
     exclusion_reason: str = ""
 
@@ -33,6 +34,7 @@ class OptimizedPanel:
 @dataclass
 class OptimizedLayout:
     """Result of layout optimization."""
+
     panels: List[OptimizedPanel]
     total_panels: int
     total_dc_kw: float
@@ -67,8 +69,13 @@ def optimize_layout(
     """
     if not smart_placements:
         return OptimizedLayout(
-            panels=[], total_panels=0, total_dc_kw=0, total_kwh_yr=0,
-            avg_kwh_per_panel=0, num_strings=0, num_branches=0,
+            panels=[],
+            total_panels=0,
+            total_dc_kw=0,
+            total_kwh_yr=0,
+            avg_kwh_per_panel=0,
+            num_strings=0,
+            num_branches=0,
             cost_effectiveness_score=0,
         )
 
@@ -148,7 +155,7 @@ def optimize_layout(
 
     # Calculate totals
     total_panels = len(included)
-    panel_kw = getattr(panel_spec, 'kw', getattr(panel_spec, 'wattage_w', 400) / 1000)
+    panel_kw = getattr(panel_spec, "kw", getattr(panel_spec, "wattage_w", 400) / 1000)
     total_dc_kw = round(total_panels * panel_kw, 2)
     total_kwh = sum(p.yearly_kwh for p in included)
     avg_kwh = total_kwh / total_panels if total_panels > 0 else 0
@@ -160,10 +167,14 @@ def optimize_layout(
     cost_effectiveness = round(capture_ratio * 100, 1)
 
     logger.info(
-        "Layout optimized: %d/%d panels, %.1f kW, %.0f kWh/yr, "
-        "avg %.0f kWh/panel, %d strings, score=%.0f",
-        total_panels, len(optimized), total_dc_kw, total_kwh,
-        avg_kwh, num_strings, cost_effectiveness,
+        "Layout optimized: %d/%d panels, %.1f kW, %.0f kWh/yr, avg %.0f kWh/panel, %d strings, score=%.0f",
+        total_panels,
+        len(optimized),
+        total_dc_kw,
+        total_kwh,
+        avg_kwh,
+        num_strings,
+        cost_effectiveness,
     )
 
     return OptimizedLayout(
