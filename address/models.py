@@ -11,6 +11,7 @@ from typing import Optional, Dict
 @dataclass
 class AddressValidation:
     """Result of geocoding + Street View validation for an address."""
+
     lat: float
     lng: float
     formatted_address: str
@@ -22,6 +23,7 @@ class AddressValidation:
 @dataclass
 class BuildingCandidate:
     """A candidate building near the target address."""
+
     lat: float
     lng: float
     distance_m: float  # distance from geocoded address center

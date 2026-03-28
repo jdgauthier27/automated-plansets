@@ -41,6 +41,7 @@ ROOF_MATERIALS = {
 # ProjectSpec
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ProjectSpec:
     """Complete project specification — the single source of truth for a design.
@@ -56,7 +57,7 @@ class ProjectSpec:
     longitude: float = 0.0
     municipality: str = ""
     province_or_state: str = ""
-    country: str = "CA"                         # "CA" or "US"
+    country: str = "US"  # "US" or "CA"
 
     # ── Equipment (from catalog) ──────────────────────────────────────────
     panel: PanelCatalogEntry = field(default_factory=PanelCatalogEntry)
@@ -65,60 +66,62 @@ class ProjectSpec:
     attachment: AttachmentCatalogEntry = field(default_factory=AttachmentCatalogEntry)
 
     # ── Property / Lot ──────────────────────────────────────────────────
-    lot_width_ft: float = 0.0                   # from manual entry or GIS
+    lot_width_ft: float = 0.0  # from manual entry or GIS
     lot_depth_ft: float = 0.0
     front_setback_ft: float = 15.0
     side_setback_ft: float = 5.0
-    building_width_ft: float = 0.0              # from API or manual
-    building_depth_ft: float = 0.0              # from API or manual
+    building_width_ft: float = 0.0  # from API or manual
+    building_depth_ft: float = 0.0  # from API or manual
     building_outline_ft: list = field(default_factory=list)  # [(x,y),...] polygon from GeoTIFF
-    lot_outline_ft: list = field(default_factory=list)       # [(x,y),...] lot polygon if known
-    street_name: str = ""                       # extracted from address
+    lot_outline_ft: list = field(default_factory=list)  # [(x,y),...] lot polygon if known
+    street_name: str = ""  # extracted from address
 
     # ── Roof ──────────────────────────────────────────────────────────────
-    roof_material: str = "asphalt_shingle"      # key from ROOF_MATERIALS
-    roof_pitch_deg: float = 0.0                 # from API or manual
-    roof_azimuth_deg: float = 180.0             # from API or manual (180 = south)
+    roof_material: str = "asphalt_shingle"  # key from ROOF_MATERIALS
+    roof_pitch_deg: float = 0.0  # from API or manual
+    roof_azimuth_deg: float = 180.0  # from API or manual (180 = south)
 
     # ── Electrical (site-specific, entered by engineer) ───────────────────
     main_panel_breaker_a: int = 200
     main_panel_bus_rating_a: int = 225
-    main_panel_brand: str = ""                  # "Square D QO", "Eaton BR"
+    main_panel_brand: str = ""  # "Square D QO", "Eaton BR"
     service_voltage_v: int = 240
     is_residential: bool = True
     num_panels: int = 0
 
     # ── System sizing & production ──────────────────────────────────────
-    target_production_kwh: float = 0.0          # annual kWh production target
-    annual_consumption_kwh: float = 0.0         # customer's annual usage
-    target_offset_pct: float = 100.0            # desired offset (100% = net zero)
-    sun_hours_peak: float = 0.0                 # peak sun hours (location-specific)
+    target_production_kwh: float = 0.0  # annual kWh production target
+    annual_consumption_kwh: float = 0.0  # customer's annual usage
+    target_offset_pct: float = 100.0  # desired offset (100% = net zero)
+    sun_hours_peak: float = 0.0  # peak sun hours (location-specific)
     # Computed:
     #   system_kw = num_panels × panel.wattage_w / 1000
     #   estimated_annual_kwh = system_kw × sun_hours_peak × 365
     #   actual_offset_pct = estimated_annual_kwh / annual_consumption_kwh × 100
 
     # Legacy alias
-    target_kwh: Optional[float] = None          # deprecated, use target_production_kwh
+    target_kwh: Optional[float] = None  # deprecated, use target_production_kwh
 
     # ── Solar resource ────────────────────────────────────────────────────
-    shade_factor: float = 1.0                   # 0.0–1.0 from annual flux GeoTIFF (1.0 = no shading)
+    shade_factor: float = 1.0  # 0.0–1.0 from annual flux GeoTIFF (1.0 = no shading)
 
     # ── Jurisdiction ───────────────────────────────────────────────────────
-    jurisdiction_id: str = ""                   # "cec_quebec", "nec_california", "nec_base"
+    jurisdiction_id: str = ""  # "cec_quebec", "nec_california", "nec_base"
 
     # ── Company ───────────────────────────────────────────────────────────
     company_name: str = "Solar Contractor"
-    company_license: str = ""                   # "CMEQ #12345"
+    company_license: str = ""  # "CMEQ #12345"
     company_email: str = ""
     designer_name: str = "AI Solar Design Engine"
     project_name: str = "Solar Installation"
 
     # ── Calculated (populated by engine, not by user) ─────────────────────
     # These are filled in during the generation pipeline
-    building_insight: Optional[Any] = None      # BuildingInsight from Google Solar
-    placements: Optional[List[Any]] = None      # List[PlacementResult]
-    electrical_design: Optional[Any] = None     # ElectricalDesign result
+    building_insight: Optional[Any] = None  # BuildingInsight from Google Solar
+    placements: Optional[List[Any]] = None  # List[PlacementResult]
+    electrical_design: Optional[Any] = None  # ElectricalDesign result
+    roof_faces_latlng: Optional[List[Dict]] = None  # GeoTIFF roof face polygons [{polygon_latlng, usable_polygon_latlng, azimuth_deg, pitch_deg, area_sqft}]
+    parcel_boundary_latlng: Optional[List[Dict]] = None  # Lot boundary [{lat, lng}] from parcel API
 
     # ── Convenience properties ────────────────────────────────────────────
 
@@ -143,18 +146,24 @@ class ProjectSpec:
     def estimated_annual_kwh(self) -> float:
         """Estimated annual production in kWh.
 
-        Uses: system_dc_kw × peak_sun_hours × 365 × system_losses
-        If sun_hours_peak is 0, use a default based on location.
+        Prefers Google Solar API per-panel energy data (accounts for shading
+        hour-by-hour). Falls back to generic formula if not available.
         """
+        # Use Google's per-panel energy if available — much more accurate
+        if self.building_insight and hasattr(self.building_insight, 'panels') and self.building_insight.panels:
+            google_panels = self.building_insight.panels[:self.num_panels] if self.num_panels else self.building_insight.panels
+            google_total = sum(p.yearly_energy_kwh for p in google_panels if hasattr(p, 'yearly_energy_kwh'))
+            if google_total > 0:
+                return round(google_total, 0)
+
+        # Fallback: generic formula
         psh = self.sun_hours_peak
         if psh <= 0:
-            # Defaults by region
             if self.country == "US":
                 psh = 5.5  # California average
             else:
                 psh = 3.8  # Quebec average
         shade = self.shade_factor if 0.0 < self.shade_factor <= 1.0 else 1.0
-        # System losses: ~85% (soiling, wiring, inverter, temp) × shade_factor
         return round(self.system_dc_kw * psh * 365 * shade * 0.85, 0)
 
     @property
@@ -209,10 +218,12 @@ class ProjectSpec:
     def monthly_production(self) -> list:
         """Monthly energy production breakdown as list of MonthlyProduction objects."""
         from engine.electrical_calc import calculate_monthly_production
+
         return calculate_monthly_production(self, self.estimated_annual_kwh)
 
     @property
     def structural_loads(self) -> dict:
         """Structural loading calculations per IBC / ASCE 7-16."""
         from engine.electrical_calc import calculate_structural_loads
+
         return calculate_structural_loads(self)

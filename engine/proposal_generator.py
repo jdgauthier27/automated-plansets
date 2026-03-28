@@ -29,8 +29,7 @@ def generate_proposal(project: ProjectSpec, bom_result, monthly_production) -> d
         material_cost = sum(
             item.qty * item.unit_cost_usd
             for item in bom_result
-            if isinstance(getattr(item, "qty", None), (int, float))
-            and getattr(item, "unit_cost_usd", 0.0) > 0
+            if isinstance(getattr(item, "qty", None), (int, float)) and getattr(item, "unit_cost_usd", 0.0) > 0
         )
         labor_cost = material_cost * 0.25
         permit_cost = 500.0
@@ -56,12 +55,12 @@ def generate_proposal(project: ProjectSpec, bom_result, monthly_production) -> d
         "annual_production_kwh": round(annual_kwh, 1),
         "annual_consumption_kwh": project.annual_consumption_kwh,
         "solar_offset_pct": round(annual_kwh / project.annual_consumption_kwh * 100, 1)
-        if project.annual_consumption_kwh > 0 else 0.0,
+        if project.annual_consumption_kwh > 0
+        else 0.0,
         "total_cost_usd": total_cost,
         "cost_per_watt": round(total_cost / system_watts, 2) if system_watts > 0 else 0.0,
         "co2_offset_lbs_per_year": round(annual_kwh * 0.92, 0),
         "trees_equivalent": round(annual_kwh * 0.92 / 48, 0),
-        "payback_years": round(total_cost / (annual_kwh * 0.15), 1)
-        if annual_kwh > 0 else 0.0,
+        "payback_years": round(total_cost / (annual_kwh * 0.15), 1) if annual_kwh > 0 else 0.0,
         "monthly_production": monthly_dict,
     }

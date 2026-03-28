@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Red Square Test — Mission 1</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; background: #111; color: #eee; }
+    #map { width: 100vw; height: 80vh; }
+    #info { padding: 16px; font-size: 13px; line-height: 1.6; }
+    #info pre { background: #222; padding: 12px; border-radius: 6px; overflow-x: auto; margin-top: 8px; font-size: 12px; }
+    .ok { color: #4caf50; } .err { color: #f44336; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="info">Loading...</div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.183.0/build/three.module.js"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import {
+      PlaneGeometry, MeshBasicMaterial, Mesh, DoubleSide,
+    } from 'three'
+
+    const DEG2RAD = Math.PI / 180
+    const info = document.getElementById('info')
+    function log(msg, cls) {
+      console.log(msg)
+      info.innerHTML += `<div class="${cls || ''}">${msg}</div>`
+    }
+
+    // ── Config ──
+    // Test address: 17001 Escalon Dr, Encino, CA 91436
+    const TEST_LAT = 34.1597
+    const TEST_LNG = -118.5009
+
+    // ── Step 1: Fetch Solar API data ──
+    log('Fetching building insights...')
+    const resp = await fetch(`/api/solar/building?lat=${TEST_LAT}&lng=${TEST_LNG}`)
+    const data = await resp.json()
+
+    const seg = data.roof_segments?.[0]
+    if (!seg) { log('FATAL: No roof segments returned', 'err'); throw new Error('No segments') }
+
+    log(`<span class="ok">Got ${data.roof_segments.length} segments, ${data.panels.length} panels</span>`)
+    log(`<b>Segment 0:</b>`)
+    log(`<pre>${JSON.stringify(seg, null, 2)}</pre>`)
+
+    const segLat = seg.center?.latitude
+    const segLng = seg.center?.longitude
+    const pitchDeg = seg.pitch_deg || 15
+    const azimuthDeg = seg.azimuth_deg || 180
+    const heightM = seg.height_m || 7
+
+    log(`Parsed: lat=${segLat}, lng=${segLng}, pitch=${pitchDeg.toFixed(1)}°, azimuth=${azimuthDeg.toFixed(1)}°, height=${heightM.toFixed(1)}m`)
+
+    // ── Step 2: Fetch DSM for ground elevation ──
+    let groundElev = 0
+    try {
+      const dsmResp = await fetch(`/api/solar/dsm-heights?lat=${TEST_LAT}&lng=${TEST_LNG}&panel_lats=${segLat}&panel_lngs=${segLng}`)
+      if (dsmResp.ok) {
+        const dsm = await dsmResp.json()
+        groundElev = dsm.building?.ground_elevation_m || 0
+        log(`<span class="ok">DSM ground elevation: ${groundElev.toFixed(2)}m</span>`)
+        log(`<pre>${JSON.stringify(dsm.building, null, 2)}</pre>`)
+      }
+    } catch (e) { log(`DSM fetch failed (non-fatal): ${e.message}`) }
+
+    // Altitude above ground
+    // height_m from Solar API = planeHeightAtCenterMeters = absolute MSL elevation
+    // groundElev from DSM = also absolute MSL
+    let altAboveGround
+    if (groundElev > 0 && heightM > 100) {
+      // Both absolute MSL — subtract to get above-ground
+      altAboveGround = heightM - groundElev
+      log(`<span class="ok">MSL→relative: ${heightM.toFixed(1)}m - ${groundElev.toFixed(1)}m = ${altAboveGround.toFixed(2)}m above ground</span>`)
+    } else if (heightM < 30) {
+      altAboveGround = heightM
+      log(`Height ${heightM.toFixed(1)}m looks relative, using as-is`)
+    } else {
+      altAboveGround = 7
+      log(`Height ${heightM.toFixed(1)}m, no ground ref, fallback to 7m`)
+    }
+    log(`<b>Altitude above ground: ${altAboveGround.toFixed(2)}m</b>`)
+
+    // ── Step 3: Load Google Maps + ThreeJSOverlayView ──
+    log('Loading Google Maps API...')
+
+    // Get API key from backend (same endpoint as main app's index.html)
+    let apiKey = ''
+    try {
+      const keyResp = await fetch('/api/config')
+      if (keyResp.ok) {
+        const cfg = await keyResp.json()
+        apiKey = cfg.google_maps_api_key || cfg.google_api_key || ''
+      }
+    } catch(e) {}
+
+    if (!apiKey) {
+      log('FATAL: No API key found. Set GOOGLE_SOLAR_API_KEY env var.', 'err')
+      throw new Error('No API key')
+    }
+    log(`<span class="ok">API key found (${apiKey.substring(0, 8)}...)</span>`)
+
+    // Load Google Maps JS API
+    await new Promise((resolve, reject) => {
+      if (window.google?.maps) { resolve(); return }
+      const s = document.createElement('script')
+      s.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=weekly&libraries=geometry`
+      s.onload = resolve; s.onerror = reject
+      document.head.appendChild(s)
+    })
+
+    // Load @googlemaps/three from CDN
+    const { ThreeJSOverlayView } = await import(
+      'https://cdn.jsdelivr.net/npm/@googlemaps/three@4.0.13/dist/index.esm.min.js'
+    )
+
+    log('<span class="ok">Google Maps + ThreeJSOverlayView loaded</span>')
+
+    // ── Step 4: Create map ──
+    const map = new google.maps.Map(document.getElementById('map'), {
+      center: { lat: TEST_LAT, lng: TEST_LNG },
+      zoom: 20,
+      tilt: 55,
+      heading: azimuthDeg + 135,
+      mapId: 'b27ceeb795ccc182b0569a21',
+      disableDefaultUI: true,
+      gestureHandling: 'greedy',
+      zoomControl: true,
+      rotateControl: true,
+    })
+    // Expose for debugging
+    window.__testMap = map
+
+    const overlay = new ThreeJSOverlayView({
+      anchor: { lat: TEST_LAT, lng: TEST_LNG, altitude: 0 },
+      map,
+      upAxis: 'Y',
+      animationMode: 'always',
+      addDefaultLighting: true,
+    })
+
+    // ── Step 5: Place red square once tiles load (only once) ──
+    let placed = false
+    map.addListener('tilesloaded', function onTilesLoaded() {
+      if (placed) return
+      placed = true
+
+      log('═══════════════════════════════════════')
+      log('<b>PLACING RED SQUARE</b>')
+      log('═══════════════════════════════════════')
+
+      // Convert lat/lng to local position
+      const pos = overlay.latLngAltitudeToVector3({
+        lat: segLat,
+        lng: segLng,
+        altitude: altAboveGround,
+      })
+
+      log(`Position (local): x=${pos.x.toFixed(4)}, y=${pos.y.toFixed(4)}, z=${pos.z.toFixed(4)}`)
+
+      // Rotation (corrected math)
+      const rotY = -(azimuthDeg - 180) * DEG2RAD
+      const rotX = -Math.PI / 2 + pitchDeg * DEG2RAD
+
+      log(`Rotation: order=YXZ, rotX=${(rotX/DEG2RAD).toFixed(2)}° (flat+pitch), rotY=${(rotY/DEG2RAD).toFixed(2)}° (azimuth)`)
+
+      // Create 2×2m red square — depthTest OFF so it renders on top of everything
+      const geom = new PlaneGeometry(4, 4) // bigger for visibility
+      const mat = new MeshBasicMaterial({
+        color: 0xff0000,
+        side: DoubleSide,
+        transparent: true,
+        opacity: 0.9,
+        depthTest: false, // render on top of building extrusions
+      })
+      const mesh = new Mesh(geom, mat)
+      mesh.position.copy(pos)
+      mesh.rotation.order = 'YXZ'
+      mesh.rotation.x = rotX
+      mesh.rotation.y = rotY
+      mesh.rotation.z = 0
+
+      overlay.scene.add(mesh)
+      overlay.requestRedraw()
+
+      log('<span class="ok"><b>RED SQUARE PLACED</b></span>')
+      log(`Final mesh: pos=(${mesh.position.x.toFixed(3)}, ${mesh.position.y.toFixed(3)}, ${mesh.position.z.toFixed(3)})`)
+      log(`Final mesh: rot=(${(mesh.rotation.x/DEG2RAD).toFixed(1)}°, ${(mesh.rotation.y/DEG2RAD).toFixed(1)}°, ${(mesh.rotation.z/DEG2RAD).toFixed(1)}°) order=${mesh.rotation.order}`)
+
+      // Also try altitude sweep — place 3 more squares at different heights for debugging
+      ;[altAboveGround - 2, altAboveGround + 2, altAboveGround + 5].forEach((alt, i) => {
+        const p = overlay.latLngAltitudeToVector3({ lat: segLat, lng: segLng, altitude: alt })
+        const g = new PlaneGeometry(3, 3)
+        const colors = [0x00ff00, 0x0000ff, 0xffff00] // green, blue, yellow
+        const m = new Mesh(g, new MeshBasicMaterial({ color: colors[i], side: DoubleSide, transparent: true, opacity: 0.7, depthTest: false }))
+        m.position.copy(p)
+        m.rotation.order = 'YXZ'
+        m.rotation.x = rotX
+        m.rotation.y = rotY
+        overlay.scene.add(m)
+        log(`  Alt sweep ${i}: ${alt.toFixed(1)}m → color=${['green','blue','yellow'][i]}`)
+      })
+      overlay.requestRedraw()
+
+      // Ground-level anchor marker — huge cyan square at (0, 0.5, 0) so we know the overlay renders
+      const anchorGeom = new PlaneGeometry(10, 10)
+      const anchorMat = new MeshBasicMaterial({ color: 0x00ffff, side: DoubleSide, transparent: true, opacity: 0.7, depthTest: false })
+      const anchorMesh = new Mesh(anchorGeom, anchorMat)
+      anchorMesh.position.set(0, 0.5, 0) // just above ground at anchor
+      anchorMesh.rotation.x = -Math.PI / 2 // lay flat
+      overlay.scene.add(anchorMesh)
+      log('CYAN 10×10m anchor marker placed at (0, 0.5, 0)')
+
+      log('═══════════════════════════════════════')
+      log('Look for: RED 2×2m square + 3 smaller altitude markers')
+      log('GREEN = 2m lower, BLUE = 2m higher, YELLOW = 5m higher')
+      log('═══════════════════════════════════════')
+    })
+  </script>
+</body>
+</html>

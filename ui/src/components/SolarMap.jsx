@@ -25,6 +25,7 @@ export default function SolarMap({ lat, lng, apiKey, panelCount = 13, panelDimen
   const panelPolygonsRef = useRef([])
   const fluxOverlayRef = useRef(null)
   const geometryLibRef = useRef(null)
+  const [mapReady, setMapReady] = useState(false)
 
   // Fetch building insights data
   useEffect(() => {
@@ -48,19 +49,37 @@ export default function SolarMap({ lat, lng, apiKey, panelCount = 13, panelDimen
       })
   }, [lat, lng])
 
-  // Initialize Google Map
+  // Initialize Google Map (only once — reuse existing map on re-renders)
   useEffect(() => {
     if (!mapRef.current || !lat || !lng || !apiKey) return
 
     const initMap = async () => {
       if (!window.google?.maps) {
-        await new Promise((resolve) => {
-          const script = document.createElement('script')
-          script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=geometry`
-          script.async = true
-          script.onload = resolve
-          document.head.appendChild(script)
-        })
+        // Only load the script if it hasn't been loaded yet
+        const existingScript = document.querySelector('script[src*="maps.googleapis.com"]')
+        if (!existingScript) {
+          await new Promise((resolve) => {
+            const script = document.createElement('script')
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=geometry`
+            script.async = true
+            script.onload = resolve
+            document.head.appendChild(script)
+          })
+        } else {
+          // Script exists but hasn't loaded yet — wait for it
+          await new Promise((resolve) => {
+            const check = () => window.google?.maps ? resolve() : setTimeout(check, 100)
+            check()
+          })
+        }
+      }
+
+      // Reuse existing map instance if the div already has one
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.setCenter({ lat, lng })
+        geometryLibRef.current = window.google.maps.geometry
+        setMapReady(true)
+        return
       }
 
       const map = new window.google.maps.Map(mapRef.current, {
@@ -73,6 +92,7 @@ export default function SolarMap({ lat, lng, apiKey, panelCount = 13, panelDimen
       })
       mapInstanceRef.current = map
       geometryLibRef.current = window.google.maps.geometry
+      setMapReady(true)
 
       // Fetch and render the solar flux overlay
       fetchFluxOverlay(map)
@@ -280,7 +300,7 @@ export default function SolarMap({ lat, lng, apiKey, panelCount = 13, panelDimen
 
       panelPolygonsRef.current.push(poly)
     })
-  }, [buildingData, panelCount, showPanels, groupedData])
+  }, [buildingData, panelCount, showPanels, groupedData, mapReady])
 
   // Totals from grouped data
   const totalKwh = groupedData?.total_kwh || 0

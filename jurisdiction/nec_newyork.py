@@ -28,62 +28,195 @@ from jurisdiction.nec_base import NECBaseEngine
 # 'region': 'nyc' | 'long_island' | 'westchester' | 'upstate'
 NY_CITIES = {
     # NYC boroughs
-    'new york city':    {'utility': 'Con Edison', 'wind_mph': 110, 'snow_psf': 30, 'region': 'nyc', 'ahj': 'NYC DOB'},
-    'manhattan':        {'utility': 'Con Edison', 'wind_mph': 110, 'snow_psf': 30, 'region': 'nyc', 'ahj': 'NYC DOB'},
-    'brooklyn':         {'utility': 'Con Edison', 'wind_mph': 110, 'snow_psf': 30, 'region': 'nyc', 'ahj': 'NYC DOB'},
-    'queens':           {'utility': 'Con Edison', 'wind_mph': 110, 'snow_psf': 30, 'region': 'nyc', 'ahj': 'NYC DOB'},
-    'bronx':            {'utility': 'Con Edison', 'wind_mph': 110, 'snow_psf': 30, 'region': 'nyc', 'ahj': 'NYC DOB'},
-    'staten island':    {'utility': 'Con Edison', 'wind_mph': 110, 'snow_psf': 30, 'region': 'nyc', 'ahj': 'NYC DOB'},
+    "new york city": {"utility": "Con Edison", "wind_mph": 110, "snow_psf": 30, "region": "nyc", "ahj": "NYC DOB"},
+    "manhattan": {"utility": "Con Edison", "wind_mph": 110, "snow_psf": 30, "region": "nyc", "ahj": "NYC DOB"},
+    "brooklyn": {"utility": "Con Edison", "wind_mph": 110, "snow_psf": 30, "region": "nyc", "ahj": "NYC DOB"},
+    "queens": {"utility": "Con Edison", "wind_mph": 110, "snow_psf": 30, "region": "nyc", "ahj": "NYC DOB"},
+    "bronx": {"utility": "Con Edison", "wind_mph": 110, "snow_psf": 30, "region": "nyc", "ahj": "NYC DOB"},
+    "staten island": {"utility": "Con Edison", "wind_mph": 110, "snow_psf": 30, "region": "nyc", "ahj": "NYC DOB"},
     # Westchester
-    'white plains':     {'utility': 'Con Edison', 'wind_mph': 110, 'snow_psf': 30, 'region': 'westchester', 'ahj': 'City of White Plains'},
-    'yonkers':          {'utility': 'Con Edison', 'wind_mph': 110, 'snow_psf': 30, 'region': 'westchester', 'ahj': 'City of Yonkers'},
-    'new rochelle':     {'utility': 'Con Edison', 'wind_mph': 110, 'snow_psf': 30, 'region': 'westchester', 'ahj': 'City of New Rochelle'},
+    "white plains": {
+        "utility": "Con Edison",
+        "wind_mph": 110,
+        "snow_psf": 30,
+        "region": "westchester",
+        "ahj": "City of White Plains",
+    },
+    "yonkers": {
+        "utility": "Con Edison",
+        "wind_mph": 110,
+        "snow_psf": 30,
+        "region": "westchester",
+        "ahj": "City of Yonkers",
+    },
+    "new rochelle": {
+        "utility": "Con Edison",
+        "wind_mph": 110,
+        "snow_psf": 30,
+        "region": "westchester",
+        "ahj": "City of New Rochelle",
+    },
     # Long Island — Nassau County
-    'hempstead':        {'utility': 'PSEG Long Island', 'wind_mph': 120, 'snow_psf': 30, 'region': 'long_island', 'ahj': 'Town of Hempstead'},
-    'nassau':           {'utility': 'PSEG Long Island', 'wind_mph': 120, 'snow_psf': 30, 'region': 'long_island', 'ahj': 'Nassau County'},
-    'garden city':      {'utility': 'PSEG Long Island', 'wind_mph': 120, 'snow_psf': 30, 'region': 'long_island', 'ahj': 'Village of Garden City'},
-    'long beach':       {'utility': 'PSEG Long Island', 'wind_mph': 120, 'snow_psf': 30, 'region': 'long_island', 'ahj': 'City of Long Beach'},
+    "hempstead": {
+        "utility": "PSEG Long Island",
+        "wind_mph": 120,
+        "snow_psf": 30,
+        "region": "long_island",
+        "ahj": "Town of Hempstead",
+    },
+    "nassau": {
+        "utility": "PSEG Long Island",
+        "wind_mph": 120,
+        "snow_psf": 30,
+        "region": "long_island",
+        "ahj": "Nassau County",
+    },
+    "garden city": {
+        "utility": "PSEG Long Island",
+        "wind_mph": 120,
+        "snow_psf": 30,
+        "region": "long_island",
+        "ahj": "Village of Garden City",
+    },
+    "long beach": {
+        "utility": "PSEG Long Island",
+        "wind_mph": 120,
+        "snow_psf": 30,
+        "region": "long_island",
+        "ahj": "City of Long Beach",
+    },
     # Long Island — Suffolk County
-    'suffolk':          {'utility': 'PSEG Long Island', 'wind_mph': 120, 'snow_psf': 30, 'region': 'long_island', 'ahj': 'Suffolk County'},
-    'babylon':          {'utility': 'PSEG Long Island', 'wind_mph': 120, 'snow_psf': 30, 'region': 'long_island', 'ahj': 'Town of Babylon'},
-    'islip':            {'utility': 'PSEG Long Island', 'wind_mph': 120, 'snow_psf': 30, 'region': 'long_island', 'ahj': 'Town of Islip'},
-    'huntington':       {'utility': 'PSEG Long Island', 'wind_mph': 120, 'snow_psf': 30, 'region': 'long_island', 'ahj': 'Town of Huntington'},
-    'brentwood':        {'utility': 'PSEG Long Island', 'wind_mph': 120, 'snow_psf': 30, 'region': 'long_island', 'ahj': 'Town of Islip'},
+    "suffolk": {
+        "utility": "PSEG Long Island",
+        "wind_mph": 120,
+        "snow_psf": 30,
+        "region": "long_island",
+        "ahj": "Suffolk County",
+    },
+    "babylon": {
+        "utility": "PSEG Long Island",
+        "wind_mph": 120,
+        "snow_psf": 30,
+        "region": "long_island",
+        "ahj": "Town of Babylon",
+    },
+    "islip": {
+        "utility": "PSEG Long Island",
+        "wind_mph": 120,
+        "snow_psf": 30,
+        "region": "long_island",
+        "ahj": "Town of Islip",
+    },
+    "huntington": {
+        "utility": "PSEG Long Island",
+        "wind_mph": 120,
+        "snow_psf": 30,
+        "region": "long_island",
+        "ahj": "Town of Huntington",
+    },
+    "brentwood": {
+        "utility": "PSEG Long Island",
+        "wind_mph": 120,
+        "snow_psf": 30,
+        "region": "long_island",
+        "ahj": "Town of Islip",
+    },
     # Upstate — Western NY
-    'buffalo':          {'utility': 'National Grid', 'wind_mph': 110, 'snow_psf': 40, 'region': 'upstate', 'ahj': 'City of Buffalo'},
-    'niagara falls':    {'utility': 'National Grid', 'wind_mph': 110, 'snow_psf': 40, 'region': 'upstate', 'ahj': 'City of Niagara Falls'},
-    'tonawanda':        {'utility': 'National Grid', 'wind_mph': 110, 'snow_psf': 40, 'region': 'upstate', 'ahj': 'City of Tonawanda'},
+    "buffalo": {
+        "utility": "National Grid",
+        "wind_mph": 110,
+        "snow_psf": 40,
+        "region": "upstate",
+        "ahj": "City of Buffalo",
+    },
+    "niagara falls": {
+        "utility": "National Grid",
+        "wind_mph": 110,
+        "snow_psf": 40,
+        "region": "upstate",
+        "ahj": "City of Niagara Falls",
+    },
+    "tonawanda": {
+        "utility": "National Grid",
+        "wind_mph": 110,
+        "snow_psf": 40,
+        "region": "upstate",
+        "ahj": "City of Tonawanda",
+    },
     # Upstate — Rochester
-    'rochester':        {'utility': 'Rochester Gas & Electric (RG&E)', 'wind_mph': 110, 'snow_psf': 40, 'region': 'upstate', 'ahj': 'City of Rochester'},
+    "rochester": {
+        "utility": "Rochester Gas & Electric (RG&E)",
+        "wind_mph": 110,
+        "snow_psf": 40,
+        "region": "upstate",
+        "ahj": "City of Rochester",
+    },
     # Upstate — Syracuse / Central NY
-    'syracuse':         {'utility': 'National Grid', 'wind_mph': 110, 'snow_psf': 40, 'region': 'upstate', 'ahj': 'City of Syracuse'},
-    'utica':            {'utility': 'National Grid', 'wind_mph': 110, 'snow_psf': 40, 'region': 'upstate', 'ahj': 'City of Utica'},
+    "syracuse": {
+        "utility": "National Grid",
+        "wind_mph": 110,
+        "snow_psf": 40,
+        "region": "upstate",
+        "ahj": "City of Syracuse",
+    },
+    "utica": {"utility": "National Grid", "wind_mph": 110, "snow_psf": 40, "region": "upstate", "ahj": "City of Utica"},
     # Upstate — Capital Region
-    'albany':           {'utility': 'National Grid', 'wind_mph': 110, 'snow_psf': 40, 'region': 'upstate', 'ahj': 'City of Albany'},
-    'schenectady':      {'utility': 'National Grid', 'wind_mph': 110, 'snow_psf': 40, 'region': 'upstate', 'ahj': 'City of Schenectady'},
-    'troy':             {'utility': 'National Grid', 'wind_mph': 110, 'snow_psf': 40, 'region': 'upstate', 'ahj': 'City of Troy'},
+    "albany": {
+        "utility": "National Grid",
+        "wind_mph": 110,
+        "snow_psf": 40,
+        "region": "upstate",
+        "ahj": "City of Albany",
+    },
+    "schenectady": {
+        "utility": "National Grid",
+        "wind_mph": 110,
+        "snow_psf": 40,
+        "region": "upstate",
+        "ahj": "City of Schenectady",
+    },
+    "troy": {"utility": "National Grid", "wind_mph": 110, "snow_psf": 40, "region": "upstate", "ahj": "City of Troy"},
     # Default
-    '_default':         {'utility': 'Con Edison', 'wind_mph': 110, 'snow_psf': 30, 'region': 'metro', 'ahj': ''},
+    "_default": {"utility": "Con Edison", "wind_mph": 110, "snow_psf": 30, "region": "metro", "ahj": ""},
 }
 
 # NYC borough names for AHJ detection
-NYC_BOROUGHS = {'new york city', 'manhattan', 'brooklyn', 'queens', 'bronx', 'staten island'}
+NYC_BOROUGHS = {"new york city", "manhattan", "brooklyn", "queens", "bronx", "staten island"}
 
 # Long Island county keywords
-LONG_ISLAND_KEYWORDS = {'nassau', 'suffolk', 'long island', 'hempstead', 'babylon',
-                        'islip', 'huntington', 'brentwood', 'garden city', 'long beach'}
+LONG_ISLAND_KEYWORDS = {
+    "nassau",
+    "suffolk",
+    "long island",
+    "hempstead",
+    "babylon",
+    "islip",
+    "huntington",
+    "brentwood",
+    "garden city",
+    "long beach",
+}
 
 # Upstate city keywords
-UPSTATE_KEYWORDS = {'buffalo', 'rochester', 'syracuse', 'albany', 'utica',
-                    'schenectady', 'troy', 'niagara', 'tonawanda'}
+UPSTATE_KEYWORDS = {
+    "buffalo",
+    "rochester",
+    "syracuse",
+    "albany",
+    "utica",
+    "schenectady",
+    "troy",
+    "niagara",
+    "tonawanda",
+}
 
 # Interconnection standards by utility
 UTILITY_INTERCONNECTION = {
-    'Con Edison':                     'Con Edison Net Metering / IEEE 1547 (NYSERDA)',
-    'PSEG Long Island':               'PSEG Long Island Distributed Generation Interconnection / IEEE 1547',
-    'National Grid':                  'National Grid Distributed Generation Interconnection / IEEE 1547',
-    'Rochester Gas & Electric (RG&E)': 'RG&E Net Metering / IEEE 1547 (NYSERDA)',
-    '_default':                       'NY PSC Net Metering / IEEE 1547',
+    "Con Edison": "Con Edison Net Metering / IEEE 1547 (NYSERDA)",
+    "PSEG Long Island": "PSEG Long Island Distributed Generation Interconnection / IEEE 1547",
+    "National Grid": "National Grid Distributed Generation Interconnection / IEEE 1547",
+    "Rochester Gas & Electric (RG&E)": "RG&E Net Metering / IEEE 1547 (NYSERDA)",
+    "_default": "NY PSC Net Metering / IEEE 1547",
 }
 
 
@@ -99,19 +232,19 @@ class NYJurisdiction(NECBaseEngine):
         self.city = city.lower().strip()
         self._state = state
         city_data = self._resolve_city_data()
-        self.wind_speed_mph = city_data['wind_mph']
-        self.snow_load_psf = city_data['snow_psf']
-        self.utility_name = city_data['utility']
-        self._region = city_data['region']
-        self._ahj = city_data['ahj']
-        intercon_key = self.utility_name if self.utility_name in UTILITY_INTERCONNECTION else '_default'
+        self.wind_speed_mph = city_data["wind_mph"]
+        self.snow_load_psf = city_data["snow_psf"]
+        self.utility_name = city_data["utility"]
+        self._region = city_data["region"]
+        self._ahj = city_data["ahj"]
+        intercon_key = self.utility_name if self.utility_name in UTILITY_INTERCONNECTION else "_default"
         self._interconnection_std = UTILITY_INTERCONNECTION[intercon_key]
         self._utility_info = {
-            'name': self.utility_name,
-            'full_name': self.utility_name,
-            'interconnection_standard': self._interconnection_std,
-            'net_metering_max_kw': 2000,
-            'rate_per_kwh': 0.20,
+            "name": self.utility_name,
+            "full_name": self.utility_name,
+            "interconnection_standard": self._interconnection_std,
+            "net_metering_max_kw": 2000,
+            "rate_per_kwh": 0.20,
         }
 
     # ------------------------------------------------------------------
@@ -122,23 +255,23 @@ class NYJurisdiction(NECBaseEngine):
         """Match city name against NY_CITIES table using substring matching."""
         city_key = self.city
         for name, data in NY_CITIES.items():
-            if name == '_default':
+            if name == "_default":
                 continue
             if name in city_key or city_key in name:
                 return data
-        return dict(NY_CITIES['_default'])
+        return dict(NY_CITIES["_default"])
 
     # ------------------------------------------------------------------
     # JurisdictionEngine interface
     # ------------------------------------------------------------------
 
     def get_code_name(self) -> str:
-        if self._region == 'nyc':
+        if self._region == "nyc":
             return "NEC 690 + NYC Building Code"
         return "NEC 690 + NY State Building Code"
 
     def get_code_edition(self) -> str:
-        if self._region == 'nyc':
+        if self._region == "nyc":
             return "NEC 2020 (NFPA 70-2020) + NYC Building Code 2022"
         return "NEC 2020 (NFPA 70-2020) + NY State Building Code 2020"
 
@@ -148,32 +281,32 @@ class NYJurisdiction(NECBaseEngine):
 
     def get_governing_codes(self) -> List[Dict]:
         codes = [
-            {"code": "NEC 2020",   "title": "National Electrical Code",                     "edition": "2020"},
-            {"code": "ASCE 7-22",  "title": "Minimum Design Loads for Buildings",            "edition": "2022"},
-            {"code": "IFC 2021",   "title": "International Fire Code",                       "edition": "2021"},
-            {"code": "UL 1741",    "title": "Inverters, Converters, Controllers",            "edition": "SA"},
-            {"code": "UL 2703",    "title": "Mounting Systems, Bonding",                    "edition": "2023"},
-            {"code": "IEEE 1547",  "title": "Interconnection Standard",                      "edition": "2018"},
+            {"code": "NEC 2020", "title": "National Electrical Code", "edition": "2020"},
+            {"code": "ASCE 7-22", "title": "Minimum Design Loads for Buildings", "edition": "2022"},
+            {"code": "IFC 2021", "title": "International Fire Code", "edition": "2021"},
+            {"code": "UL 1741", "title": "Inverters, Converters, Controllers", "edition": "SA"},
+            {"code": "UL 2703", "title": "Mounting Systems, Bonding", "edition": "2023"},
+            {"code": "IEEE 1547", "title": "Interconnection Standard", "edition": "2018"},
         ]
-        if self._region == 'nyc':
+        if self._region == "nyc":
             codes.insert(1, {"code": "NYC BC 2022", "title": "New York City Building Code", "edition": "2022"})
         else:
-            codes.insert(1, {"code": "NYSBC 2020",  "title": "New York State Building Code", "edition": "2020"})
+            codes.insert(1, {"code": "NYSBC 2020", "title": "New York State Building Code", "edition": "2020"})
         return codes
 
     def get_design_temperatures(self, city: str = "") -> Dict:
         city_key = (city or self.city).lower()
         temps = {
-            'new york':   {"cold_c": -15, "hot_module_c": 65, "stc_c": 25},
-            'manhattan':  {"cold_c": -15, "hot_module_c": 65, "stc_c": 25},
-            'brooklyn':   {"cold_c": -15, "hot_module_c": 65, "stc_c": 25},
-            'queens':     {"cold_c": -15, "hot_module_c": 65, "stc_c": 25},
-            'bronx':      {"cold_c": -15, "hot_module_c": 65, "stc_c": 25},
-            'buffalo':    {"cold_c": -20, "hot_module_c": 62, "stc_c": 25},
-            'rochester':  {"cold_c": -18, "hot_module_c": 62, "stc_c": 25},
-            'syracuse':   {"cold_c": -18, "hot_module_c": 62, "stc_c": 25},
-            'albany':     {"cold_c": -18, "hot_module_c": 62, "stc_c": 25},
-            'long island': {"cold_c": -12, "hot_module_c": 63, "stc_c": 25},
+            "new york": {"cold_c": -15, "hot_module_c": 65, "stc_c": 25},
+            "manhattan": {"cold_c": -15, "hot_module_c": 65, "stc_c": 25},
+            "brooklyn": {"cold_c": -15, "hot_module_c": 65, "stc_c": 25},
+            "queens": {"cold_c": -15, "hot_module_c": 65, "stc_c": 25},
+            "bronx": {"cold_c": -15, "hot_module_c": 65, "stc_c": 25},
+            "buffalo": {"cold_c": -20, "hot_module_c": 62, "stc_c": 25},
+            "rochester": {"cold_c": -18, "hot_module_c": 62, "stc_c": 25},
+            "syracuse": {"cold_c": -18, "hot_module_c": 62, "stc_c": 25},
+            "albany": {"cold_c": -18, "hot_module_c": 62, "stc_c": 25},
+            "long island": {"cold_c": -12, "hot_module_c": 63, "stc_c": 25},
         }
         for key, t in temps.items():
             if key in city_key:
@@ -267,14 +400,14 @@ class NYJurisdiction(NECBaseEngine):
         if city and city.lower().strip() != self.city:
             return NYJurisdiction(city=city, state=state).get_jurisdiction_data()
         return {
-            "utility":         self.utility_name,
-            "wire_type":       self.wire_type,
+            "utility": self.utility_name,
+            "wire_type": self.wire_type,
             "electrical_code": self.get_code_edition(),
-            "utility_full":    self.utility_name,
-            "wind_mph":        self.wind_speed_mph,
-            "snow_load_psf":   self.snow_load_psf,
-            "snow_psf":        self.snow_load_psf,
-            "ahj":             self.get_ahj_label(),
-            "licensing_body":  self.get_licensing_body(),
-            "code_name":       self.get_code_name(),
+            "utility_full": self.utility_name,
+            "wind_mph": self.wind_speed_mph,
+            "snow_load_psf": self.snow_load_psf,
+            "snow_psf": self.snow_load_psf,
+            "ahj": self.get_ahj_label(),
+            "licensing_body": self.get_licensing_body(),
+            "code_name": self.get_code_name(),
         }

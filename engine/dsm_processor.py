@@ -36,11 +36,12 @@ _dsm_cache: Dict[str, "DSMData"] = {}
 @dataclass
 class DSMData:
     """Parsed DSM GeoTIFF data."""
-    heights: np.ndarray          # 2D height grid (height × width)
+
+    heights: np.ndarray  # 2D height grid (height × width)
     width: int
     height: int
     bounds: Tuple[float, float, float, float]  # (minLng, minLat, maxLng, maxLat)
-    resolution_m: float          # meters per pixel
+    resolution_m: float  # meters per pixel
 
     def lat_lng_to_pixel(self, lat: float, lng: float) -> Tuple[int, int]:
         """Convert lat/lng to pixel coordinates in the height grid."""
@@ -66,17 +67,19 @@ class DSMData:
 @dataclass
 class RoofFeature:
     """A detected roof feature (chimney, skylight, etc.)."""
-    type: str           # "chimney", "skylight", "vent", "dormer"
+
+    type: str  # "chimney", "skylight", "vent", "dormer"
     lat: float
     lng: float
-    height_m: float     # absolute height
+    height_m: float  # absolute height
     height_above_roof_m: float  # height above surrounding roof plane
-    radius_m: float     # approximate size
+    radius_m: float  # approximate size
 
 
 @dataclass
 class DSMAnalysis:
     """Complete DSM analysis for a building."""
+
     eave_height_m: float = 0.0
     ridge_height_m: float = 0.0
     building_height_m: float = 0.0
@@ -146,6 +149,7 @@ def fetch_dsm(lat: float, lng: float, radius_m: float = 100) -> Optional[DSMData
     # Step 3: Parse GeoTIFF
     try:
         import tifffile
+
         with io.BytesIO(tiff_bytes) as buf:
             tiff = tifffile.TiffFile(buf)
             page = tiff.pages[0]
@@ -185,9 +189,9 @@ def _extract_bounds(page, shape) -> Tuple[float, float, float, float]:
         transform = tags[34264].value
         # transform = [scaleX, 0, 0, originX, 0, scaleY, 0, originY, ...]
         # scaleX = pixel width in meters, scaleY = -pixel height (negative = top-down)
-        scale_x = transform[0]   # 0.5 meters/pixel
+        scale_x = transform[0]  # 0.5 meters/pixel
         origin_x = transform[3]  # UTM easting of top-left pixel
-        scale_y = transform[5]   # -0.5 meters/pixel
+        scale_y = transform[5]  # -0.5 meters/pixel
         origin_y = transform[7]  # UTM northing of top-left pixel
 
         # Determine UTM zone from GeoKeys
@@ -212,10 +216,16 @@ def _extract_bounds(page, shape) -> Tuple[float, float, float, float]:
         sw_lat, sw_lng = _utm_to_latlng(min_x_utm, min_y_utm, utm_zone)
         ne_lat, ne_lng = _utm_to_latlng(max_x_utm, max_y_utm, utm_zone)
 
-        logger.info("DSM bounds: UTM zone %d, origin=(%.0f, %.0f), "
-                    "lat=[%.6f, %.6f], lng=[%.6f, %.6f]",
-                    utm_zone, origin_x, origin_y,
-                    sw_lat, ne_lat, sw_lng, ne_lng)
+        logger.info(
+            "DSM bounds: UTM zone %d, origin=(%.0f, %.0f), lat=[%.6f, %.6f], lng=[%.6f, %.6f]",
+            utm_zone,
+            origin_x,
+            origin_y,
+            sw_lat,
+            ne_lat,
+            sw_lng,
+            ne_lng,
+        )
 
         return (sw_lng, sw_lat, ne_lng, ne_lat)
 
@@ -235,8 +245,7 @@ def _extract_bounds(page, shape) -> Tuple[float, float, float, float]:
     return (0, 0, 0, 0)
 
 
-def _utm_to_latlng(easting: float, northing: float, zone: int,
-                   northern: bool = True) -> Tuple[float, float]:
+def _utm_to_latlng(easting: float, northing: float, zone: int, northern: bool = True) -> Tuple[float, float]:
     """Convert UTM coordinates to WGS84 lat/lng.
 
     Simplified conversion (accurate to ~1m for most use cases).
@@ -252,27 +261,30 @@ def _utm_to_latlng(easting: float, northing: float, zone: int,
     y = northing if northern else northing - 10000000.0
 
     M = y / k0
-    mu = M / (a * (1 - e*e/4 - 3*e**4/64 - 5*e**6/256))
+    mu = M / (a * (1 - e * e / 4 - 3 * e**4 / 64 - 5 * e**6 / 256))
 
-    e1 = (1 - math.sqrt(1 - e*e)) / (1 + math.sqrt(1 - e*e))
-    phi1 = mu + (3*e1/2 - 27*e1**3/32) * math.sin(2*mu)
-    phi1 += (21*e1**2/16 - 55*e1**4/32) * math.sin(4*mu)
-    phi1 += (151*e1**3/96) * math.sin(6*mu)
+    e1 = (1 - math.sqrt(1 - e * e)) / (1 + math.sqrt(1 - e * e))
+    phi1 = mu + (3 * e1 / 2 - 27 * e1**3 / 32) * math.sin(2 * mu)
+    phi1 += (21 * e1**2 / 16 - 55 * e1**4 / 32) * math.sin(4 * mu)
+    phi1 += (151 * e1**3 / 96) * math.sin(6 * mu)
 
-    N1 = a / math.sqrt(1 - e*e * math.sin(phi1)**2)
-    T1 = math.tan(phi1)**2
-    C1 = e_prime**2 * math.cos(phi1)**2
-    R1 = a * (1 - e*e) / (1 - e*e * math.sin(phi1)**2)**1.5
+    N1 = a / math.sqrt(1 - e * e * math.sin(phi1) ** 2)
+    T1 = math.tan(phi1) ** 2
+    C1 = e_prime**2 * math.cos(phi1) ** 2
+    R1 = a * (1 - e * e) / (1 - e * e * math.sin(phi1) ** 2) ** 1.5
     D = x / (N1 * k0)
 
     lat = phi1 - (N1 * math.tan(phi1) / R1) * (
-        D*D/2 - (5 + 3*T1 + 10*C1 - 4*C1*C1 - 9*e_prime**2) * D**4/24
-        + (61 + 90*T1 + 298*C1 + 45*T1*T1 - 252*e_prime**2 - 3*C1*C1) * D**6/720
+        D * D / 2
+        - (5 + 3 * T1 + 10 * C1 - 4 * C1 * C1 - 9 * e_prime**2) * D**4 / 24
+        + (61 + 90 * T1 + 298 * C1 + 45 * T1 * T1 - 252 * e_prime**2 - 3 * C1 * C1) * D**6 / 720
     )
 
-    lng = (D - (1 + 2*T1 + C1) * D**3/6
-           + (5 - 2*C1 + 28*T1 - 3*C1*C1 + 8*e_prime**2 + 24*T1*T1) * D**5/120
-           ) / math.cos(phi1)
+    lng = (
+        D
+        - (1 + 2 * T1 + C1) * D**3 / 6
+        + (5 - 2 * C1 + 28 * T1 - 3 * C1 * C1 + 8 * e_prime**2 + 24 * T1 * T1) * D**5 / 120
+    ) / math.cos(phi1)
 
     lat_deg = math.degrees(lat)
     lng_deg = math.degrees(lng) + (zone * 6 - 183)
@@ -282,7 +294,8 @@ def _utm_to_latlng(easting: float, northing: float, zone: int,
 
 def analyze_building_dsm(
     dsm: DSMData,
-    lat: float, lng: float,
+    lat: float,
+    lng: float,
     panel_positions: Optional[List[Tuple[float, float]]] = None,
 ) -> DSMAnalysis:
     """Analyze DSM data for a building to extract heights and features.
@@ -335,15 +348,16 @@ def analyze_building_dsm(
                     if h > mean_roof + 2.5:  # >2.5m above mean roof = chimney/vent
                         feature = RoofFeature(
                             type="chimney",
-                            lat=sample_lat, lng=sample_lng,
+                            lat=sample_lat,
+                            lng=sample_lng,
                             height_m=h,
                             height_above_roof_m=h - mean_roof,
                             radius_m=0.5,
                         )
                         # Avoid duplicates (cluster nearby detections)
                         is_dup = any(
-                            abs(f.lat - feature.lat) < 2 * deg_per_m_lat and
-                            abs(f.lng - feature.lng) < 2 * deg_per_m_lng
+                            abs(f.lat - feature.lat) < 2 * deg_per_m_lat
+                            and abs(f.lng - feature.lng) < 2 * deg_per_m_lng
                             for f in analysis.roof_features
                         )
                         if not is_dup:
@@ -355,10 +369,11 @@ def analyze_building_dsm(
             analysis.panel_heights[i] = dsm.get_height(plat, plng)
 
     logger.info(
-        "DSM analysis: ground=%.1fm, eave=%.1fm, ridge=%.1fm, "
-        "building=%.1fm, features=%d",
-        analysis.ground_elevation_m, analysis.eave_height_m,
-        analysis.ridge_height_m, analysis.building_height_m,
+        "DSM analysis: ground=%.1fm, eave=%.1fm, ridge=%.1fm, building=%.1fm, features=%d",
+        analysis.ground_elevation_m,
+        analysis.eave_height_m,
+        analysis.ridge_height_m,
+        analysis.building_height_m,
         len(analysis.roof_features),
     )
 

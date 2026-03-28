@@ -17,25 +17,26 @@ logger = logging.getLogger(__name__)
 @dataclass
 class RoofSegmentInfo:
     """Analyzed roof segment with solar potential data."""
+
     index: int
     pitch_deg: float
     azimuth_deg: float
     area_m2: float
     area_sqft: float
-    height_m: float                       # planeHeightAtCenterMeters
+    height_m: float  # planeHeightAtCenterMeters
     center_lat: float
     center_lng: float
 
     # Solar potential
     sunshine_hours_per_year: float = 0.0
     sunshine_quantiles: List[float] = field(default_factory=list)  # 11 buckets
-    panel_count: int = 0                  # panels Google placed on this segment
+    panel_count: int = 0  # panels Google placed on this segment
 
     # Derived
-    direction_label: str = ""             # "South", "SSW", "NE", etc.
-    solar_score: float = 0.0              # 0-100 ranking
-    obstruction_score: float = 0.0        # 0-100 (100 = heavily obstructed)
-    is_viable: bool = True                # recommended for panels?
+    direction_label: str = ""  # "South", "SSW", "NE", etc.
+    solar_score: float = 0.0  # 0-100 ranking
+    obstruction_score: float = 0.0  # 0-100 (100 = heavily obstructed)
+    is_viable: bool = True  # recommended for panels?
 
     @property
     def area_display(self) -> str:
@@ -47,14 +48,12 @@ SQFT_PER_M2 = 10.7639
 
 def _azimuth_to_direction(azimuth_deg: float) -> str:
     """Convert azimuth degrees to compass direction label."""
-    dirs = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
-            "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
+    dirs = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
     idx = round(azimuth_deg / 22.5) % 16
     return dirs[idx]
 
 
-def _solar_score(pitch_deg: float, azimuth_deg: float, sunshine_hours: float,
-                 max_sunshine: float) -> float:
+def _solar_score(pitch_deg: float, azimuth_deg: float, sunshine_hours: float, max_sunshine: float) -> float:
     """Calculate a 0-100 solar score for a roof segment.
 
     Factors:
@@ -115,30 +114,36 @@ def analyze_roof(insight) -> List[RoofSegmentInfo]:
     panels_per_seg = {}
     if insight.panels:
         for p in insight.panels:
-            seg_idx = getattr(p, 'segment_index', 0)
+            seg_idx = getattr(p, "segment_index", 0)
             panels_per_seg[seg_idx] = panels_per_seg.get(seg_idx, 0) + 1
 
     # Find max sunshine for normalization
-    max_sunshine = max(
-        (getattr(seg, 'sunshine_hours_per_year', 0) or
-         getattr(getattr(seg, 'stats', None), 'sunshine_hours_per_year', 0) or 0)
-        for seg in insight.roof_segments
-    ) or 1500  # default fallback
+    max_sunshine = (
+        max(
+            (
+                getattr(seg, "sunshine_hours_per_year", 0)
+                or getattr(getattr(seg, "stats", None), "sunshine_hours_per_year", 0)
+                or 0
+            )
+            for seg in insight.roof_segments
+        )
+        or 1500
+    )  # default fallback
 
     segments = []
     for seg in insight.roof_segments:
         # Extract sunshine data
-        stats = getattr(seg, 'stats', None)
-        sunshine_hours = getattr(seg, 'sunshine_hours_per_year', 0)
+        stats = getattr(seg, "stats", None)
+        sunshine_hours = getattr(seg, "sunshine_hours_per_year", 0)
         if not sunshine_hours and stats:
-            sunshine_hours = getattr(stats, 'sunshine_hours_per_year', 0)
-        quantiles = getattr(seg, 'sunshine_quantiles', [])
+            sunshine_hours = getattr(stats, "sunshine_hours_per_year", 0)
+        quantiles = getattr(seg, "sunshine_quantiles", [])
         if not quantiles and stats:
-            quantiles = getattr(stats, 'sunshine_quantiles', [])
+            quantiles = getattr(stats, "sunshine_quantiles", [])
 
-        area_m2 = getattr(seg, 'area_m2', 0)
+        area_m2 = getattr(seg, "area_m2", 0)
         if not area_m2 and stats:
-            area_m2 = getattr(stats, 'area_m2', getattr(stats, 'areaMeters2', 0))
+            area_m2 = getattr(stats, "area_m2", getattr(stats, "areaMeters2", 0))
 
         info = RoofSegmentInfo(
             index=seg.index,
@@ -146,12 +151,9 @@ def analyze_roof(insight) -> List[RoofSegmentInfo]:
             azimuth_deg=seg.azimuth_deg,
             area_m2=area_m2,
             area_sqft=area_m2 * SQFT_PER_M2,
-            height_m=getattr(seg, 'plane_height_at_center_meters',
-                     getattr(seg, 'height_m', 0)) or 0,
-            center_lat=getattr(seg, 'center_lat',
-                       getattr(getattr(seg, 'center', None), 'lat', 0)) or 0,
-            center_lng=getattr(seg, 'center_lng',
-                       getattr(getattr(seg, 'center', None), 'lng', 0)) or 0,
+            height_m=getattr(seg, "plane_height_at_center_meters", getattr(seg, "height_m", 0)) or 0,
+            center_lat=getattr(seg, "center_lat", getattr(getattr(seg, "center", None), "lat", 0)) or 0,
+            center_lng=getattr(seg, "center_lng", getattr(getattr(seg, "center", None), "lng", 0)) or 0,
             sunshine_hours_per_year=sunshine_hours or 0,
             sunshine_quantiles=quantiles or [],
             panel_count=panels_per_seg.get(seg.index, 0),
@@ -160,8 +162,10 @@ def analyze_roof(insight) -> List[RoofSegmentInfo]:
 
         # Calculate scores
         info.solar_score = _solar_score(
-            info.pitch_deg, info.azimuth_deg,
-            info.sunshine_hours_per_year, max_sunshine,
+            info.pitch_deg,
+            info.azimuth_deg,
+            info.sunshine_hours_per_year,
+            max_sunshine,
         )
         info.obstruction_score = _obstruction_score(info.sunshine_quantiles)
         info.is_viable = info.solar_score >= 30 and info.area_m2 >= 4.0
@@ -171,12 +175,17 @@ def analyze_roof(insight) -> List[RoofSegmentInfo]:
     # Sort by solar score, best first
     segments.sort(key=lambda s: s.solar_score, reverse=True)
 
-    logger.info("Roof analysis: %d segments, %d viable",
-                len(segments), sum(1 for s in segments if s.is_viable))
+    logger.info("Roof analysis: %d segments, %d viable", len(segments), sum(1 for s in segments if s.is_viable))
     for s in segments[:5]:
-        logger.info("  Seg %d: %s-facing, pitch=%.0f°, score=%.0f, obstruction=%.0f, %d panels",
-                    s.index, s.direction_label, s.pitch_deg,
-                    s.solar_score, s.obstruction_score, s.panel_count)
+        logger.info(
+            "  Seg %d: %s-facing, pitch=%.0f°, score=%.0f, obstruction=%.0f, %d panels",
+            s.index,
+            s.direction_label,
+            s.pitch_deg,
+            s.solar_score,
+            s.obstruction_score,
+            s.panel_count,
+        )
 
     return segments
 
@@ -194,18 +203,15 @@ def get_building_dimensions(insight) -> Dict:
     max_height = 0
 
     for seg in insight.roof_segments:
-        bb = getattr(seg, 'bounding_box', None)
+        bb = getattr(seg, "bounding_box", None)
         if bb:
-            ne = bb.get('ne', bb.get('high', {}))
-            sw = bb.get('sw', bb.get('low', {}))
+            ne = bb.get("ne", bb.get("high", {}))
+            sw = bb.get("sw", bb.get("low", {}))
             if ne and sw:
-                all_lats.extend([ne.get('lat', ne.get('latitude', 0)),
-                                sw.get('lat', sw.get('latitude', 0))])
-                all_lngs.extend([ne.get('lng', ne.get('longitude', 0)),
-                                sw.get('lng', sw.get('longitude', 0))])
+                all_lats.extend([ne.get("lat", ne.get("latitude", 0)), sw.get("lat", sw.get("latitude", 0))])
+                all_lngs.extend([ne.get("lng", ne.get("longitude", 0)), sw.get("lng", sw.get("longitude", 0))])
 
-        height = getattr(seg, 'plane_height_at_center_meters',
-                 getattr(seg, 'height_m', 0)) or 0
+        height = getattr(seg, "plane_height_at_center_meters", getattr(seg, "height_m", 0)) or 0
         max_height = max(max_height, height)
 
     if not all_lats or not all_lngs:

@@ -62,19 +62,21 @@ EGC_TABLE = [
 @dataclass
 class PanelModuleSpec:
     """Solar panel module electrical specifications."""
+
     name: str = "Generic 400W"
     wattage: float = 400
-    voc: float = 49.0        # Open circuit voltage (STC)
-    isc: float = 10.5        # Short circuit current (STC)
-    vmp: float = 41.0        # Voltage at max power
-    imp: float = 9.76        # Current at max power
+    voc: float = 49.0  # Open circuit voltage (STC)
+    isc: float = 10.5  # Short circuit current (STC)
+    vmp: float = 41.0  # Voltage at max power
+    imp: float = 9.76  # Current at max power
     temp_coeff_voc: float = -0.0027  # %/°C typical
-    temp_coeff_isc: float = 0.0005   # %/°C typical
+    temp_coeff_isc: float = 0.0005  # %/°C typical
 
 
 @dataclass
 class InverterSpec:
     """Inverter specifications."""
+
     name: str = "Grid-Tied Inverter"
     rated_ac_watts: float = 5000
     rated_ac_volts: float = 240
@@ -89,6 +91,7 @@ class InverterSpec:
 @dataclass
 class ElectricalDesign:
     """Complete electrical design result."""
+
     # System
     num_panels: int = 0
     num_strings: int = 1
@@ -145,8 +148,8 @@ class QuebecElectricalCalculator:
     """
 
     # Quebec design temperatures
-    LOW_TEMP_C = -30   # coldest expected (for Voc correction)
-    HIGH_TEMP_C = 45   # hottest expected
+    LOW_TEMP_C = -30  # coldest expected (for Voc correction)
+    HIGH_TEMP_C = 45  # hottest expected
 
     def __init__(self):
         pass
@@ -172,16 +175,12 @@ class QuebecElectricalCalculator:
         design.dc_system_kw = round(num_panels * panel.wattage / 1000, 2)
 
         # String sizing
-        design.panels_per_string, design.num_strings = self._size_strings(
-            num_panels, panel, inverter
-        )
+        design.panels_per_string, design.num_strings = self._size_strings(num_panels, panel, inverter)
 
         # DC calculations
         design.string_voc = round(design.panels_per_string * panel.voc, 1)
         design.string_voc_cold = round(
-            design.panels_per_string * panel.voc *
-            (1 + panel.temp_coeff_voc * (self.LOW_TEMP_C - 25)),
-            1
+            design.panels_per_string * panel.voc * (1 + panel.temp_coeff_voc * (self.LOW_TEMP_C - 25)), 1
         )
         design.string_isc = round(panel.isc, 2)
 
@@ -197,12 +196,8 @@ class QuebecElectricalCalculator:
         design.dc_conductor = "#10 AWG PV Wire"
 
         # AC calculations (CEC 64-100)
-        design.inverter_continuous_amps = round(
-            inverter.rated_ac_watts / inverter.rated_ac_volts, 1
-        )
-        design.ac_breaker_amps = self._ac_breaker_size(
-            inverter.rated_ac_watts, inverter.rated_ac_volts
-        )
+        design.inverter_continuous_amps = round(inverter.rated_ac_watts / inverter.rated_ac_volts, 1)
+        design.ac_breaker_amps = self._ac_breaker_size(inverter.rated_ac_watts, inverter.rated_ac_volts)
         design.ac_conductor = self._conductor_for_amps(design.ac_breaker_amps)
         design.egc = self._egc_for_amps(design.ac_breaker_amps)
 
@@ -210,9 +205,7 @@ class QuebecElectricalCalculator:
         design.main_breaker_amps = main_breaker_amps
         design.bus_rating_amps = bus_rating_amps
         design.rule_120_max = int(bus_rating_amps * 1.20)
-        design.rule_120_pass = (
-            design.ac_breaker_amps + main_breaker_amps <= design.rule_120_max
-        )
+        design.rule_120_pass = design.ac_breaker_amps + main_breaker_amps <= design.rule_120_max
         if not design.rule_120_pass:
             design.warnings.append(
                 f"120% rule FAIL: {design.ac_breaker_amps}A + {main_breaker_amps}A = "
@@ -231,9 +224,7 @@ class QuebecElectricalCalculator:
 
         return design
 
-    def _size_strings(
-        self, num_panels: int, panel: PanelModuleSpec, inverter: InverterSpec
-    ) -> Tuple[int, int]:
+    def _size_strings(self, num_panels: int, panel: PanelModuleSpec, inverter: InverterSpec) -> Tuple[int, int]:
         """Determine panels per string and number of strings."""
         # Temperature-corrected voltages
         voc_cold = panel.voc * (1 + panel.temp_coeff_voc * (self.LOW_TEMP_C - 25))
@@ -302,9 +293,11 @@ class QuebecElectricalCalculator:
 
 # ── Labels / Placards Generator ────────────────────────────────────
 
+
 @dataclass
 class LabelSpec:
     """A required label/placard per CEC Section 64."""
+
     location: str
     text: str
     code_ref: str
@@ -318,22 +311,14 @@ def get_required_labels(design: ElectricalDesign) -> List[LabelSpec]:
         LabelSpec(
             location="DC Disconnect",
             text=(
-                f"CAUTION: SOLAR PV SYSTEM\n"
-                f"DC DISCONNECT\n"
-                f"Voc = {design.string_voc:.0f}V DC\n"
-                f"DO NOT OPEN UNDER LOAD"
+                f"CAUTION: SOLAR PV SYSTEM\nDC DISCONNECT\nVoc = {design.string_voc:.0f}V DC\nDO NOT OPEN UNDER LOAD"
             ),
             code_ref="CEC 64-060",
             color="red",
         ),
         LabelSpec(
             location="AC Disconnect",
-            text=(
-                f"CAUTION: SOLAR PV SYSTEM\n"
-                f"AC DISCONNECT\n"
-                f"{design.ac_breaker_amps}A / 240V\n"
-                f"SERVICE DISCONNECT"
-            ),
+            text=(f"CAUTION: SOLAR PV SYSTEM\nAC DISCONNECT\n{design.ac_breaker_amps}A / 240V\nSERVICE DISCONNECT"),
             code_ref="CEC 64-060",
             color="red",
         ),
@@ -361,22 +346,13 @@ def get_required_labels(design: ElectricalDesign) -> List[LabelSpec]:
         ),
         LabelSpec(
             location="Utility Meter",
-            text=(
-                f"BIDIRECTIONAL METER\n"
-                f"Net Metering — Hydro-Québec\n"
-                f"DO NOT REMOVE"
-            ),
+            text=(f"BIDIRECTIONAL METER\nNet Metering — Hydro-Québec\nDO NOT REMOVE"),
             code_ref="HQ Net Metering Requirements",
             color="blue",
         ),
         LabelSpec(
             location="Rapid Shutdown Initiator",
-            text=(
-                f"RAPID SHUTDOWN SWITCH\n"
-                f"PV System Shutdown\n"
-                f"Activate in Emergency\n"
-                f"≤30V within 30 seconds"
-            ),
+            text=(f"RAPID SHUTDOWN SWITCH\nPV System Shutdown\nActivate in Emergency\n≤30V within 30 seconds"),
             code_ref="CEC 64-218",
             color="red",
         ),

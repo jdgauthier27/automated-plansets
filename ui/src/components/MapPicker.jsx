@@ -1,4 +1,10 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
+
+function Spinner({ className = 'w-4 h-4' }) {
+  return (
+    <div className={`${className} border-2 border-current border-t-transparent rounded-full animate-spin`} />
+  )
+}
 
 /**
  * Interactive satellite map where the user can click to pick the correct building.
@@ -14,6 +20,8 @@ export default function MapPicker({ centerLat, centerLng, zoom = 20, onPick }) {
   const imgRef = useRef(null)
   const [pin, setPin] = useState(null) // { x, y, lat, lng }
   const [confirmed, setConfirmed] = useState(false)
+  const [imgLoading, setImgLoading] = useState(true)
+  const [imgError, setImgError] = useState(false)
 
   // Google Maps Static API image dimensions (640x480 @ scale 2 = 1280x960 actual,
   // but displayed at container width). We use 640x480 display size.
@@ -24,7 +32,7 @@ export default function MapPicker({ centerLat, centerLng, zoom = 20, onPick }) {
   const metersPerPx = (156543.03392 * Math.cos((centerLat * Math.PI) / 180)) / Math.pow(2, zoom)
 
   const handleClick = (e) => {
-    if (confirmed) return
+    if (confirmed || imgLoading || imgError) return
     const rect = imgRef.current.getBoundingClientRect()
     const clickX = e.clientX - rect.left
     const clickY = e.clientY - rect.top
@@ -63,11 +71,33 @@ export default function MapPicker({ centerLat, centerLng, zoom = 20, onPick }) {
   return (
     <div className="space-y-3">
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-blue-800 text-sm font-medium">
-        Click on the correct building in the satellite view below to set the location.
+        Click on the satellite image to select your building's location.
       </div>
 
+      {/* Loading state */}
+      {imgLoading && !imgError && (
+        <div className="flex items-center justify-center gap-2 py-12 bg-gray-50 rounded-lg border border-gray-200">
+          <Spinner className="w-5 h-5 text-gray-500" />
+          <span className="text-sm text-gray-500">Loading satellite image...</span>
+        </div>
+      )}
+
+      {/* Error state */}
+      {imgError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center space-y-2">
+          <p className="text-red-800 text-sm font-medium">Failed to load satellite image.</p>
+          <p className="text-red-600 text-xs">The satellite imagery service may be temporarily unavailable.</p>
+          <button
+            onClick={() => { setImgError(false); setImgLoading(true) }}
+            className="mt-2 text-sm px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg font-medium"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       <div
-        className="relative cursor-crosshair rounded-lg overflow-hidden border border-gray-300 shadow-sm"
+        className={`relative cursor-crosshair rounded-lg overflow-hidden border border-gray-300 shadow-sm ${imgLoading || imgError ? 'hidden' : ''}`}
         onClick={handleClick}
         style={{ maxWidth: '100%' }}
       >
@@ -77,6 +107,8 @@ export default function MapPicker({ centerLat, centerLng, zoom = 20, onPick }) {
           alt="Satellite view — click to select building"
           className="w-full"
           draggable={false}
+          onLoad={() => setImgLoading(false)}
+          onError={() => { setImgLoading(false); setImgError(true) }}
         />
 
         {/* Pin marker */}
@@ -107,7 +139,7 @@ export default function MapPicker({ centerLat, centerLng, zoom = 20, onPick }) {
         </div>
       </div>
 
-      {pin && (
+      {pin && !imgError && (
         <div className="flex items-center justify-between">
           <span className="text-xs text-gray-500">
             Selected: {pin.lat.toFixed(6)}, {pin.lng.toFixed(6)}
@@ -115,7 +147,7 @@ export default function MapPicker({ centerLat, centerLng, zoom = 20, onPick }) {
           {!confirmed ? (
             <button
               onClick={handleConfirm}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+              className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold shadow-sm"
             >
               Confirm This Location
             </button>
@@ -125,9 +157,9 @@ export default function MapPicker({ centerLat, centerLng, zoom = 20, onPick }) {
         </div>
       )}
 
-      {!pin && (
+      {!pin && !imgLoading && !imgError && (
         <p className="text-xs text-gray-500 text-center">
-          Yellow circle shows the original geocoded position. Click on the correct building to move the pin.
+          Yellow circle shows the original geocoded position. Click on the correct building to place the red pin.
         </p>
       )}
     </div>

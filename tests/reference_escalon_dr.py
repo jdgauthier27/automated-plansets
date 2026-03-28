@@ -30,11 +30,11 @@ SYSTEM = {
 
 # ── Production & Sizing ────────────────────────────────────────────────
 PRODUCTION = {
-    "annual_production_kwh": 16862,      # from OpenSolar with Google 3D data
-    "annual_consumption_kwh": 15055,     # estimated from 112% offset
-    "offset_pct": 112,                   # produces 12% more than consumed
-    "peak_sun_hours": 5.5,              # Los Angeles area (PSH)
-    "system_losses_pct": 20,            # soiling, wiring, inverter, temp derating
+    "annual_production_kwh": 16862,  # from OpenSolar with Google 3D data
+    "annual_consumption_kwh": 15055,  # estimated from 112% offset
+    "offset_pct": 112,  # produces 12% more than consumed
+    "peak_sun_hours": 5.5,  # Los Angeles area (PSH)
+    "system_losses_pct": 20,  # soiling, wiring, inverter, temp derating
     # Calculation: 11.85 kW × 5.5 PSH × 365 days × 0.80 losses = 19,042 kWh theoretical
     # OpenSolar actual: 16,862 kWh (accounts for shading, orientation, real irradiance)
     # The difference is because OpenSolar uses hour-by-hour simulation, not simple PSH
@@ -121,7 +121,7 @@ ROOF_SEGMENTS = [
 # ── Fire Setbacks ──────────────────────────────────────────────────────
 FIRE_SETBACKS = {
     "ridge_in": 36,  # 3'-0" from ridge on all sides
-    "eave_in": 36,   # 36" fire setback marked on reference A-102
+    "eave_in": 36,  # 36" fire setback marked on reference A-102
     "valley_in": 36,
     "hip_in": 36,
 }
@@ -165,14 +165,14 @@ BOM = [
     {"item": "Microinverter", "qty": 30, "desc": "Enphase IQ8PLUS-72-2-US (240V) Micro-Inverters"},
     {"item": "Junction Box", "qty": 2, "desc": "Junction Box, NEMA 3R, UL Listed"},
     {"item": "IQ Combiner Box", "qty": 1, "desc": "Enphase IQ Combiner 5C w/IQ Gateway (X-IQ-AM1-240-5C)"},
-    {"item": "Attachment", "qty": 66, "desc": "Bolt Lag 5/16 x 4.25\""},
+    {"item": "Attachment", "qty": 66, "desc": 'Bolt Lag 5/16 x 4.25"'},
     {"item": "Attachment", "qty": 66, "desc": "Assy, Flashing"},
     {"item": "Attachment", "qty": 66, "desc": "Washer, EPDM Backed"},
     {"item": "Attachment", "qty": 66, "desc": "Assy, Cap"},
     {"item": "IQ Water Tight Cap", "qty": 7, "desc": "IQ Water Tight Caps"},
     {"item": "Enphase", "qty": 37, "desc": "Enphase Q Cable 240V, (Per Connector)"},
     {"item": "Enphase", "qty": 3, "desc": "Branch Terminator"},
-    {"item": "Rails", "qty": 16, "desc": "IronRidge XR100 Rail (168\")"},
+    {"item": "Rails", "qty": 16, "desc": 'IronRidge XR100 Rail (168")'},
     {"item": "Bonded Splice", "qty": 8, "desc": "Splice Kit"},
     {"item": "Mid Clamp", "qty": 72, "desc": "Universal Fastening Object (UFO)"},
     {"item": "End Clamp", "qty": 24, "desc": "Stopper Sleeves"},
@@ -194,6 +194,8 @@ def validate_output(html: str) -> dict:
 
     Returns a dict with pass/fail for each check and an overall score.
     """
+    import re
+
     results = {}
 
     # --- Address & Client ---
@@ -210,8 +212,16 @@ def validate_output(html: str) -> dict:
     results["no_hydro_quebec_in_codes"] = "Hydro-Qu" not in html.split("GOVERNING")[0] if "GOVERNING" in html else True
 
     # --- Quebec contamination (CRITICAL for California plansets) ---
-    qc_count = (html.count("Hydro-Qu") + html.count("CMEQ") + html.count("AECQ")
-                + html.count("NBCC") + html.count("CCQ") + html.count("RW90-XLPE"))
+    # Strip base64 data URIs before checking — encoded PNG data naturally contains "CCQ"
+    html_no_b64 = re.sub(r'data:[a-zA-Z0-9+/;=,\-]+[A-Za-z0-9+/=]+', '', html)
+    qc_count = (
+        html_no_b64.count("Hydro-Qu")
+        + html_no_b64.count("CMEQ")
+        + html_no_b64.count("AECQ")
+        + html_no_b64.count("NBCC")
+        + html_no_b64.count("CCQ")
+        + html_no_b64.count("RW90-XLPE")
+    )
     results["zero_quebec_refs"] = qc_count == 0
 
     # --- Roof Segments ---
@@ -225,8 +235,9 @@ def validate_output(html: str) -> dict:
     results["street_name"] = "ESCALON" in html.upper()
 
     # --- Production ---
-    results["production_shown"] = ("16862" in html or "16,862" in html or
-                                    "kWh" in html)  # annual production should appear
+    results["production_shown"] = (
+        "16862" in html or "16,862" in html or "kWh" in html
+    )  # annual production should appear
 
     # --- Score ---
     total = len(results)
@@ -239,6 +250,7 @@ def validate_output(html: str) -> dict:
 
 if __name__ == "__main__":
     import sys
+
     if len(sys.argv) > 1:
         with open(sys.argv[1]) as f:
             html = f.read()
@@ -252,8 +264,12 @@ if __name__ == "__main__":
         print("\nReference data loaded. Key specs:")
         print(f"  Panels: {SYSTEM['num_panels']}x {PANEL['model']} ({PANEL['wattage_w']}W)")
         print(f"  Inverters: {INVERTER['quantity']}x {INVERTER['model']}")
-        print(f"  Roof #1: {ROOF_SEGMENTS[0]['num_panels']} panels, {ROOF_SEGMENTS[0]['tilt_deg']}° tilt, {ROOF_SEGMENTS[0]['azimuth_deg']}° azim")
-        print(f"  Roof #2: {ROOF_SEGMENTS[1]['num_panels']} panels, {ROOF_SEGMENTS[1]['tilt_deg']}° tilt, {ROOF_SEGMENTS[1]['azimuth_deg']}° azim")
-        print(f"  Fire setbacks: {FIRE_SETBACKS['ridge_in']}\" all edges")
+        print(
+            f"  Roof #1: {ROOF_SEGMENTS[0]['num_panels']} panels, {ROOF_SEGMENTS[0]['tilt_deg']}° tilt, {ROOF_SEGMENTS[0]['azimuth_deg']}° azim"
+        )
+        print(
+            f"  Roof #2: {ROOF_SEGMENTS[1]['num_panels']} panels, {ROOF_SEGMENTS[1]['tilt_deg']}° tilt, {ROOF_SEGMENTS[1]['azimuth_deg']}° azim"
+        )
+        print(f'  Fire setbacks: {FIRE_SETBACKS["ridge_in"]}" all edges')
         print(f"  Lot shape: IRREGULAR polygon ({len(PROPERTY['lot_sides_ft'])} sides)")
         print(f"  Building: {PROPERTY['building_shape']}")

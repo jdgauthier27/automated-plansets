@@ -32,8 +32,7 @@ def render_proposal_html(proposal_data: dict) -> str:
 
     # Monthly production bar chart
     monthly = d.get("monthly_production", {})
-    months_order = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    months_order = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     max_kwh = max(monthly.values()) if monthly else 1
 
     bar_cells = ""

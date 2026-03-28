@@ -69,9 +69,7 @@ class GoogleGeocoder:
         results = data.get("results")
         if not results:
             status = data.get("status", "UNKNOWN")
-            raise ValueError(
-                f"Geocoding returned no results for '{address}' (status={status})"
-            )
+            raise ValueError(f"Geocoding returned no results for '{address}' (status={status})")
 
         first = results[0]
         loc = first["geometry"]["location"]

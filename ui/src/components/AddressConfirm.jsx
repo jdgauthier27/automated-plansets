@@ -2,6 +2,12 @@ import { useState } from 'react'
 import MapPicker from './MapPicker'
 import AddressAutocomplete from './AddressAutocomplete'
 
+function Spinner({ className = 'w-4 h-4' }) {
+  return (
+    <div className={`${className} border-2 border-current border-t-transparent rounded-full animate-spin`} />
+  )
+}
+
 export default function AddressConfirm({ address, streetViewB64, confirmed, latitude, longitude, satelliteB64, apiKey, onUpdate }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -33,10 +39,10 @@ export default function AddressConfirm({ address, streetViewB64, confirmed, lati
           addressConfirmed: false,
         })
       } else {
-        setError(data.detail || 'Geocoding failed — you can proceed with manual confirmation below.')
+        setError(data.detail || 'Geocoding failed — you can try again or enter coordinates manually.')
       }
     } catch (e) {
-      setError('Could not reach verification service. You can proceed with manual confirmation below.')
+      setError('Could not reach verification service. Check your connection and try again, or enter coordinates manually.')
     }
     setLoading(false)
   }
@@ -44,6 +50,19 @@ export default function AddressConfirm({ address, streetViewB64, confirmed, lati
   const handleManualConfirm = () => {
     onUpdate({ addressConfirmed: true })
     setManualMode(false)
+  }
+
+  const handleTryDifferentAddress = () => {
+    onUpdate({
+      streetViewB64: null,
+      satelliteB64: null,
+      addressConfirmed: false,
+      address: '',
+      latitude: 0,
+      longitude: 0,
+    })
+    setMapPickerMode(false)
+    setError(null)
   }
 
   const hasImages = streetViewB64 || satelliteB64
@@ -67,32 +86,51 @@ export default function AddressConfirm({ address, streetViewB64, confirmed, lati
           <button
             onClick={handleValidate}
             disabled={loading || address.length < 5}
-            className="px-4 py-2 bg-solar-600 hover:bg-solar-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 whitespace-nowrap"
+            className="px-4 py-2 bg-solar-600 hover:bg-solar-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex items-center gap-2"
           >
-            {loading ? 'Checking...' : 'Verify Address'}
+            {loading && <Spinner />}
+            {loading ? 'Verifying...' : 'Verify Address'}
           </button>
         </div>
       </div>
 
-      {error && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-yellow-800 text-sm">
-          {error}
-          {!manualMode && (
+      {/* Loading indicator */}
+      {loading && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-blue-800 text-sm flex items-center gap-2">
+          <Spinner className="w-4 h-4 text-blue-600" />
+          Looking up address and fetching Street View and satellite images...
+        </div>
+      )}
+
+      {/* Error state */}
+      {error && !loading && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-2">
+          <p className="text-red-800 text-sm font-medium">{error}</p>
+          <div className="flex gap-2">
             <button
-              onClick={() => setManualMode(true)}
-              className="ml-2 underline text-yellow-700 hover:text-yellow-900"
+              onClick={handleValidate}
+              disabled={address.length < 5}
+              className="text-sm px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg font-medium"
             >
-              Enter coordinates manually
+              Retry
             </button>
-          )}
+            {!manualMode && (
+              <button
+                onClick={() => setManualMode(true)}
+                className="text-sm px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium"
+              >
+                Enter coordinates manually
+              </button>
+            )}
+          </div>
         </div>
       )}
 
       {/* Street View + Satellite confirmation */}
-      {hasImages && !confirmed && (
+      {hasImages && !confirmed && !loading && (
         <div className="space-y-3">
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-blue-800 text-sm font-medium">
-            Confirm this is the correct building and location. You must verify before proceeding.
+            Is this the correct building? Confirm to proceed or try a different address.
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -136,16 +174,22 @@ export default function AddressConfirm({ address, streetViewB64, confirmed, lati
               onClick={() => onUpdate({ addressConfirmed: true })}
               className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium"
             >
-              Yes, correct building & location
+              Confirm — Correct Building
             </button>
             <button
               onClick={() => {
                 setMapPickerMode(true)
                 onUpdate({ streetViewB64: null, satelliteB64: null, addressConfirmed: false })
               }}
-              className="flex-1 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-4 py-2.5 rounded-lg text-sm font-medium"
+              className="px-4 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-lg text-sm font-medium"
             >
-              No, wrong building
+              Pick on Map
+            </button>
+            <button
+              onClick={handleTryDifferentAddress}
+              className="px-4 py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-200 rounded-lg text-sm font-medium"
+            >
+              Try Different Address
             </button>
           </div>
         </div>
@@ -153,22 +197,36 @@ export default function AddressConfirm({ address, streetViewB64, confirmed, lati
 
       {/* Interactive map picker — shown when user says "wrong building" */}
       {mapPickerMode && !confirmed && geocodedLat !== 0 && (
-        <MapPicker
-          centerLat={geocodedLat}
-          centerLng={geocodedLng}
-          zoom={20}
-          onPick={(lat, lng) => {
-            onUpdate({ latitude: lat, longitude: lng, addressConfirmed: true })
-            setMapPickerMode(false)
-          }}
-        />
+        <div className="space-y-2">
+          <MapPicker
+            centerLat={geocodedLat}
+            centerLng={geocodedLng}
+            zoom={20}
+            onPick={(lat, lng) => {
+              onUpdate({ latitude: lat, longitude: lng, addressConfirmed: true })
+              setMapPickerMode(false)
+            }}
+          />
+          <button
+            onClick={() => {
+              setMapPickerMode(false)
+              handleValidate()
+            }}
+            className="text-sm text-gray-500 hover:text-gray-700 underline"
+          >
+            &larr; Back to address verification
+          </button>
+        </div>
       )}
 
-      {/* Manual coordinate entry */}
+      {/* Manual coordinate entry — fallback option */}
       {manualMode && !confirmed && !mapPickerMode && (
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
-          <p className="text-sm font-medium text-gray-700">Manual Location Entry</p>
-          <p className="text-xs text-gray-500">Enter the exact coordinates, or adjust the address and try verification again.</p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-gray-700">Manual Location Entry</p>
+            <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">Fallback</span>
+          </div>
+          <p className="text-xs text-gray-500">Enter the exact coordinates if address lookup is unavailable.</p>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-gray-500 mb-1">Latitude</label>
@@ -191,13 +249,21 @@ export default function AddressConfirm({ address, streetViewB64, confirmed, lati
               />
             </div>
           </div>
-          <button
-            onClick={handleManualConfirm}
-            disabled={!latitude || !longitude}
-            className="w-full bg-solar-600 hover:bg-solar-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
-          >
-            Confirm Location Manually
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleManualConfirm}
+              disabled={!latitude || !longitude}
+              className="flex-1 bg-solar-600 hover:bg-solar-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Confirm Location Manually
+            </button>
+            <button
+              onClick={() => setManualMode(false)}
+              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-sm font-medium"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 

@@ -31,9 +31,10 @@ class GeoTiffRoofGeometry:
         scale_factor: Page scale in pts/ft (same convention as solar_insight_to_roof_faces).
         roof_faces:   Full RoofFace list for passing directly to panel_placer.
     """
+
     polygons: List[List[Tuple[float, float]]]
     scale_factor: float
-    roof_faces: list = field(default_factory=list)   # List[RoofFace]
+    roof_faces: list = field(default_factory=list)  # List[RoofFace]
 
 
 # ---------------------------------------------------------------------------
@@ -64,6 +65,7 @@ def get_roof_geometry_from_geotiff(
 
     try:
         from engine.geotiff_roof import get_roof_faces_from_geotiff
+
         roof_faces, scale = get_roof_faces_from_geotiff(lat, lng, api_key)
     except Exception as exc:
         logger.error("GeoTIFF extraction failed: %s", exc)
@@ -84,7 +86,9 @@ def get_roof_geometry_from_geotiff(
 
     logger.info(
         "GeoTIFF geometry: %d faces, %d polygons, scale=%.3f pts/ft",
-        len(roof_faces), len(polygons), scale,
+        len(roof_faces),
+        len(polygons),
+        scale,
     )
     return GeoTiffRoofGeometry(
         polygons=polygons,

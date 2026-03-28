@@ -18,10 +18,11 @@ logger = logging.getLogger(__name__)
 @dataclass
 class PageAnalysis:
     """Analysis of a single planset page."""
+
     page_number: int = 0
-    page_type: str = ""           # "cover", "site_plan", "sld", "datasheet", etc.
+    page_type: str = ""  # "cover", "site_plan", "sld", "datasheet", etc.
     title: str = ""
-    sheet_id: str = ""            # "PV-1", "PV-4", etc.
+    sheet_id: str = ""  # "PV-1", "PV-4", etc.
     has_title_block: bool = False
     tables: List[Dict] = field(default_factory=list)
     notes: List[str] = field(default_factory=list)
@@ -36,6 +37,7 @@ class PageAnalysis:
 @dataclass
 class PlansetAnalysis:
     """Complete analysis of a reference planset."""
+
     source_path: str = ""
     total_pages: int = 0
     pages: List[PageAnalysis] = field(default_factory=list)
@@ -89,7 +91,7 @@ def extract_from_html(html_path: str) -> PlansetAnalysis:
     pages = re.split(r'<div[^>]*class="[^"]*page[^"]*"[^>]*>', html_content)
     if len(pages) <= 1:
         # Try splitting by page-break-after
-        pages = re.split(r'page-break-after:\s*always', html_content)
+        pages = re.split(r"page-break-after:\s*always", html_content)
 
     analysis.total_pages = max(1, len(pages) - 1)  # first split is header
 
@@ -97,30 +99,30 @@ def extract_from_html(html_path: str) -> PlansetAnalysis:
         page = PageAnalysis(page_number=i)
 
         # Extract text content (strip HTML tags)
-        text = re.sub(r'<[^>]+>', ' ', page_html)
-        text = re.sub(r'\s+', ' ', text).strip()
+        text = re.sub(r"<[^>]+>", " ", page_html)
+        text = re.sub(r"\s+", " ", text).strip()
 
         # Classify page type
         page.page_type = classify_page(text)
 
         # Find sheet ID (e.g., "PV-1", "S-2", "E-601")
-        sheet_match = re.search(r'(PV-\d+\.?\d*|S-\d+|E-\d+|T-\d+|A-\d+)', text)
+        sheet_match = re.search(r"(PV-\d+\.?\d*|S-\d+|E-\d+|T-\d+|A-\d+)", text)
         if sheet_match:
             page.sheet_id = sheet_match.group(1)
 
         # Check for title block
-        page.has_title_block = bool(re.search(r'DRAWN BY|SHEET|REVISION', text, re.IGNORECASE))
+        page.has_title_block = bool(re.search(r"DRAWN BY|SHEET|REVISION", text, re.IGNORECASE))
 
         # Find equipment references
         equipment_patterns = [
-            r'LONGi\s+Hi-MO\s+\d+',
-            r'Canadian\s+Solar\s+\w+',
-            r'Enphase\s+IQ\d+\w*',
-            r'Hoymiles\s+HMS-?\d+',
-            r'Solis\s+S\d+',
-            r'IronRidge\s+XR\d+',
-            r'K2\s+CrossRail',
-            r'FlashFoot\d*',
+            r"LONGi\s+Hi-MO\s+\d+",
+            r"Canadian\s+Solar\s+\w+",
+            r"Enphase\s+IQ\d+\w*",
+            r"Hoymiles\s+HMS-?\d+",
+            r"Solis\s+S\d+",
+            r"IronRidge\s+XR\d+",
+            r"K2\s+CrossRail",
+            r"FlashFoot\d*",
         ]
         for pattern in equipment_patterns:
             matches = re.findall(pattern, text, re.IGNORECASE)
@@ -128,21 +130,21 @@ def extract_from_html(html_path: str) -> PlansetAnalysis:
 
         # Find code references
         code_patterns = [
-            r'CEC\s+(CSA\s+)?C22\.\d+',
-            r'NEC\s+\d+',
-            r'NFPA\s+70',
-            r'IFC\s+\d+',
-            r'UL\s+\d+',
-            r'IEEE\s+\d+',
-            r'CEC\s+Rule\s+\d+-\d+',
-            r'NEC\s+\d+\.\d+',
+            r"CEC\s+(CSA\s+)?C22\.\d+",
+            r"NEC\s+\d+",
+            r"NFPA\s+70",
+            r"IFC\s+\d+",
+            r"UL\s+\d+",
+            r"IEEE\s+\d+",
+            r"CEC\s+Rule\s+\d+-\d+",
+            r"NEC\s+\d+\.\d+",
         ]
         for pattern in code_patterns:
             matches = re.findall(pattern, text, re.IGNORECASE)
             page.code_refs.extend(matches)
 
         # Extract notes
-        note_matches = re.findall(r'\d+\.\s+[A-Z][^.]+\.', text)
+        note_matches = re.findall(r"\d+\.\s+[A-Z][^.]+\.", text)
         page.notes = note_matches[:20]  # cap at 20
 
         page.text_blocks = [text[:500]]  # first 500 chars for context
@@ -173,8 +175,12 @@ def extract_from_html(html_path: str) -> PlansetAnalysis:
         "page_count_adequate": analysis.total_pages >= 11,
     }
 
-    logger.info("Analyzed planset: %d pages, %d equipment refs, %d code refs",
-                analysis.total_pages, len(all_equipment), len(all_codes))
+    logger.info(
+        "Analyzed planset: %d pages, %d equipment refs, %d code refs",
+        analysis.total_pages,
+        len(all_equipment),
+        len(all_codes),
+    )
 
     return analysis
 
@@ -189,6 +195,7 @@ def extract_from_pdf(pdf_path: str) -> PlansetAnalysis:
 
     try:
         import fitz  # PyMuPDF
+
         doc = fitz.open(pdf_path)
         analysis.total_pages = len(doc)
 
@@ -198,11 +205,11 @@ def extract_from_pdf(pdf_path: str) -> PlansetAnalysis:
             page_analysis.page_type = classify_page(text)
 
             # Find sheet ID
-            sheet_match = re.search(r'(PV-\d+\.?\d*|S-\d+|E-\d+)', text)
+            sheet_match = re.search(r"(PV-\d+\.?\d*|S-\d+|E-\d+)", text)
             if sheet_match:
                 page_analysis.sheet_id = sheet_match.group(1)
 
-            page_analysis.has_title_block = bool(re.search(r'DRAWN BY|SHEET', text, re.IGNORECASE))
+            page_analysis.has_title_block = bool(re.search(r"DRAWN BY|SHEET", text, re.IGNORECASE))
             page_analysis.text_blocks = [text[:500]]
             analysis.pages.append(page_analysis)
 

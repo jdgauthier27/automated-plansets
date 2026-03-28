@@ -25,6 +25,7 @@ class RoofObstacle:
         height_ft:     Total exclusion height including 18" clearance on each side.
         obstacle_type: One of 'vent', 'skylight', 'chimney', 'hvac'.
     """
+
     x_ft: float
     y_ft: float
     width_ft: float

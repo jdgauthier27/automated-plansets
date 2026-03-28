@@ -140,6 +140,16 @@ class JurisdictionEngine(ABC):
         """Return electrical code notes for the planset."""
         ...
 
+    # ── Building code ──────────────────────────────────────────────────
+
+    def get_building_code(self) -> str:
+        """Return the applicable building code abbreviation.
+
+        Override in subclasses for jurisdiction-specific building codes.
+        Default: 'IBC' (International Building Code) for NEC jurisdictions.
+        """
+        return "IBC"
+
     # ── Governing codes ───────────────────────────────────────────────
 
     @abstractmethod

@@ -242,8 +242,8 @@ export default function CesiumMap3D({
       if (pointLng > maxLng) maxLng = pointLng
     }
 
-    const latMeters = Math.max((maxLat - minLat) * FT_PER_DEG_LAT / FT_PER_M, 45)
-    const lngMeters = Math.max((maxLng - minLng) * 111320 * Math.cos(targetCenterLat * Math.PI / 180), 45)
+    const latMeters = Math.max((maxLat - minLat) * FT_PER_DEG_LAT / FT_PER_M, 20)
+    const lngMeters = Math.max((maxLng - minLng) * 111320 * Math.cos(targetCenterLat * Math.PI / 180), 20)
     const hintedSpan = Math.max(
       Number(cameraHint?.radius_m || 0) * 2,
       Number(cameraHint?.width_m || 0),
@@ -251,7 +251,9 @@ export default function CesiumMap3D({
     )
     const spanMeters = Math.max(latMeters, lngMeters, hintedSpan || 0)
     const groundH = dsmHeightsRef.current?.building?.ground_elevation_m ?? 0
-    const altitudeM = groundH + Math.min(420, Math.max(140, spanMeters * 2.0))
+    // Altitude: close enough to see a residential roof clearly
+    // ~50m for a small house, ~80m for a large commercial building
+    const altitudeM = groundH + Math.min(120, Math.max(45, spanMeters * 1.8))
 
     return {
       centerLat: targetCenterLat,
@@ -272,23 +274,57 @@ export default function CesiumMap3D({
     stopOrbit(viewer)
     setIsOrbiting(false)
 
-    const view = getRoofViewState()
-    const centerLatOffset = (view.spanMeters * FT_PER_M / FT_PER_DEG_LAT) * 0.2
-    const centerLngOffset = view.spanMeters / (111320 * Math.max(0.25, Math.cos(view.centerLat * Math.PI / 180))) * 0.18
+    // Use the actual panel positions to find the true building center
+    // (the geocode lat/lng is often at the street curb, not the roof)
+    let targetLat = lat
+    let targetLng = lng
+    if (panels.length > 0) {
+      const selected = panels.slice(0, Math.min(panelCount, panels.length))
+      const validPanels = selected.filter(p => p.lat && p.lng)
+      if (validPanels.length > 0) {
+        targetLat = validPanels.reduce((s, p) => s + p.lat, 0) / validPanels.length
+        targetLng = validPanels.reduce((s, p) => s + p.lng, 0) / validPanels.length
+      }
+    }
 
-    viewer.camera.flyTo({
-      destination: Cesium.Cartesian3.fromDegrees(
-        view.centerLng + centerLngOffset,
-        view.centerLat - centerLatOffset,
-        view.altitudeM,
-      ),
-      orientation: {
-        heading: Cesium.Math.toRadians(view.headingDeg),
-        pitch: Cesium.Math.toRadians(view.pitchDeg),
-        roll: 0,
-      },
-      duration: immediate ? 0.85 : 1.5,
-    })
+    // Sample the actual tile mesh height at building center for accurate target
+    ;(async () => {
+      let rooftopH = 280 // fallback: high enough to be safe
+      try {
+        const cart = Cesium.Cartographic.fromDegrees(targetLng, targetLat)
+        const results = await viewer.scene.sampleHeightMostDetailed([cart])
+        if (results[0]?.height > 0) {
+          rooftopH = results[0].height + 2 // just above roof surface
+        }
+      } catch (_) {
+        // Fallback: use DSM + geoid estimate
+        const groundH = dsmHeightsRef.current?.building?.ground_elevation_m ?? 0
+        const buildingH = dsmHeightsRef.current?.building?.building_height_m ?? 6
+        if (groundH > 0) {
+          // Rough geoid offset for this area
+          rooftopH = groundH + buildingH - 29
+        }
+      }
+
+      if (viewer.isDestroyed()) return
+
+      const target = Cesium.Cartesian3.fromDegrees(targetLng, targetLat, rooftopH)
+      const primaryAzimuth = segments.length > 0 ? (segments[0].azimuth_deg || 180) : 180
+      const headingDeg = (primaryAzimuth + 135) % 360
+      const range = 55
+
+      console.log(`[focusRoof] lookAt center=(${targetLat.toFixed(5)}, ${targetLng.toFixed(5)}), rooftopH=${rooftopH.toFixed(1)}m, range=${range}m`)
+
+      viewer.camera.lookAt(
+        target,
+        new Cesium.HeadingPitchRange(
+          Cesium.Math.toRadians(headingDeg),
+          Cesium.Math.toRadians(-40),
+          range,
+        )
+      )
+      viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY)
+    })()
   }
 
   // Fetch building data if not already provided
@@ -332,6 +368,8 @@ export default function CesiumMap3D({
         timeline: false,
         fullscreenButton: false,
         vrButton: false,
+        infoBox: false, // we use custom tooltips, not Cesium's built-in InfoBox
+        selectionIndicator: false, // suppress green selection ring on entity click
         creditContainer: creditDiv, // hide credit display (we show Google attribution separately)
       })
 
@@ -341,7 +379,7 @@ export default function CesiumMap3D({
 
       // Position camera near building while tiles load
       viewer.camera.setView({
-        destination: Cesium.Cartesian3.fromDegrees(lng, lat, 320),
+        destination: Cesium.Cartesian3.fromDegrees(lng, lat, 280),
         orientation: {
           heading: Cesium.Math.toRadians(DEFAULT_ORBIT_HEADING_DEG),
           pitch: Cesium.Math.toRadians(-52),
@@ -651,24 +689,35 @@ export default function CesiumMap3D({
       allLngs.push(cLng)
 
       const segIdx = panel.segment_index || 0
-      const azimuth = segments[segIdx]?.azimuth_deg || 180
+      // Use per-panel azimuth from grouped data if available, else fall back to segment
+      const azimuth = panel.azimuth_deg ?? segments[segIdx]?.azimuth_deg ?? 180
       const orientation = panel.orientation === 'PORTRAIT' ? 90 : 0
       const totalAngle = azimuth + orientation
 
-      const cosLat = Math.cos(cLat * Math.PI / 180)
-      const halfW = (panelW / 2) / (111319.5 * cosLat)
-      const halfH = (panelH / 2) / 111319.5
+      // Match SolarMap's corner math exactly: polar coords (distance + bearing)
+      // then geodesic offset. This ensures 2D and 3D panel shapes are identical.
+      const hw = panelW / 2 // half-width in meters
+      const hh = panelH / 2 // half-height in meters
+      const rawCorners = [
+        { x: +hw, y: +hh },
+        { x: +hw, y: -hh },
+        { x: -hw, y: -hh },
+        { x: -hw, y: +hh },
+      ]
 
-      const corners = [
-        { dx: +halfW, dy: +halfH },
-        { dx: +halfW, dy: -halfH },
-        { dx: -halfW, dy: -halfH },
-        { dx: -halfW, dy: +halfH },
-      ].map(({ dx, dy }) => {
-        const angleRad = totalAngle * Math.PI / 180
-        const rotX = dx * Math.cos(angleRad) - dy * Math.sin(angleRad)
-        const rotY = dx * Math.sin(angleRad) + dy * Math.cos(angleRad)
-        return [cLng + rotX, cLat + rotY]
+      const cosLat = Math.cos(cLat * Math.PI / 180)
+      const metersPerDegLng = 111319.5 * cosLat
+      const metersPerDegLat = 111319.5
+
+      const corners = rawCorners.map(({ x, y }) => {
+        const distance = Math.sqrt(x * x + y * y)
+        const baseAngle = Math.atan2(y, x) * (180 / Math.PI)
+        const bearing = baseAngle + totalAngle
+        const bearingRad = bearing * Math.PI / 180
+        // Offset in meters → degrees (same as computeOffset for short distances)
+        const dLng = (distance * Math.sin(bearingRad)) / metersPerDegLng
+        const dLat = (distance * Math.cos(bearingRad)) / metersPerDegLat
+        return [cLng + dLng, cLat + dLat]
       })
 
       const kwhPerYear = (panel.yearly_energy_kwh || 0).toFixed(0)
@@ -680,42 +729,79 @@ export default function CesiumMap3D({
       panelGeometries.push({ i, cLat, cLng, corners, tooltipText, wattage, faceName, row, col })
     })
 
-    // Place panels using terrain sampling + DSM heights
-    // sampleHeightMostDetailed returns terrain height in WGS84 ellipsoid coords.
-    // DSM heights are geoid-referenced (MSL). The difference gives us the geoid undulation
-    // to convert DSM panel heights → WGS84 for correct CesiumJS placement.
+    // Place panels by sampling center height from 3D tile mesh, then
+    // computing corner heights using roof pitch + azimuth from Solar API.
+    // This is more reliable than sampling 4 independent corners which gives
+    // noisy results from the tile mesh resolution.
     ;(async () => {
-      const OFFSET = 1.0 // 1m above roof — ensures panels are ABOVE 3D tile mesh
+      const OFFSET = 0.4 // 40cm above tile mesh
 
-      // Sample terrain at building center to compute geoid undulation
-      let geoidUndulation = -33.5 // Default Southern California
-      if (!loading) {
+      // Sample each panel CENTER + building center for geoid reference
+      const centerCarts = panelGeometries.map((pg) =>
+        Cesium.Cartographic.fromDegrees(pg.cLng, pg.cLat)
+      )
+      centerCarts.push(Cesium.Cartographic.fromDegrees(lng, lat))
+
+      let sampledHeights = []
+      if (!loading && centerCarts.length > 0) {
         try {
-          const centerCart = Cesium.Cartographic.fromDegrees(lng, lat)
-          const results = await viewer.scene.sampleHeightMostDetailed([centerCart])
-          const terrainH = results[0]?.height
-          const dsmGround = dsmHeights?.building?.ground_elevation_m
-          if (terrainH > 0 && dsmGround > 0) {
-            geoidUndulation = terrainH - dsmGround
-          }
-        } catch (_) { /* terrain not ready — use default */ }
+          sampledHeights = await viewer.scene.sampleHeightMostDetailed(centerCarts)
+        } catch (_) { /* tiles not ready */ }
       }
 
       if (viewer.isDestroyed()) return
 
+      // Compute geoid undulation from building center sample vs DSM
+      const buildingSample = sampledHeights[sampledHeights.length - 1]
+      let geoidUndulation = -33.5 // Default Southern California
+      const dsmGround = dsmHeights?.building?.ground_elevation_m || 0
+      if (buildingSample?.height > 0 && dsmGround > 0) {
+        geoidUndulation = buildingSample.height - dsmGround
+      }
+
+      console.log(`[CesiumMap3D] Geoid undulation: ${geoidUndulation.toFixed(2)}m, DSM ground: ${dsmGround.toFixed(1)}m`)
+      console.log(`[CesiumMap3D] Sampled ${Math.max(0, sampledHeights.length - 1)} panel centers for ${panelGeometries.length} panels`)
+
       panelGeometries.forEach((pg, idx) => {
-        // Convert DSM panel height (MSL/geoid) → WGS84 ellipsoid
-        const dsmPanelH = dsmHeights?.panel_heights?.[String(pg.i)]
-        const dsmGround = dsmHeights?.building?.ground_elevation_m || 0
-        const roofH = dsmPanelH > 0 ? dsmPanelH : (dsmGround + 6)
-        const panelH = roofH + geoidUndulation + OFFSET
+        // Panel center height from 3D tile mesh
+        const sampled = sampledHeights[idx]
+        let centerH
+        if (Number.isFinite(sampled?.height) && sampled.height > 0) {
+          centerH = sampled.height + OFFSET
+        } else {
+          // Fallback: DSM height + geoid
+          const dsmPanelH = dsmHeights?.panel_heights?.[String(pg.i)]
+          const roofH = dsmPanelH > 0 ? dsmPanelH : (dsmGround + 6)
+          centerH = roofH + geoidUndulation + OFFSET
+        }
 
-        const cornerHeights = [panelH, panelH, panelH, panelH]
+        // Compute corner heights using roof pitch + azimuth
+        const panel = selectedPanels[pg.i]
+        const segIdx = panel?.segment_index || 0
+        const pitchDeg = panel?.pitch_deg ?? segments[segIdx]?.pitch_deg ?? 0
+        const azimuthDeg = panel?.azimuth_deg ?? segments[segIdx]?.azimuth_deg ?? 180
+        const pitchRad = pitchDeg * Math.PI / 180
+        const azimuthRad = azimuthDeg * Math.PI / 180
 
-        // Build positions with per-corner heights (follows roof pitch)
+        // Slope direction vector (downhill) in local ENU coords
+        const slopeEast = Math.sin(azimuthRad)
+        const slopeNorth = Math.cos(azimuthRad)
+
+        const cornerHeights = pg.corners.map(([cornerLng, cornerLat]) => {
+          // Distance from panel center in meters
+          const dLng = (cornerLng - pg.cLng) * 111320 * Math.cos(pg.cLat * Math.PI / 180)
+          const dLat = (cornerLat - pg.cLat) * 111320
+          // Project onto slope direction
+          const distAlongSlope = dLng * slopeEast + dLat * slopeNorth
+          // Height offset = distance along slope × tan(pitch)
+          const heightOffset = -distAlongSlope * Math.tan(pitchRad)
+          return centerH + heightOffset
+        })
+
+        // Build positions with per-corner heights
         const coordsWithH = []
-        pg.corners.forEach(([lng, lat], c) => {
-          coordsWithH.push(lng, lat, cornerHeights[c])
+        pg.corners.forEach(([cornerLng, cornerLat], c) => {
+          coordsWithH.push(cornerLng, cornerLat, cornerHeights[c])
         })
         const positions = Cesium.Cartesian3.fromDegreesArrayHeights(coordsWithH)
 
@@ -723,10 +809,10 @@ export default function CesiumMap3D({
         const entity = viewer.entities.add({
           polygon: {
             hierarchy: { positions },
-            material: Cesium.Color.fromCssColorString('#1565c0').withAlpha(0.95),
+            material: Cesium.Color.fromCssColorString('#0d1b2a').withAlpha(0.92),
             outline: true,
-            outlineColor: Cesium.Color.WHITE.withAlpha(0.9),
-            outlineWidth: 1,
+            outlineColor: Cesium.Color.fromCssColorString('#90caf9').withAlpha(0.95),
+            outlineWidth: 2,
             perPositionHeight: true,
           },
           description: pg.tooltipText,

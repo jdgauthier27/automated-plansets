@@ -112,12 +112,16 @@ def build_terrain_data(
     # like floating fragments. Smoothing rounds these transitions.
     # sigma=1.5 at 200px grid ≈ 0.75m spatial smoothing — preserves roof shape
     from scipy.ndimage import gaussian_filter
+
     grid_normalized = gaussian_filter(grid_normalized, sigma=1.5)
 
     logger.info(
         "Terrain mesh: %dx%d grid, ground=%.1fm, range=[%.1f, %.1f]m above ground",
-        grid_size, grid_size, ground_elevation,
-        float(grid_normalized.min()), float(grid_normalized.max()),
+        grid_size,
+        grid_size,
+        ground_elevation,
+        float(grid_normalized.min()),
+        float(grid_normalized.max()),
     )
 
     # Convert to list of lists for JSON serialization (round to 2 decimal places)
